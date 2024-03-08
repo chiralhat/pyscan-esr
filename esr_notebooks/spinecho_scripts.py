@@ -1,10 +1,9 @@
 import sys, os
-sys.path.append('../../../pyscan-master/')
+sys.path.append('../../pyscan-master/')
 from scipy.integrate import simps
 from time import sleep, time
 from scipy.fft import rfft, rfftfreq
 import numpy as np
-import utility as ut
 import spinecho as se
 import pyscan as ps
 
@@ -83,6 +82,52 @@ def change_nutation(devices, width, ave=4, sltime=0.3):
     sleep(0.1)
     devices.scope.average = ave
     sleep(sltime)
+
+
+def integrate_echo(times, data, alldat=False, backsub=False, prewin=False):
+    """Prompts for the integration window, and then integrates all the data
+    in that window. If 'alldat' is True, all the datasets are shown in the
+    integration prompt, otherwise only the first is shown. If 'backsub' is
+    'linear', a linear fit is made between the integration endpoints and
+    subtracted from the data before integrating; if it is 'end', the last 50
+    points are averaged and subtracted from the data before integrating.
+    If 'prewin' is not false it needs to be a two-element list with the
+    window limits, in which case the integration prompt doesn't run."""
+    # Pick the integration window values by inspecting the data and seeing
+    # what window works
+    lower_limit, upper_limit = prewin or int_window(times, data, alldat)
+    # Check if the limits are entirely outside of our times, and if so
+    # set them to be the existing time boundaries
+    if lower_limit>times[-1] or upper_limit<times[0]:
+        lower_limit, upper_limit = times[[0, -1]]
+    lims = [np.abs(times-n).argmin() for n in [lower_limit, upper_limit]]
+    tlim = times[lims[0]:lims[1]]
+    
+    # Integrate the data over the window
+    if backsub=='linear':
+        tdiff = tlim[-1]-tlim[0]
+        limrange = [np.arange(lims[0], lims[0]+10),
+                    np.arange(lims[1]-10, lims[1])]
+        slope = np.array([(np.mean(dat[limrange[1]])-
+                           np.mean(dat[limrange[0]]))/tdiff
+                          for dat in data])
+        intercept = np.array([np.mean(data[n][limrange[0]])-
+                              slope[n]*tlim[0] for n in np.arange(len(slope))])
+        dat_sub = np.array([data[n]-(slope[n]*times+intercept[n])
+                            for n in np.arange(len(slope))])
+        se_area = [simps(d[lims[0]:lims[1]], tlim)
+                            for d in dat_sub]
+        # se_mean = [np.mean(d[lims[0]:lims[1]]) for d in dat_sub]
+    elif backsub=='end':
+        dat_sub = np.array([dat-np.mean(dat[50:]) for dat in data])
+        se_area = [simps(d[lims[0]:lims[1]], tlim)
+                            for d in dat_sub]
+        # se_mean = [np.mean(d[lims[0]:lims[1]]) for d in dat_sub]
+    else:
+        se_area = [simps(d[lims[0]:lims[1]], tlim)
+                            for d in data]
+        # se_mean = [np.mean(d[lims[0]:lims[1]]) for d in data]
+    return np.array(se_area)
     
     
 def fourier_signal(d, fstart=3, fstop=100):
@@ -94,7 +139,7 @@ def fourier_signal(d, fstart=3, fstop=100):
     for n in range(flen):
         try:
             lordat = np.array([d.ffreqs, -d.fourier[n]])[:, fstart:fstop]
-            d.ffit[n] = ut.lor_fit(lordat)[0]
+            d.ffit[n] = lor_fit(lordat)[0]
         except:
             0
     d.xfamp, d.v1famp, d.v2famp, d.xxfamp = [-fit[1] for fit in d.ffit]
@@ -102,7 +147,7 @@ def fourier_signal(d, fstart=3, fstop=100):
     d.ffdet2 = d.ffit[2][-1]
     d.ffdetx = d.ffit[3][-1]
     fwin = list(d.ffreqs[[fstart, fstop]])
-    int_out = se.integrate_echo(d.ffreqs, d.fourier,
+    int_out = integrate_echo(d.ffreqs, d.fourier,
                                 backsub='linear', prewin=fwin)
     [d.xfint, d.v1fint, d.v2fint, d.xxfint] = int_out
      # d.xfmean, d.v1fmean, d.v2fmean, d.xxfmean] = int_out
@@ -122,7 +167,7 @@ def fourier_signals(d, fstart=3, fstop=100):
             try:
                 lordat = np.array([d.ffreqs[n], -d.fourier[n][i]])[:,
                                                                    fstart:fstop]
-                d.ffit[n][i] = ut.lor_fit(lordat)[0]
+                d.ffit[n][i] = lor_fit(lordat)[0]
             except:
                 d.ffit[n][i] = np.zeros(4)
     d.xfamp = np.array([-fit[0][1] for fit in d.ffit])
@@ -155,7 +200,7 @@ def process_se(d, win, backnum=100, detune=0):
 #     d.xdown1 = d.xdown1-np.mean(d.xdown1[-20:])
     d.xsub1 = d.xup-d.xdown
 
-    int_out = se.integrate_echo(d.time, [d.v1sub, d.v2sub, d.xsub, d.xsub1],
+    int_out = integrate_echo(d.time, [d.v1sub, d.v2sub, d.xsub, d.xsub1],
                                 backsub='linear', prewin=win)
     [d.v1int, d.v2int, d.xint, d.xint1] = int_out
      # d.v1mean, d.v2mean, d.xmean, d.x1mean] = int_out
@@ -514,7 +559,7 @@ def rabifit(x, a, t, T, b):
 
 
 def plot_fit_rabi(t_nut, vdat, guess=[1, 200, 100, 0.3]):
-    rfit = ut.plot_func_fit(rabifit, np.array([t_nut, vdat/vdat.max()]), guess)
+    rfit = plot_func_fit(rabifit, np.array([t_nut, vdat/vdat.max()]), guess)
     return rfit
 
 
@@ -614,7 +659,7 @@ def pulse_length_sweep():
 
 def phase_fit(phase, sig):
     guess = [0, np.max(sig), np.pi/180, 0]
-    fit = ut.func_fit(ut.sinefit, np.array([phase, sig]), guess)[0]
+    fit = func_fit(sinefit, np.array([phase, sig]), guess)[0]
     return (90-fit[-1]*180/np.pi+90*(1-np.sign(fit[1]))) % 360
 
 

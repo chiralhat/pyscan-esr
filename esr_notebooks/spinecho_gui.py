@@ -1,13 +1,8 @@
-import sys, os
-sys.path.append('../../../pyscan-master/')
+import sys
+sys.path.append('../../pyscan/')
 import pyscan as ps
 import matplotlib.pyplot as plt
-import numpy as np
-import utility as ut
-from datetime import date, datetime
-# from pathlib import Path
 from IPython.display import display, clear_output
-import ipywidgets as ipw
 from spinecho_scripts import *
 import gui_setup as gs
 

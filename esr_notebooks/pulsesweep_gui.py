@@ -1,14 +1,7 @@
-import sys, os
-sys.path.append('../../../pyscan-master/')
+import sys
+sys.path.append('../../pyscan-master/')
 import pyscan as ps
 import matplotlib.pyplot as plt
-import numpy as np
-import utility as ut
-from datetime import date, datetime
-from pathlib import Path
-import pickle
-import ipywidgets as ipw
-from pulsesweep_scripts import *
 import gui_setup as gs
 
 plt.rc('lines', lw=2)
