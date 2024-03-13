@@ -223,6 +223,7 @@ def measure_echos(expt):
 
 
 def pulse_change(devices, tpi2, port, mult):
+    time_delta = tpi2*(1+mult) - devices.fpga.pulse1-devices.fpga.pulse2
     if port==0:
         devices.fpga.pulse1 = tpi2
         devices.fpga.pulse2 = tpi2*mult
@@ -232,8 +233,10 @@ def pulse_change(devices, tpi2, port, mult):
         devices.fpga.pulse1 = tpi2
         devices.fpga.pulse2 = tpi2*mult
     elif port==2:
+        time_delta = 0
         devices.fpga.pulse2_1 = tpi2
         devices.fpga.pulse2_2 = tpi2*mult
+    devices.scope.trigger_delay += time_delta/1e9
 
 
 bifunction_select = {'Delay': subback_delays,

@@ -128,7 +128,9 @@ def init_experiment(devices, parameters, sweep):
     parameters['pulse1'] = parameters['pulse1_1']
     parameters['pulse2'] = parameters['pulse1_2']
     parameters['delay'] = parameters['delay1']
-    [devices.scope.write('SEL:CH'+str(ch)+' 0') for ch in chs[2:]]
+    # Turn on all the channels
+    [devices.scope.write('SEL:CH'+str(ch)+' 1')
+     for ch in devices.scope.channels[2:]]
     devices.fpga.bimodal_spin_echo(parameters)
     devices.synth.bimodal_spin_echo(parameters)
     devices.scope.setup_spin_echo(parameters)
