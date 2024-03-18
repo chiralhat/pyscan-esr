@@ -3,6 +3,7 @@ sys.path.append('../')
 import pyscan as ps
 import matplotlib.pyplot as plt
 import gui_setup as gs
+from pulsesweep_scripts import *
 
 plt.rc('lines', lw=2)
 plotfont = {'family': 'serif', 'size': 16}
