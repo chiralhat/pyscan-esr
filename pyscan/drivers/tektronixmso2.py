@@ -71,7 +71,7 @@ class TektronixMSO2(Oscilloscope):
             'name': 'time_division',
             'write_string': 'HOR:SCA {}',
             'query_string': 'HOR:SCA?',
-            'range': [np.min(self.tdivs), np.max(self.tdivs)],
+            'range': [float(np.min(self.tdivs)), float(np.max(self.tdivs))],
             'return_type': float})
 
         self.add_device_property({
