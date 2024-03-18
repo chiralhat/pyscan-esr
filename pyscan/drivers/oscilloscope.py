@@ -107,7 +107,7 @@ class Oscilloscope(InstrumentDriver):
         d.ffit = np.zeros((3, 4))
         for n in range(3):
             try:
-                d.ffit[n] = ut.lor_fit(np.array([d.ffreqs, -d.fourier[n]])[:, fstart:fstop])[0]
+                d.ffit[n] = lor_fit(np.array([d.ffreqs, -d.fourier[n]])[:, fstart:fstop])[0]
             except:
                 0
         d.xfamp, d.v1famp, d.v2famp = [-fit[1] for fit in d.ffit]
