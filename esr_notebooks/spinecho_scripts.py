@@ -1,5 +1,5 @@
-import sys, os
-sys.path.append('../../pyscan-master/')
+import sys
+sys.path.append('../')
 from scipy.integrate import simps
 from time import sleep, time
 from scipy.fft import rfft, rfftfreq

@@ -1,5 +1,5 @@
 import sys, os
-sys.path.append('../../../pyscan-master/')
+sys.path.append('../')
 from spinecho_scripts import *
 
 defwin = [[1e-1, 4e-1], [1e-1, 4e-1]]

@@ -1,5 +1,5 @@
 import sys
-sys.path.append('../../pyscan/')
+sys.path.append('../')
 import pyscan as ps
 import matplotlib.pyplot as plt
 from IPython.display import display, clear_output

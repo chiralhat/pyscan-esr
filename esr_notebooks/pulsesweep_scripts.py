@@ -1,8 +1,7 @@
-import sys, os
-sys.path.append('../../../pyscan-master/')
+import sys
+sys.path.append('../')
 import spinecho_scripts as ses
 import pyscan as ps
-import utility as ut
 import numpy as np
 from time import sleep
 from IPython.display import display, clear_output
@@ -14,7 +13,7 @@ def single_shot(sig, parameters, devices, output, fig):
         ax.remove()
     ax = fig.add_subplot(111)
     freq = devices.synth.c_freqs
-    fit, err = ut.plot_exp_fit_norange(np.array([sig.time*1e6, sig.xsub]),
+    fit, err = plot_exp_fit_norange(np.array([sig.time*1e6, sig.xsub]),
                                        freq, 1, plt=ax)
     sig.fit = fit
     fitstr = f'A={fit[1]:.3g} V, t={fit[2]:.3g} μs, Q={fit[2]*np.pi*freq/1e6:.3g}'
@@ -101,7 +100,7 @@ def decay_field_sweep(expt):
     sleep(sltime)
     d = devices.scope.read_vxy(sltime=sltime, reps=reps)
     expt.t = d.time
-    d.fit, d.err = ut.exp_fit_norange_noback(np.array([d.time-d.time[0], d.xsub]),
+    d.fit, d.err = exp_fit_norange_noback(np.array([d.time-d.time[0], d.xsub]),
                                              parameters['freq_start'], 1)[:2]
     d.Q = d.fit[-1]
     d.A = d.fit[0]

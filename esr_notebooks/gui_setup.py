@@ -1,5 +1,5 @@
 import sys, os
-sys.path.append('../../../pyscan-master/')
+sys.path.append('../')
 import pyscan as ps
 import numpy as np
 import matplotlib.pyplot as plt
