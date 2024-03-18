@@ -4,7 +4,6 @@ from scipy.integrate import simps
 from time import sleep, time
 from scipy.fft import rfft, rfftfreq
 import numpy as np
-import spinecho as se
 import pyscan as ps
 
 defwin = [1e-1, 4e-1]
