@@ -1,5 +1,5 @@
 # Objects
-from .instrumentdriver import InstrumentDriver
+from .instrument_driver import InstrumentDriver
 from .driver import Driver
 # Instrument Drivers
 try:

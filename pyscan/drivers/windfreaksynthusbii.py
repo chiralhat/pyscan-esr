@@ -6,7 +6,7 @@ Created on June 9 2021
 """
 
 
-from .instrumentdriver import InstrumentDriver
+from .instrument_driver import InstrumentDriver
 
 
 class WindfreakSynthUSBii(InstrumentDriver):

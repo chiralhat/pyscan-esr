@@ -6,7 +6,7 @@ Created on March 2 2021
 """
 
 
-from .instrumentdriver import InstrumentDriver
+from .instrument_driver import InstrumentDriver
 from lakeshore import Model335
 from time import sleep
 import numpy as np

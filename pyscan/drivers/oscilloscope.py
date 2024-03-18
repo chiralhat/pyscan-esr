@@ -6,7 +6,7 @@ Created on Dec 22 2020
 """
 
 
-from .instrumentdriver import InstrumentDriver
+from .instrument_driver import InstrumentDriver
 from pyscan.general.itemattribute import ItemAttribute
 import numpy as np
 import struct

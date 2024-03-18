@@ -9,7 +9,7 @@ https://github.com/christian-hahn/windfreak-python
 """
 
 
-from .instrumentdriver import InstrumentDriver
+from .instrument_driver import InstrumentDriver
 from windfreak import SynthHD
 
 phase_compression = 1#0.55
