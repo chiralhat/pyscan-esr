@@ -1,4 +1,4 @@
-import sys, os
+import sys
 sys.path.append('../')
 from spinecho_scripts import *
 
@@ -51,7 +51,7 @@ def fourier_signals(d, fstart=3, fstop=100):
     d.ffdet4 = d.ffit[6][-1]
     d.ffdetx2 = d.ffit[7][-1]
     fwin = list(d.ffreqs[[fstart, fstop]])
-    int_out = se.integrate_echo(d.ffreqs, d.fourier,
+    int_out = integrate_echo(d.ffreqs, d.fourier,
                                 backsub='linear', prewin=fwin)
     [d.x1fint, d.v1fint, d.v2fint, d.x1xfint,
      d.x2fint, d.v3fint, d.v4fint, d.x2xfint] = int_out
@@ -70,7 +70,7 @@ def process_ses(d, win, backnum=100, detune=0):
     d.x1sub = np.sqrt(d.v1sub**2+d.v2sub**2)
     d.x1sub1 = d.x1up-d.x1down
 
-    int_out = se.integrate_echo(d.time, [d.v1sub, d.v2sub, d.x1sub, d.x1sub1],
+    int_out = integrate_echo(d.time, [d.v1sub, d.v2sub, d.x1sub, d.x1sub1],
                                 backsub='linear', prewin=win[0])
     [d.v1int, d.v2int, d.x1int, d.x1int1] = int_out
     
@@ -86,7 +86,7 @@ def process_ses(d, win, backnum=100, detune=0):
 
     d.x2sub1 = d.x2up-d.x2down
 
-    int_out = se.integrate_echo(d.time, [d.v3sub, d.v4sub, d.x2sub, d.x2sub1],
+    int_out = integrate_echo(d.time, [d.v3sub, d.v4sub, d.x2sub, d.x2sub1],
                                 backsub='linear', prewin=win[1])
     [d.v3int, d.v4int, d.x2int, d.x2int1] = int_out
     d = fourier_signals(d)
