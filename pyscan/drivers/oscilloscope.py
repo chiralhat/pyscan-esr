@@ -7,7 +7,7 @@ Created on Dec 22 2020
 
 
 from .instrument_driver import InstrumentDriver
-from pyscan.general.itemattribute import ItemAttribute
+from pyscan.general.item_attribute import ItemAttribute
 import numpy as np
 import struct
 from time import sleep

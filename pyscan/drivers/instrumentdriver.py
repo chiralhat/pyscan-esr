@@ -6,7 +6,7 @@ Created on Jan 4, 2019
 """
 
 
-from pyscan.general.itemattribute import ItemAttribute
+from pyscan.general.item_attribute import ItemAttribute
 from .newinstrument import new_instrument
 
 

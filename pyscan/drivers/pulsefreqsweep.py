@@ -5,7 +5,7 @@ Created on Sat  Oct 10 2016
 @author: amounce
 """
 
-from pyscan.general.itemattribute import ItemAttribute
+from pyscan.general.item_attribute import ItemAttribute
 
 
 class Driver(ItemAttribute):  # pragma: no cover
