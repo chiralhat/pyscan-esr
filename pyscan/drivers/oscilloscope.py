@@ -13,7 +13,6 @@ import struct
 from time import sleep
 import matplotlib.pyplot as plt
 from scipy.fft import rfft, rfftfreq
-import utility as ut
 
 plotstyle = '.-'
 def_wait = 0.25
