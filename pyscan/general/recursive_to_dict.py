@@ -18,7 +18,7 @@ def recursive_to_dict(obj_dict):
         # print(key, value)
         # is method/function
         if key in ['logger', 'expt_thread', 'data_path',
-                   'instrument', 'module_id_string', 'spec']:
+                   'instrument', 'module_id_string', 'spec', 'dut_lock', 'synth']:
             pass
         elif hasattr(value, '__call__'):
             new_dict[key] = value.__name__
