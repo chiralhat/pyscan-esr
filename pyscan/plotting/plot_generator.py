@@ -100,7 +100,7 @@ class PlotGenerator(object):
         '''
         if self.d == 1:
             return
-        if self.expt.runinfo.ndim == 1:
+        if self.expt.runinfo.ndim == 1 and self.y_name is None:
             self.y_name = 'y_indicies'
             self.y = np.array(range(self.data.shape[1]))
             self.other_y = ''
