@@ -11,7 +11,8 @@ plt.rc('font', **plotfont)
 plt.rc('mathtext', fontset='cm')
 default_file = 'ps_defaults.pkl'
 
-pscont_keys = {'devices': [['scope_address', 'fpga_address', 'synth_address', 'psu_address']],
+pscont_keys = {'devices': [['scope_address', 'fpga_address', 'synth_address'],
+                           ['psu_address', 'use_psu']],
              'synth': [['freq', 'port'],
                        ['power', 'power2', 'phase']],
              'fpga': [['delay', 'pulse1', 'mult'],

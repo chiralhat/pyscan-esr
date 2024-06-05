@@ -21,10 +21,12 @@ function_select = {'Phase': subback_phase,
 default_file = 'se_defaults.pkl'
 
 # These are all the controls to add for this GUI
-secont_keys = {'devices': [['scope_address', 'fpga_address', 'synth_address', 'psu_address']],
+secont_keys = {'devices': [['scope_address', 'fpga_address', 'synth_address'],
+                           ['psu_address', 'use_psu']],
              'synth': [['freq', 'port', 'att'], ['power', 'power2', 'phase']],
              'fpga': [['delay', 'pulse1', 'mult'],
-                      ['period', 'nutation_delay', 'nutation_width'],
+                      ['period', 'pre_att'],
+                      ['nutation_delay', 'nutation_width'],
                       ['cpmg', 'pulse_block', 'block', 'phase_sub']],
              'scope': [['ave', 'scale', 'h_offset', 'tdiv']],
              'psu': [['field', 'gauss_amps', 'current_limit']],
@@ -101,7 +103,8 @@ def init_experiment(devices, parameters, sweep):
     devices.fpga.spin_echo(parameters)
     devices.synth.spin_echo(parameters)
     devices.scope.setup_spin_echo(parameters)
-    devices.psu.set_magnet(parameters)
+    if parameters['use_psu']:
+        devices.psu.set_magnet(parameters)
     setup_experiment(parameters, devices, sweep)
     
 
