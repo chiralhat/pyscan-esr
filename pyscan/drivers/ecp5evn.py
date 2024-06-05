@@ -66,6 +66,10 @@ class ecp5evn(InstrumentDriver):
     tstep = tstep
 
 
+    def close(self):
+        self.instrument.close()
+
+
     def readcheck(self, out):
         self.instrument.write(out)
         check = self.read()
@@ -314,6 +318,7 @@ class ecp5evn(InstrumentDriver):
         self.nutation_delay = p['nutation_delay']
         self.nutation_width = p['nutation_width']
         self.period = p['period']
+        self.pre_att = p['pre_att']
         if p['port'] == 1:
             self.pulse1 = p['pulse1']
             self.pulse2 = p['pulse2']

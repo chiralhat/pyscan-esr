@@ -24,10 +24,14 @@ class Lakeshore335():
         self.query = self.tcon.query
         self.write = self.tcon.command
         # self.setpoint(self.get_temp(), track=0)
-        self.ramp()
-        self.output()
+        self.ramp(0)
+        self.output('Read')
         self.heater('Read')
 
+    
+    def close(self):
+        self.tcon.disconnect_usb()
+    
     
     def get_temp(self):
         tstr = self.query('KRDG?', check_errors=False)

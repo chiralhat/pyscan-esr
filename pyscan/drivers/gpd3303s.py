@@ -25,6 +25,10 @@ class GPD3303S():
         self.c_limit = 3.5
 
 
+    def close(self):
+        self.psu.close()
+    
+    
     def __getitem__(cls, x):
         return getattr(cls, x)
     
