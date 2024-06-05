@@ -13,7 +13,7 @@ def single_shot(sig, parameters, devices, output, fig):
         ax.remove()
     ax = fig.add_subplot(111)
     freq = devices.synth.c_freqs
-    fit, err = plot_exp_fit_norange(np.array([sig.time*1e6, sig.xsub]),
+    fit, err = ps.plot_exp_fit_norange(np.array([sig.time*1e6, sig.xsub]),
                                        freq, 1, plt=ax)
     sig.fit = fit
     fitstr = f'A={fit[1]:.3g} V, t={fit[2]:.3g} μs, Q={fit[2]*np.pi*freq/1e6:.3g}'
