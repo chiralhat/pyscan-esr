@@ -124,7 +124,7 @@ def func_fit(func, data, guess, **kwargs):
 
 
 def plot_func_fit(func, data, guess, plt=plt, fit=0, cols=0, datlab='Data',
-                  fitlab='Fit', dsty='o', fsty='--', **kwargs):
+                  fitlab='Fit', dsty='o', fsty='--', transpose=False, **kwargs):
     """Fits any function to a dataset and plots the result.
 
     'func' is the fitting function to use;
@@ -138,8 +138,12 @@ def plot_func_fit(func, data, guess, plt=plt, fit=0, cols=0, datlab='Data',
         fit, err, R2b = func_fit(func, data, guess)
     if cols == 0:
         cols = ['b', 'g']
-    plt.plot(data[0], data[1], dsty, label=datlab, c=cols[0], **kwargs)
-    plt.plot(data[0], func(data[0], *fit), fsty, label=fitlab, c=cols[1])
+    if transpose:
+        plt.plot(data[1], data[0], dsty, label=datlab, c=cols[0], **kwargs)
+        plt.plot(func(data[0], *fit), data[0], fsty, label=fitlab, c=cols[1])
+    else:
+        plt.plot(data[0], data[1], dsty, label=datlab, c=cols[0], **kwargs)
+        plt.plot(data[0], func(data[0], *fit), fsty, label=fitlab, c=cols[1])
 
     return np.array([fit, err])
 
