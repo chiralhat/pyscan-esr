@@ -20,9 +20,9 @@ class Lakeshore335():
 
     def __init__(self, baud=57600):
 
-        self.tcon = Model335(baud)
-        self.query = self.tcon.query
-        self.write = self.tcon.command
+        self.instrument = Model335(baud)
+        self.query = self.instrument.query
+        self.write = self.instrument.command
         # self.setpoint(self.get_temp(), track=0)
         self.ramp(0)
         self.output('Read')
@@ -30,7 +30,7 @@ class Lakeshore335():
 
     
     def close(self):
-        self.tcon.disconnect_usb()
+        self.instrument.disconnect_usb()
     
     
     def get_temp(self):

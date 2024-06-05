@@ -23,14 +23,14 @@ class WindfreakSynthHD():
 
     def __init__(self, port='/dev/ttyACM0'):
 
-        self.synth = SynthHD(port)
-        self.synth.init()
-        self.ch = self.synth
+        self.instrument = SynthHD(port)
+        self.instrument.init()
+        self.ch = self.instrument
         
         # Need to set the Feedback to 'Divided'
-        self.synth.API['feedback'] = (int, 'b{}', 'b?')
-        self.synth.write('feedback', 0)
-#         self.synth.close()
+        self.instrument.API['feedback'] = (int, 'b{}', 'b?')
+        self.instrument.write('feedback', 0)
+#         self.instrument.close()
     
 
     def __getitem__(cls, x):
@@ -42,18 +42,18 @@ class WindfreakSynthHD():
     
     
     def open(self):
-        if not self.synth._dev:
-            self.synth.open()
+        if not self.instrument._dev:
+            self.instrument.open()
     
 
     def close(self):
-        self.synth.close()
+        self.instrument.close()
     
     
     def power_on(self, channel=0, close=True):
 #         self.open()
-        if self.synth.sweep_enable == True:
-            self.synth.sweep_cont = False
+        if self.instrument.sweep_enable == True:
+            self.instrument.sweep_cont = False
         chans = [channel-1] if channel else [0, 1]
         for chan in chans:
             if not self.ch[chan].enable:
@@ -203,105 +203,105 @@ class WindfreakSynthHD():
     
     @property
     def sweep_freq_low(self):
-        self.synth.write('channel', 0)
-        return self.synth.read('sweep_freq_low')
+        self.instrument.write('channel', 0)
+        return self.instrument.read('sweep_freq_low')
 
     @sweep_freq_low.setter
     def sweep_freq_low(self, new_value):
-        self.synth.write('channel', 0)
-        self.synth.write('sweep_freq_low', new_value)
+        self.instrument.write('channel', 0)
+        self.instrument.write('sweep_freq_low', new_value)
 
     @property
     def sweep_freq_low2(self):
-        self.synth.write('channel', 1)
-        return self.synth.read('sweep_freq_low')
+        self.instrument.write('channel', 1)
+        return self.instrument.read('sweep_freq_low')
 
     @sweep_freq_low.setter
     def sweep_freq_low2(self, new_value):
-        self.synth.write('channel', 1)
-        self.synth.write('sweep_freq_low', new_value)
+        self.instrument.write('channel', 1)
+        self.instrument.write('sweep_freq_low', new_value)
 
     @property
     def sweep_freq_high(self):
-        self.synth.write('channel', 0)
-        return self.synth.read('sweep_freq_high')
+        self.instrument.write('channel', 0)
+        return self.instrument.read('sweep_freq_high')
 
     @sweep_freq_high.setter
     def sweep_freq_high(self, new_value):
-        self.synth.write('channel', 0)
-        self.synth.write('sweep_freq_high', new_value)
+        self.instrument.write('channel', 0)
+        self.instrument.write('sweep_freq_high', new_value)
 
     @property
     def sweep_freq_high2(self):
-        self.synth.write('channel', 1)
-        return self.synth.read('sweep_freq_high')
+        self.instrument.write('channel', 1)
+        return self.instrument.read('sweep_freq_high')
 
     @sweep_freq_high.setter
     def sweep_freq_high2(self, new_value):
-        self.synth.write('channel', 1)
-        self.synth.write('sweep_freq_high', new_value)
+        self.instrument.write('channel', 1)
+        self.instrument.write('sweep_freq_high', new_value)
 
     @property
     def sweep_freq_step(self):
-        self.synth.write('channel', 0)
-        return self.synth.read('sweep_freq_step')
+        self.instrument.write('channel', 0)
+        return self.instrument.read('sweep_freq_step')
 
     @sweep_freq_step.setter
     def sweep_freq_step(self, new_value):
-        self.synth.write('channel', 0)
-        self.synth.write('sweep_freq_step', new_value)
+        self.instrument.write('channel', 0)
+        self.instrument.write('sweep_freq_step', new_value)
 
     @property
     def sweep_freq_step2(self):
-        self.synth.write('channel', 1)
-        return self.synth.read('sweep_freq_step')
+        self.instrument.write('channel', 1)
+        return self.instrument.read('sweep_freq_step')
 
     @sweep_freq_step.setter
     def sweep_freq_step2(self, new_value):
-        self.synth.write('channel', 1)
-        self.synth.write('sweep_freq_step', new_value)
+        self.instrument.write('channel', 1)
+        self.instrument.write('sweep_freq_step', new_value)
 
     @property
     def sweep_time_step(self):
-        self.synth.write('channel', 0)
-        return self.synth.read('sweep_time_step')
+        self.instrument.write('channel', 0)
+        return self.instrument.read('sweep_time_step')
 
     @sweep_time_step.setter
     def sweep_time_step(self, new_value):
-        self.synth.write('channel', 0)
-        self.synth.write('sweep_time_step', new_value)
+        self.instrument.write('channel', 0)
+        self.instrument.write('sweep_time_step', new_value)
 
     @property
     def sweep_time_step2(self):
-        self.synth.write('channel', 1)
-        return self.synth.read('sweep_time_step')
+        self.instrument.write('channel', 1)
+        return self.instrument.read('sweep_time_step')
 
     @sweep_time_step.setter
     def sweep_time_step2(self, new_value):
-        self.synth.write('channel', 1)
-        self.synth.write('sweep_time_step', new_value)
+        self.instrument.write('channel', 1)
+        self.instrument.write('sweep_time_step', new_value)
 
     @property
     def sweep_power(self):
-        self.synth.write('channel', 0)
-        return self.synth.read('sweep_power_low')
+        self.instrument.write('channel', 0)
+        return self.instrument.read('sweep_power_low')
 
     @sweep_power.setter
     def sweep_power(self, new_value):
-        self.synth.write('channel', 0)
-        self.synth.write('sweep_power_low', new_value)
-        self.synth.write('sweep_power_high', new_value)
+        self.instrument.write('channel', 0)
+        self.instrument.write('sweep_power_low', new_value)
+        self.instrument.write('sweep_power_high', new_value)
 
     @property
     def sweep_power2(self):
-        self.synth.write('channel', 1)
-        return self.synth.read('sweep_power_low')
+        self.instrument.write('channel', 1)
+        return self.instrument.read('sweep_power_low')
 
     @sweep_power.setter
     def sweep_power2(self, new_value):
-        self.synth.write('channel', 1)
-        self.synth.write('sweep_power_low', new_value)
-        self.synth.write('sweep_power_high', new_value)
+        self.instrument.write('channel', 1)
+        self.instrument.write('sweep_power_low', new_value)
+        self.instrument.write('sweep_power_high', new_value)
 
     def freq_sweep_nolockin(self, params):
         """Set up and start a frequency sweep.
@@ -320,7 +320,7 @@ class WindfreakSynthHD():
         # num_steps = (stop-start)//step
         # step_length = length/num_steps
 #        print(start, stop, step, step_length, power)
-        self.synth.trigger_mode = 'full frequency sweep'
+        self.instrument.trigger_mode = 'full frequency sweep'
         self.sweep_freq_low = params['freq_start']
         self.sweep_freq_high = params['freq_end']
         self.sweep_freq_step = params['freq_step']
@@ -341,7 +341,7 @@ class WindfreakSynthHD():
 
     def freq_sweep_stop(self):
 #         self.open()
-        self.synth.trigger_mode = 'disabled'
+        self.instrument.trigger_mode = 'disabled'
         self.ch[0].enable = False
         self.ch[1].enable = False
 #         self.close()
@@ -354,7 +354,7 @@ class WindfreakSynthHD():
             self.c_freqs = p['freq_start']
         self.ch[0].power = p['power']
         self.ch[1].power = p['power2']
-        self.synth.write('feedback', 0)
+        self.instrument.write('feedback', 0)
         self.power_on()
         
         
@@ -365,7 +365,7 @@ class WindfreakSynthHD():
         self.ch[1].power = p['power2']
         self.c2_phase = p['phase']
         self.power_on()
-        self.synth.write('feedback', 0)
+        self.instrument.write('feedback', 0)
 
         
     def bimodal_spin_echo(self, p):
@@ -376,4 +376,4 @@ class WindfreakSynthHD():
         self.ch[0].power = p['power']
         self.ch[1].power = p['power2']
         self.power_on()
-        self.synth.write('feedback', 0)
+        self.instrument.write('feedback', 0)

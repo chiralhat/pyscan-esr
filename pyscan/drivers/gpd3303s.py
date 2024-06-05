@@ -14,19 +14,19 @@ class GPD3303S():
     Class to control GPD 3303S Programmable Power Supply
     '''
     def __init__(self, port='/dev/ttyUSB2'):
-        self.psu = gpd3303s.GPD3303S()
-        self.psu.open(port)
-        self.psu.selectIndependentMode()
-        self.psu.enableBeep(False)
-        self.psu.setVoltage(1, 12)
-        self.psu.setVoltage(2, 0)
-#        self.psu.enableOutput(False)
+        self.instrument = gpd3303s.GPD3303S()
+        self.instrument.open(port)
+        self.instrument.selectIndependentMode()
+        self.instrument.enableBeep(False)
+        self.instrument.setVoltage(1, 12)
+        self.instrument.setVoltage(2, 0)
+#        self.instrument.enableOutput(False)
         self._gauss = 278
         self.c_limit = 3.5
 
 
     def close(self):
-        self.psu.close()
+        self.instrument.close()
     
     
     def __getitem__(cls, x):
@@ -38,52 +38,52 @@ class GPD3303S():
         
 
     def power_on(self):
-        self.psu.enableOutput(True)
+        self.instrument.enableOutput(True)
 
 
     def power_off(self):
-        self.psu.enableOutput(False)
+        self.instrument.enableOutput(False)
 
 
     @property
     def v1(self):
-        return self.psu.getVoltageOutput(1), self.psu.getVoltage(1)
+        return self.instrument.getVoltageOutput(1), self.instrument.getVoltage(1)
 
     @v1.setter
     def v1(self, value):
-        self.psu.setVoltage(1, value)
+        self.instrument.setVoltage(1, value)
 
 
     @property
     def v2(self):
-        return self.psu.getVoltageOutput(2), self.psu.getVoltage(2)
+        return self.instrument.getVoltageOutput(2), self.instrument.getVoltage(2)
 
     @v2.setter
     def v2(self, value):
         assert value<self.c_limit, f'Current exceeds limit, limit: {self.c_limit}, current: {value}'
         voltage = 3.5 if value>self.c_limit else value
-        self.psu.setVoltage(2, voltage)
+        self.instrument.setVoltage(2, voltage)
 
 
     @property
     def c1(self):
-        return self.psu.getCurrentOutput(1)
+        return self.instrument.getCurrentOutput(1)
 
 
     @property
     def c2(self):
-        return self.psu.getCurrentOutput(2)
+        return self.instrument.getCurrentOutput(2)
 
 
     @property
     def status(self):
-        self.psu.serial.write(b'STATUS?\n')
+        self.instrument.serial.write(b'STATUS?\n')
 
         ret = []
         for i in range(3):
-            ret.append(self.psu.serial.readline(eol=self.psu.eol))
+            ret.append(self.instrument.serial.readline(eol=self.instrument.eol))
             
-        err = self.psu.getError()
+        err = self.instrument.getError()
         if err != b'No Error.':
             raise RuntimeError(err)
         return ret
@@ -98,7 +98,7 @@ class GPD3303S():
     @output.setter
     def output(self, out):
         assert type(out) is bool, f'output expected Boolean, got: {out}, of type {type(out)}'
-        self.psu.enableOutput(out)
+        self.instrument.enableOutput(out)
 
         
     @property
