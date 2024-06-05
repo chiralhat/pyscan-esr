@@ -56,6 +56,12 @@ run_ind = ipw.IntProgress(value=0, min=0, max=1,
                           layout=ipw.Layout(width='110px'),
                           style={'bar_color': 'red'})
 
+# This indicator shows whether the devices are connected.
+conn_ind = ipw.IntProgress(value=0, min=0, max=1,
+                          description='Connected:',
+                          layout=ipw.Layout(width='110px'),
+                          style={'bar_color': 'green'})
+
 # The complete list of controls for every GUI. Not all will be used in any given script
 control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layout=wwid,
                                                           description='Scope Addr'),
@@ -64,7 +70,8 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
                             'synth_address': ipw.Dropdown(options=res_list,
                                                           description='RF Addr'),
                             'psu_address': ipw.Dropdown(options=res_list,
-                                                          description='PSU Addr')},
+                                                          description='PSU Addr'),
+                            'use_psu': ipw.Checkbox(layout=wwid, description='Use PSU? (No magnet if not)')},
                 'synth': {'freq': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
                                                        description='Freq (MHz)'),
                           'freq1': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
@@ -385,13 +392,14 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
             if not hasattr(devices, 'synth'):
                 waddr = parameters['synth_address'].split('ASRL')[-1].split('::')[0]
                 devices.synth = ps.WindfreakSynthHD(waddr)
-            if not hasattr(devices, 'psu'):
+            if not hasattr(devices, 'psu') and parameters['use_psu']:
                 waddr = parameters['psu_address'].split('ASRL')[-1].split('::')[0]
                 devices.psu = ps.GPD3303S(waddr)
             if not hasattr(devices, 'ls335'):
                 devices.ls335 = ps.Lakeshore335()
             if (parameters['init'] or btn.description=='Initialize'):
                 init_expt(devices, parameters, sweep) # TODO: Fix the runinfo, expt bit (put into new dict?)
+                conn_ind.value = 1
 
 
         def init_btn(btn):
@@ -437,6 +445,17 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
             set_pars(btn)
             single_run(sig, parameters, devices, output, fig)
             run_ind.value = 0
+
+        
+        def disconnect(btn):
+            run_ind.value = 1
+            turnoff(btn)
+            for key in devices.keys():
+                devices[key].close()
+            devices.__dict__.clear()
+            conn_ind.value = 0
+            run_ind.value = 0
+
         
         goButton = ipw.Button(description='Initialize')
         goButton.on_click(init_btn)
@@ -455,8 +474,12 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
     
         offButton = ipw.Button(description='Output Off')
         offButton.on_click(turnoff)
+
+        closeButton = ipw.Button(description='Disconnect')
+        closeButton.on_click(disconnect)
     
-        controls += [ipw.HBox([goButton, readButton, monButton, startButton, stopButton, offButton, run_ind])]
+        controls += [ipw.HBox([goButton, readButton, monButton, startButton, stopButton, run_ind])]
+        controls += [ipw.HBox([offButton, closeButton, conn_ind])]
         
         # mtab = measure_select()
         controls += [ipw.HBox([output, measout])]
