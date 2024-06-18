@@ -1,6 +1,7 @@
 # Objects
 from .instrument_driver import InstrumentDriver
-from .driver import Driver
+
+
 # Instrument Drivers
 try:
     from .oscilloscope import Oscilloscope
@@ -47,8 +48,11 @@ try:
 except OSError:
     print('Power Supply not found, GPD3303S not loaded')
 
+
+
 # Methods
-from .newinstrument import new_instrument
+from .new_instrument import new_instrument
 
 # Test Devices
-
+from .testing.test_voltage import TestVoltage
+from .testing.test_instrument_driver import TestInstrumentDriver

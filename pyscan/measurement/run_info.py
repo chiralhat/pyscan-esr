@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from pyscan.general.item_attribute import ItemAttribute
+from pyscan.general.get_pyscan_version import get_pyscan_version
 from .scans import PropertyScan, AverageScan
 
 
@@ -39,6 +40,8 @@ class RunInfo(ItemAttribute):
         called by Experiment objects `run()` methods.
     verbose : bool
         Flag to print status information, defaults to `False`.
+    version : str
+        Current version of pyscan to be saved as metadata.
 
     '''
 
@@ -60,6 +63,7 @@ class RunInfo(ItemAttribute):
         self.average_d = -1
 
         self.verbose = False
+        self._pyscan_version = get_pyscan_version()
 
     def check(self):
         '''Checks to see if runinfo is properly formatted. Called by Experiment object's `run()` methods.
@@ -83,12 +87,6 @@ class RunInfo(ItemAttribute):
         # throw an error if more than one average scan is found
         if num_av_scans > 1:
             assert False, "More than one average scan is not allowed"
-
-    @property
-    def version(self):
-        '''version of pyscan/runinfo
-        '''
-        return 0.2
 
     @property
     def scans(self):
