@@ -1,6 +1,10 @@
-# Pyscan
+# Installing pyscan-esr
 
-Python scientific measurement toolbox
+This code is available in the Github repository (https://github.com/chiralhat/pyscan-esr/tree/2024_paper), and can be installed following the original instructions below. Alternatively, it can be installed by first downloading the original pyscan program from (https://github.com/sandialabs/pyscan), then moving all the included pyscan-esr code into the appropriate folders in the pyscan directory, replacing any files with the same names. It can then be installed as below, or just run in place. The dependencies listed in `setup.py` must be installed before running it in place.
+
+# Pyscan-esr
+
+Python scientific measurement toolbox for electron spin resonance
 
 ## Intro
 
