@@ -1,50 +1,12 @@
+from rfsoc2 import *
 import sys
 sys.path.append('../')
 import spinecho_scripts as ses
 import pyscan as ps
 import numpy as np
-from time import sleep
-from IPython.display import display, clear_output
+from time import sleep, time
 
 
-def single_shot(sig, parameters, devices, output, fig):
-    devices.scope.read_vxy(d=sig)
-    for ax in fig.axes:
-        ax.remove()
-    ax = fig.add_subplot(111)
-    freq = devices.synth.c_freqs
-    fit, err = ps.plot_exp_fit_norange(np.array([sig.time*1e6, sig.xsub]),
-                                       freq, 1, plt=ax)
-    sig.fit = fit
-    fitstr = f'A={fit[1]:.3g} V, t={fit[2]:.3g} μs, Q={fit[2]*np.pi*freq/1e6:.3g}'
-    fourstr = f'famp: v1={sig.v1famp:.3g}, v2={sig.v2famp:.3g}'
-    fourfstr = f'ffreq (MHz): v1={sig.ffdet/1e6:.3g}, v2={sig.ffdet2/1e6:.3g}'
-    freqstr = f'freq (MHz): {freq/1e6}'
-    ax.set_xlabel('Time (μs)')
-    ax.set_ylabel('Voltage (V)')
-    xpt = sig.time[len(sig.time)//5]*1e6
-    ypt = sig.xsub.max()*np.array([0.75, 0.65, 0.55, 0.85])
-    ax.text(xpt, ypt[0], fitstr)
-    ax.text(xpt, ypt[1], fourstr)
-    ax.text(xpt, ypt[2], fourfstr)
-    ax.text(xpt, ypt[3], freqstr)
-    with output:
-        clear_output(wait=True)
-        display(ax.figure)
-
-
-def read_wait(devices, parameters):
-    ave = devices.scope.average
-    if ave > 1:
-        period = parameters['period']/1e9
-        devices.scope.average = 1
-        sleep(0.1)
-        devices.scope.average = ave
-        sleep(period*ave*2)
-
-    return devices.scope.read_vxy()
-
-        
 def decay_freq_sweep(expt):
     """
     """
@@ -87,59 +49,64 @@ def decay_freq_sweep_onoff(expt):
     return d
 
 
-def decay_field_sweep(expt):
-    runinfo = expt.runinfo
-    devices = expt.devices
+def setup_measure_function(soc, function):
+    def measure_function(expt):
+        runinfo = expt.runinfo
+        devices = expt.devices
 
-    sltime = runinfo.parameters['sltime'] or runinfo.parameters['period']/1e9*2*devices.scope.average
-    if 'reps' in runinfo.parameters.keys():
-        reps = runinfo.parameters.reps
-    else:
-        reps = 1
+        prog = runinfo.progfunc(runinfo.parameters)
+
+        #if function==0:
+        d = measure_decay(prog, soc)
+        #else:
+        #    d = runinfo.measure_phase(prog, soc)
+
+        if 'ls335' in devices.keys():
+            d.temp = devices.ls335.get_temp()
+
+        expt.t = d.time
+
+        d.current_time = time()
+
+        if runinfo._indicies[0]==(runinfo._dims[0]-1):
+            if runinfo.parameters['turn_off']:
+                soc.reset_gens()
+                if runinfo.parameters['use_psu']:
+                    devices.psu.output = False
+
+        return d
     
-    sleep(sltime)
-    d = devices.scope.read_vxy(sltime=sltime, reps=reps)
-    expt.t = d.time
-    d.fit, d.err = exp_fit_norange_noback(np.array([d.time-d.time[0], d.xsub]),
-                                             parameters['freq_start'], 1)[:2]
-    d.Q = d.fit[-1]
-    d.A = d.fit[0]
-
-    if runinfo._indicies[0]==(runinfo._dims[0]-1):
-        if runinfo.parameters['turn_off']:
-            devices.synth.power_off()
-            devices.psu.output = False
-    
-    return d
+    return measure_function
 
 
-def setup_experiment(parameters, devices, sweep):
+def setup_experiment(parameters, devices, sweep, soc):
+    def freq_sweep(freq):
+        parameters['freq'] = freq
     expt_select = {'Freq Sweep': 0,
                    'Field Sweep': 1}
     wait = parameters['wait']
     sweep_range = ps.drange(parameters['sweep_start'],
                             parameters['sweep_step'],
                             parameters['sweep_end'])
-    setup_vars = {'y_name': ['synth_c_freqs',
+    setup_vars = {'y_name': ['freq_sweep',
                             'psu_field'],
-                 'loop': [ps.PropertyScan({'synth': sweep_range}, prop='c_freqs', dt=wait),
+                 'loop': [ps.FunctionScan(freq_sweep, sweep_range, dt=wait),
                               ps.PropertyScan({'psu': sweep_range}, prop='field', dt=wait)],
                   'file': ['PulseFreqSweep',
-                           'PulseBSweep'],
-                  'function': [decay_freq_sweep,
-                               decay_field_sweep]
+                           'PulseBSweep']
                   }
     run_n = expt_select[parameters['psexpt']]
     parameters['y_name'] = setup_vars['y_name'][run_n]
     fname = setup_vars['file'][run_n]
     runinfo = ps.RunInfo()
     runinfo.loop0 = setup_vars['loop'][run_n]
-    runinfo.measure_function = setup_vars['function'][run_n]
+    def progfunc(parameters):
+        return CPMGProgram(soc, parameters)
+    runinfo.progfunc = progfunc
+    runinfo.measure_function = setup_measure_function(soc, run_n)
 
     runinfo.parameters = parameters
-    runinfo.wait_time = 0.1
-    
-    # expt = ps.Sweep(runinfo, devices, parameters['outfile']+fname)
-    # sweep['expt'] = expt
+    runinfo.wait_time = wait
+
     sweep['name'] = parameters['outfile']+fname
     sweep['runinfo'] = runinfo
