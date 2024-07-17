@@ -15,8 +15,7 @@ plt.rc('mathtext', fontset='cm')
 function_select = {'Phase': subback_phase,
                    'Delay': subback_delay,
                    'Both': subback_phasedelay,
-                       'None': subback_none,
-                       'Autophase': subback_autophase}
+                       'None': subback_none}
 
 default_file = 'se_defaults.pkl'
 
