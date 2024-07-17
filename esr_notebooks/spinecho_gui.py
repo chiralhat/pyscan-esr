@@ -64,7 +64,7 @@ def single_shot(sig, parameters, devices, output, fig):
     phase = devices.synth.c2_phase#parameters['phase']
     reps = parameters['reps']
     delay = parameters['delay']
-    delay2 = parameters['delay2']
+    delay2 = parameters['delay']
     port = parameters['port']
     sltime = parameters['sltime']
     lims = [-parameters['int_start'], parameters['int_end']]
