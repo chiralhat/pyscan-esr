@@ -65,11 +65,12 @@ def single_shot(sig, parameters, devices, output, fig):
     phase = devices.synth.c2_phase#parameters['phase']
     reps = parameters['reps']
     delay = parameters['delay']
+    delay2 = parameters['delay2']
     port = parameters['port']
     sltime = parameters['sltime']
     lims = [-parameters['int_start'], parameters['int_end']]
     func(devices, ave=ave, phase=phase, reps=reps,
-         delay=delay, d=sig, port=port, sltime=sltime, lims=lims)
+         delay=delay, delay2=delay2, d=sig, port=port, sltime=sltime, lims=lims)
     win = sig.win
     for ax in fig.axes:
         ax.remove()

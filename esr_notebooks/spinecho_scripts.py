@@ -55,8 +55,7 @@ def change_delay(devices, delay, ave=4, sltime=0.3, port=1, **kwargs):
         old_delay = devices.fpga.delay
         devices.fpga.delay = delay
         devices.fpga.delay2 = delay
-        #delta_delay = delay-old_delay
-        #devices.fpga.nutation_delay = devices.fpga.nutation_delay-delta_delay
+    change_trigger_delta(devices, old_delay, delay)
     devices.scope.average = 1
     sleep(0.1)
     devices.scope.average = ave
@@ -246,53 +245,6 @@ def subback(subfunc, args, devices, ave,
     
     d = process_se(d, win, detune=detune)
     #d.xsub, d.v1sub, d.v2sub = [sig/2 for sig in [d.xsub, d.v1sub, d.v2sub]]
-    d.win = win
-    
-    return d
-
-
-def subback_autophase(devices, ave=256, sltime=0, lims=defwin, reps=1, detune=0,
-                      d=0, port=1, backnum=100,
-                      **kwargs):
-    if isinstance(d, int):
-        d = ps.ItemAttribute()
-    period = devices.fpga.period/1e9
-    delay = devices.fpga.delay2/1e9 if port==2 else devices.fpga.delay/1e9
-    win = [delay+lims[0]/1e6, delay+lims[1]/1e6]
-    
-    if not sltime:
-        sltime = period*ave if period>0.1 else 2*period*ave
-    sltime = sltime if sltime>=0.01 else 0
-    for cycle in np.arange(4):
-        change_autophase(devices, cycle, ave=ave, sltime=sltime, port=port,
-                         **kwargs)
-        [[d.time, d['v1p'+str(cycle)]],
-         [_, d['v2p'+str(cycle)]]] = devices.scope.read_screen(0, init=False)
-        if reps>1:
-            for n in range(reps-1):
-                sleep(sltime)
-                [[_, v1d], [_, v2d]] = devices.scope.read_screen(0, init=False)
-                d['v1p'+str(cycle)] += v1d
-                d['v2p'+str(cycle)] += v2d
-            d['v1p'+str(cycle)] /= reps
-            d['v2p'+str(cycle)] /= reps
-
-    v1p1sub = sback(d.v1p1)
-    v1p2sub = sback(d.v1p2)
-    v1p0sub = sback(d.v1p0)
-    v1p3sub = sback(d.v1p3)
-    d.v1up = v1p1sub+v1p2sub
-    d.v1down = v1p0sub+v1p3sub
-
-    v2p1sub = sback(d.v2p1)
-    v2p2sub = sback(d.v2p2)
-    v2p0sub = sback(d.v2p0)
-    v2p3sub = sback(d.v2p3)
-    d.v2up = v2p1sub+v2p2sub
-    d.v2down = v2p0sub+v2p3sub
-    
-    d = process_se(d, win, detune=detune, backnum=backnum)
-    d.xsub, d.v1sub, d.v2sub = [sig/2 for sig in [d.xsub, d.v1sub, d.v2sub]]
     d.win = win
     
     return d
