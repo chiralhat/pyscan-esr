@@ -22,7 +22,7 @@ def nochange(devices, phase, ave=4, sltime=0.3, offset=[False, 0],
     
 def change_phase(devices, phase, ave=4, sltime=0.3, offset=[False, 0],
                  **kwargs):
-    devices.synth.ch[1].phase = (phase)
+    devices.synth.instrument[1].phase = (phase)
     if offset[0]:
         n = offset[1]
         devices.scope.channel1_offset = offset[0][n]
@@ -408,7 +408,7 @@ def max_phase(devices, ave=4, ch=1):
                     if ph<0:
                         ph = ph + 360
                 break
-    devices.synth.ch[0].phase = (ph)
+    devices.synth.instrument[0].phase = (ph)
     return ph
 
 
