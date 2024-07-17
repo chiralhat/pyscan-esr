@@ -18,19 +18,6 @@ def change_trigger_delta(devices, old_time, new_time):#, delay_change=0):
 def nochange(devices, phase, ave=4, sltime=0.3, offset=[False, 0],
              **kwargs):
     return 0
-
-
-def change_autophase(devices, cycle, ave=4, sltime=0.3, offset=[False, 0],
-                     **kwargs):
-    devices.fpga.phase_sub = 2*cycle+1
-    if offset[0]:
-        n = offset[1]
-        devices.scope.channel1_offset = offset[0][n]
-#         devices.scope.channel1_scale = offset[1]
-    devices.scope.average = 1
-    sleep(0.1)
-    devices.scope.average = ave
-    sleep(sltime)
     
     
 def change_phase(devices, phase, ave=4, sltime=0.3, offset=[False, 0],
@@ -531,8 +518,7 @@ def setup_experiment(parameters, devices, sweep):
     function_select = {'Phase': subback_phase,
                        'Delay': subback_delay,
                        'Both': subback_phasedelay,
-                           'None': subback_none,
-                           'Autophase': subback_autophase}
+                           'None': subback_none}
     func = function_select[parameters['subtract']]
     wait = parameters['wait']
     sweep_range = ps.drange(parameters['sweep_start'],
