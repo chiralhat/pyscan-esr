@@ -181,6 +181,8 @@ def sub_hole(devices, ave=128, delay1=1000, delay2=1000,
     devices.fpga.nutation_width = nut_width
     hole = subback_delays(devices, ave, delay1, delay2,
             sltime, lims, reps, detune, **kwargs)
+
+    d.time = hole.time
     d.v1up = hole.v1sub
     d.v2up = hole.v2sub
     d.x1up = hole.x1sub
@@ -191,7 +193,7 @@ def sub_hole(devices, ave=128, delay1=1000, delay2=1000,
     d.v1sub = d.v1up-d.v1down
     d.v2sub = d.v2up-d.v2down
     d.x1sub = np.sqrt(d.v1sub**2+d.v2sub**2)
-    d.x1sub1 = d.xup-d.xdown
+    d.x1sub1 = d.x1up-d.x1down
 
     return d
 
@@ -360,7 +362,7 @@ def setup_twotone_experiment(parameters, devices, sweep):
                   }
     run_n = expt_select[parameters['twotone_expt']]
     parameters['y_name'] = setup_vars['y_name'][run_n]
-    fname = setup_vars['file'][run_n]
+    fname = 'TT_'+setup_vars['file'][run_n]
     runinfo = ps.RunInfo()
     runinfo.loop0 = setup_vars['loop'][run_n]
     runinfo.measure_function = measure_echos
