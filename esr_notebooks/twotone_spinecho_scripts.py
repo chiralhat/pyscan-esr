@@ -308,7 +308,8 @@ def setup_twotone_experiment(parameters, devices, sweep):
         'DEER': 10,
         'A Power Sweep': 11,
         'B Power Sweep': 12,
-        'Hole Burning': 13}
+        'Hole Burning': 13,
+        'Hole Burning Freq Sweep': 14}
     func = bifunction_select[parameters['subtract']]
     wait = parameters['wait']
     sweep_range = ps.drange(parameters['sweep_start'],
@@ -328,6 +329,7 @@ def setup_twotone_experiment(parameters, devices, sweep):
                              'synth_c1_power',
                              'synth_c2_power',
                              'fpga_nutation_delay'],
+                             'synth_c2_freq',
                   'loop': [ps.FunctionScan(pulse_a_time, sweep_range, dt=wait),
                            ps.FunctionScan(pulse_b_time, sweep_range, dt=wait),
                            ps.FunctionScan(pulse_time, sweep_range, dt=wait),
@@ -351,7 +353,9 @@ def setup_twotone_experiment(parameters, devices, sweep):
                            ps.PropertyScan({'synth': sweep_range},
                                            prop='c2_power', dt=wait),
                            ps.PropertyScan({'fpga': sweep_range},
-                                           prop='nutation_delay', dt=wait)],
+                                           prop='nutation_delay', dt=wait),
+                           ps.PropertyScan({'synth': sweep_range},
+                                           prop='c2_freq', dt=wait)],
                   'file': ['PASweep',
                            'PBSweep',
                            'PSweep',
@@ -365,7 +369,8 @@ def setup_twotone_experiment(parameters, devices, sweep):
                            'DEER',
                            'APowSweep',
                            'BPowSweep',
-                           'HoleBurn']
+                           'HoleBurn',
+                           'HoleBurnFS']
                   }
     run_n = expt_select[parameters['twotone_expt']]
     parameters['y_name'] = setup_vars['y_name'][run_n]
@@ -373,7 +378,7 @@ def setup_twotone_experiment(parameters, devices, sweep):
     runinfo = ps.RunInfo()
     runinfo.loop0 = setup_vars['loop'][run_n]
     runinfo.measure_function = measure_echos
-    runinfo.sub_func = sub_hole if run_n==13 else func
+    runinfo.sub_func = sub_hole if (run_n==13 or run_n==14) else func
     runinfo.sltime = parameters['sltime']
     # devices.scope.read_scope()
 

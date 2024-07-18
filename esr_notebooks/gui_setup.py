@@ -46,7 +46,8 @@ twotone_sweep_list = ['A Pulse Sweep',
               'DEER',
               'A Power Sweep',
                 'B Power Sweep',
-        'Hole Burning']
+        'Hole Burning',
+        'Hole Burning Freq Sweep']
 
 # Load the Resource Manager if it hasn't been done yet
 if not hasattr(ps, 'rm'):
