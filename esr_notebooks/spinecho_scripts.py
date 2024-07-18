@@ -339,34 +339,6 @@ def subback_delay(devices, ave=128, delay=1000, delay2=1000, port=1,
     return d
 
 
-def subback_nutation(devices, ave, sltime=0, lims=defwin, **kwargs):
-    d = ps.ItemAttribute()
-    period = devices.fpga.period/1e9
-    width = devices.fpga.pulse1
-    win = [delay/1e9+lims[0], delay/1e9+lims[1]]
-    if not sltime:
-        sltime = period*ave if period>0.1 else 2*period*ave
-    change_nutation(devices, width, ave, sltime)
-    [[d.time, d.v1down],
-     [_, d.v2down]] = devices.scope.read_screen(0, init=False)
-    change_nutation(devices, 0, ave, sltime)
-    [[_, d.v1up], [_, d.v2up]] = devices.scope.read_screen(0, init=False)
-#     v1sub = (v1up-np.mean(v1up[-20:]))-(v1down-np.mean(v1down[-20:]))
-#     v1int = simps(v1sub, time)
-#     v2sub = (v2up-np.mean(v1up[-20:]))-(v1down-np.mean(v1down[-20:]))
-#     v2int = simps(v2sub, time)
-#     xup = np.sqrt((v1up)**2+(v2up)**2)
-#     xdown = np.sqrt((v1down)**2+(v2down)**2)
-#     xup = xup-np.mean(xup[-20:])
-#     xdown = xdown-np.mean(xdown[-20:])
-#     xsub = xup-xdown
-#     xint = simps(xsub, time)
-    d = process_se(d, win)
-    
-    
-    return d
-
-
 def max_phase(devices, ave=4, ch=1):
     phs = np.zeros(3)
     dph = 5
