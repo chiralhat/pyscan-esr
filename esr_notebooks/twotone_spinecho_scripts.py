@@ -175,6 +175,9 @@ def sub_hole(devices, ave=128, delay1=1000, delay2=1000,
             nut_width=1000, **kwargs):
     if isinstance(d, int):
         d = ps.ItemAttribute()
+    win = [[lim[0]/1e6, lim[1]/1e6]
+            for lim in lims]
+
     devices.fpga.nutation_width = 0
     no_hole = subback_delays(devices, ave, delay1, delay2,
             sltime, lims, reps, detune, **kwargs)
@@ -194,6 +197,10 @@ def sub_hole(devices, ave=128, delay1=1000, delay2=1000,
     d.v2sub = d.v2up-d.v2down
     d.x1sub = np.sqrt(d.v1sub**2+d.v2sub**2)
     d.x1sub1 = d.x1up-d.x1down
+
+    int_out = integrate_echo(d.time, [d.v1sub, d.v2sub, d.x1sub, d.x1sub1],
+                                backsub='linear', prewin=win[0])
+    [d.v1int, d.v2int, d.x1int, d.x1int1] = int_out
 
     return d
 
