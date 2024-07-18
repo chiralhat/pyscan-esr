@@ -30,7 +30,8 @@ sweep_list = ['Pulse Sweep',
               'Period Sweep',
               'Hahn Echo',
               'EDFS',
-              'Freq Sweep']
+              'Freq Sweep',
+              'Inversion Sweep']
 
 bimod_sweep_list = ['A Pulse Sweep',
               'B Pulse Sweep',

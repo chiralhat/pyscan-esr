@@ -486,7 +486,8 @@ def setup_experiment(parameters, devices, sweep):
                    'Hahn Echo': 3,
                    'EDFS': 4,
                    'Freq Sweep': 5,
-                    'Phase Sweep': 6}
+                    'Phase Sweep': 6,
+                  'Inversion Sweep': 7}
     function_select = {'Phase': subback_phase,
                        'Delay': subback_delay,
                        'Both': subback_phasedelay,
@@ -502,7 +503,8 @@ def setup_experiment(parameters, devices, sweep):
                              'delay_sweep',
                              'psu_field',
                              'synth_c_freqs',
-                                 'phase_sweep'],
+                                 'phase_sweep',
+                            'fpga_nutation_delay'],
                   'loop': [ps.FunctionScan(pulse_time, sweep_range, dt=wait),
                            ps.PropertyScan({'fpga': sweep_range},
                                            prop='nutation_width', dt=wait),
@@ -513,14 +515,17 @@ def setup_experiment(parameters, devices, sweep):
                                            prop='field', dt=wait),
                            ps.PropertyScan({'synth': sweep_range},
                                            prop='c_freqs', dt=wait),
-                           ps.FunctionScan(phase_sweep, sweep_range, dt=wait)],
+                           ps.FunctionScan(phase_sweep, sweep_range, dt=wait),
+                           ps.PropertyScan({'fpga': sweep_range},
+                                           prop='nutation_delay', dt=wait)],
                   'file': ['PSweep',
                            'Rabi',
                            'T1',
                            'Hahn',
                            'EDFS',
                            'EFSweep',
-                               'PhiSweep']
+                               'PhiSweep',
+                          'T1']
                   }
     run_n = expt_select[parameters['expt']]
     parameters['y_name'] = setup_vars['y_name'][run_n]
