@@ -43,7 +43,10 @@ bimod_sweep_list = ['A Pulse Sweep',
               'A Freq Sweep',
               'B Freq Sweep',
               'Both Freq Sweep',
-              'DEER']
+              'DEER',
+              'A Power Sweep',
+                'B Power Sweep',
+        'Hole Burning']
 
 # Load the Resource Manager if it hasn't been done yet
 if not hasattr(ps, 'rm'):

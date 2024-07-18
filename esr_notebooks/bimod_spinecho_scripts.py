@@ -7,7 +7,7 @@ defwin = [[1e-1, 4e-1], [1e-1, 4e-1]]
 
 
 def change_delays(devices, delays, ave=4, sltime=0.3, **kwargs):
-    old_delay = devices.fpga.delay1
+    old_delay = devices.fpga.delay
     devices.fpga.delay = delays[0]
     devices.fpga.delay2 = delays[1]
     change_trigger_delta(devices, old_delay, delays[0])
@@ -268,7 +268,10 @@ def setup_bimod_experiment(parameters, devices, sweep):
         'A Freq Sweep': 7,
         'B Freq Sweep': 8,
         'Both Freq Sweep': 9,
-        'DEER': 10}
+        'DEER': 10,
+        'A Power Sweep': 11,
+        'B Power Sweep': 12,
+        'Hole Burning': 13}
     func = bifunction_select[parameters['subtract']]
     wait = parameters['wait']
     sweep_range = ps.drange(parameters['sweep_start'],
@@ -284,7 +287,10 @@ def setup_bimod_experiment(parameters, devices, sweep):
                              'synth_c1_freq',
                              'synth_c2_freq',
                              'synth_c_freqs',
-                             'fpga_p2start'],
+                             'fpga_p2start',
+                             'synth_c1_power',
+                             'synth_c2_power',
+                             'synth_c2_freq'],
                   'loop': [ps.FunctionScan(pulse_a_time, sweep_range, dt=wait),
                            ps.FunctionScan(pulse_b_time, sweep_range, dt=wait),
                            ps.FunctionScan(pulse_time, sweep_range, dt=wait),
@@ -302,7 +308,13 @@ def setup_bimod_experiment(parameters, devices, sweep):
                            ps.PropertyScan({'synth': sweep_range},
                                            prop='c_freqs', dt=wait),
                            ps.PropertyScan({'fpga': sweep_range},
-                                           prop='p2start', dt=wait)],
+                                           prop='p2start', dt=wait),
+                           ps.PropertyScan({'synth': sweep_range},
+                                           prop='c1_power', dt=wait),
+                           ps.PropertyScan({'synth': sweep_range},
+                                           prop='c2_power', dt=wait),
+                           ps.PropertyScan({'synth': sweep_range},
+                                           prop='c2_freq', dt=wait)],
                   'file': ['PASweep',
                            'PBSweep',
                            'PSweep',
@@ -313,7 +325,10 @@ def setup_bimod_experiment(parameters, devices, sweep):
                            'EDFreqAS',
                            'EDFreqBS',
                            'EDFreqS',
-                           'DEER']
+                           'DEER',
+                           'APowSweep',
+                           'BPowSweep',
+                           'HoleBurn']
                   }
     run_n = expt_select[parameters['bimod_expt']]
     parameters['y_name'] = setup_vars['y_name'][run_n]
