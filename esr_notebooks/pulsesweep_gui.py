@@ -31,7 +31,8 @@ def init_experiment(devices, parameters, sweep):
     devices.fpga.pulse_freq_sweep(parameters)
     devices.synth.pulse_freq_sweep(parameters)
     devices.scope.setup_pulse_decay(parameters)
-    devices.psu.set_magnet(parameters)
+    if parameters['use_psu']:
+        devices.psu.set_magnet(parameters)
     setup_experiment(parameters, devices, sweep)
 
 
