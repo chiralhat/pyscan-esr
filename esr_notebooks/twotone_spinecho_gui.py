@@ -3,7 +3,7 @@ sys.path.append('../')
 import pyscan as ps
 import matplotlib.pyplot as plt
 from IPython.display import display, clear_output
-from bimod_spinecho_scripts import *
+from twotone_spinecho_scripts import *
 from spinecho_gui import *
 import gui_setup as gs
 
@@ -17,7 +17,7 @@ secont_keys['synth'][0] = ['freq1', 'freq2', 'att1', 'att2']
 secont_keys['fpga'] = [['delay1', 'pulse1_1', 'mult1', 'period'],
                        ['delay2', 'pulse2_1', 'mult2', 'p2start', 'block'],
                        ['cpmg', 'pulse_block', 'nutation_delay', 'nutation_width']]
-secont_keys['measure'] = [['subtract', 'reps', 'bimod_expt'],
+secont_keys['measure'] = [['subtract', 'reps', 'twotone_expt'],
                           ['wait', 'sltime', 'init', 'turn_off'],
                           ['int_start', 'int_end', 'int_start2', 'int_end2'],
                           ['sweep_start', 'sweep_end', 'sweep_step']]
@@ -130,8 +130,8 @@ def init_experiment(devices, parameters, sweep):
     devices.scope.setup_spin_echo(parameters)
     if parameters['use_psu']:
         devices.psu.set_magnet(parameters)
-    setup_bimod_experiment(parameters, devices, sweep)
+    setup_twotone_experiment(parameters, devices, sweep)
 
 
-bimod_spinecho_gui = gs.init_gui(secont_keys, init_experiment, default_file, 
+twotone_spinecho_gui = gs.init_gui(secont_keys, init_experiment, default_file, 
     single_shot, gs.run_sweep, biread)

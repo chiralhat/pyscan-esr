@@ -170,6 +170,33 @@ def subback_nones(devices, ave=128, phase=0, dphase=180,
     return d
 
 
+def sub_hole(devices, ave=128, delay1=1000, delay2=1000,
+            sltime=0, lims=defwin, reps=1, d=0, detune=0,
+            nut_width=1000, **kwargs):
+    if isinstance(d, int):
+        d = ps.ItemAttribute()
+    devices.fpga.nutation_width = 0
+    no_hole = subback_delays(devices, ave, delay1, delay2,
+            sltime, lims, reps, detune, **kwargs)
+    devices.fpga.nutation_width = nut_width
+    hole = subback_delays(devices, ave, delay1, delay2,
+            sltime, lims, reps, detune, **kwargs)
+    d.v1up = hole.v1sub
+    d.v2up = hole.v2sub
+    d.x1up = hole.x1sub
+    d.v1down = no_hole.v1sub
+    d.v2down = no_hole.v2sub
+    d.x1down = no_hole.x1sub
+
+    d.v1sub = d.v1up-d.v1down
+    d.v2sub = d.v2up-d.v2down
+    d.x1sub = np.sqrt(d.v1sub**2+d.v2sub**2)
+    d.x1sub1 = d.xup-d.xdown
+
+    return d
+
+
+
 def measure_echos(expt):
     """
     """
@@ -203,7 +230,8 @@ def measure_echos(expt):
                          delay2=delay2,
                          sltime=sltime,
                          reps=runinfo.parameters['reps'],
-                         lims=lims)
+                         lims=lims,
+                         nut_width=runinfo.parameters['nutation_width'])
     d.delay = delay
     d.delay2 = delay2
     d.sltime = sltime
@@ -243,7 +271,7 @@ bifunction_select = {'Delay': subback_delays,
     'None': subback_nones}
 
 
-def setup_bimod_experiment(parameters, devices, sweep):
+def setup_twotone_experiment(parameters, devices, sweep):
     '''Initialize the desired experimental parameters, and set up the sweep.
     Needs to define any necessary functions for function sweeps.
     Choose the experiment, the background subtraction method, and then
@@ -330,13 +358,13 @@ def setup_bimod_experiment(parameters, devices, sweep):
                            'BPowSweep',
                            'HoleBurn']
                   }
-    run_n = expt_select[parameters['bimod_expt']]
+    run_n = expt_select[parameters['twotone_expt']]
     parameters['y_name'] = setup_vars['y_name'][run_n]
     fname = setup_vars['file'][run_n]
     runinfo = ps.RunInfo()
     runinfo.loop0 = setup_vars['loop'][run_n]
     runinfo.measure_function = measure_echos
-    runinfo.sub_func = func
+    runinfo.sub_func = sub_hole if run_n==13 else func
     runinfo.sltime = parameters['sltime']
     # devices.scope.read_scope()
 
