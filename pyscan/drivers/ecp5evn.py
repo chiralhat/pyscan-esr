@@ -9,6 +9,7 @@ Created on Dec 22 2020
 from .instrument_driver import InstrumentDriver
 import struct
 import numpy as np
+from time import sleep
 
 freq = .2
 tstep = 1/freq

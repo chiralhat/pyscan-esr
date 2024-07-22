@@ -18,24 +18,11 @@ def change_trigger_delta(devices, old_time, new_time):#, delay_change=0):
 def nochange(devices, phase, ave=4, sltime=0.3, offset=[False, 0],
              **kwargs):
     return 0
-
-
-def change_autophase(devices, cycle, ave=4, sltime=0.3, offset=[False, 0],
-                     **kwargs):
-    devices.fpga.phase_sub = 2*cycle+1
-    if offset[0]:
-        n = offset[1]
-        devices.scope.channel1_offset = offset[0][n]
-#         devices.scope.channel1_scale = offset[1]
-    devices.scope.average = 1
-    sleep(0.1)
-    devices.scope.average = ave
-    sleep(sltime)
     
     
 def change_phase(devices, phase, ave=4, sltime=0.3, offset=[False, 0],
                  **kwargs):
-    devices.synth.ch[1].phase = (phase)
+    devices.synth.instrument[1].phase = (phase)
     if offset[0]:
         n = offset[1]
         devices.scope.channel1_offset = offset[0][n]
@@ -55,8 +42,7 @@ def change_delay(devices, delay, ave=4, sltime=0.3, port=1, **kwargs):
         old_delay = devices.fpga.delay
         devices.fpga.delay = delay
         devices.fpga.delay2 = delay
-        #delta_delay = delay-old_delay
-        #devices.fpga.nutation_delay = devices.fpga.nutation_delay-delta_delay
+    change_trigger_delta(devices, old_delay, delay)
     devices.scope.average = 1
     sleep(0.1)
     devices.scope.average = ave
@@ -251,53 +237,6 @@ def subback(subfunc, args, devices, ave,
     return d
 
 
-def subback_autophase(devices, ave=256, sltime=0, lims=defwin, reps=1, detune=0,
-                      d=0, port=1, backnum=100,
-                      **kwargs):
-    if isinstance(d, int):
-        d = ps.ItemAttribute()
-    period = devices.fpga.period/1e9
-    delay = devices.fpga.delay2/1e9 if port==2 else devices.fpga.delay/1e9
-    win = [delay+lims[0]/1e6, delay+lims[1]/1e6]
-    
-    if not sltime:
-        sltime = period*ave if period>0.1 else 2*period*ave
-    sltime = sltime if sltime>=0.01 else 0
-    for cycle in np.arange(4):
-        change_autophase(devices, cycle, ave=ave, sltime=sltime, port=port,
-                         **kwargs)
-        [[d.time, d['v1p'+str(cycle)]],
-         [_, d['v2p'+str(cycle)]]] = devices.scope.read_screen(0, init=False)
-        if reps>1:
-            for n in range(reps-1):
-                sleep(sltime)
-                [[_, v1d], [_, v2d]] = devices.scope.read_screen(0, init=False)
-                d['v1p'+str(cycle)] += v1d
-                d['v2p'+str(cycle)] += v2d
-            d['v1p'+str(cycle)] /= reps
-            d['v2p'+str(cycle)] /= reps
-
-    v1p1sub = sback(d.v1p1)
-    v1p2sub = sback(d.v1p2)
-    v1p0sub = sback(d.v1p0)
-    v1p3sub = sback(d.v1p3)
-    d.v1up = v1p1sub+v1p2sub
-    d.v1down = v1p0sub+v1p3sub
-
-    v2p1sub = sback(d.v2p1)
-    v2p2sub = sback(d.v2p2)
-    v2p0sub = sback(d.v2p0)
-    v2p3sub = sback(d.v2p3)
-    d.v2up = v2p1sub+v2p2sub
-    d.v2down = v2p0sub+v2p3sub
-    
-    d = process_se(d, win, detune=detune, backnum=backnum)
-    d.xsub, d.v1sub, d.v2sub = [sig/2 for sig in [d.xsub, d.v1sub, d.v2sub]]
-    d.win = win
-    
-    return d
-
-
 def subback_phase(devices, ave=128, phase=0, dphase=180,
                   sltime=0, lims=defwin, reps=1, detune=0, d=0, port=1,
                   **kwargs):
@@ -400,34 +339,6 @@ def subback_delay(devices, ave=128, delay=1000, delay2=1000, port=1,
     return d
 
 
-def subback_nutation(devices, ave, sltime=0, lims=defwin, **kwargs):
-    d = ps.ItemAttribute()
-    period = devices.fpga.period/1e9
-    width = devices.fpga.pulse1
-    win = [delay/1e9+lims[0], delay/1e9+lims[1]]
-    if not sltime:
-        sltime = period*ave if period>0.1 else 2*period*ave
-    change_nutation(devices, width, ave, sltime)
-    [[d.time, d.v1down],
-     [_, d.v2down]] = devices.scope.read_screen(0, init=False)
-    change_nutation(devices, 0, ave, sltime)
-    [[_, d.v1up], [_, d.v2up]] = devices.scope.read_screen(0, init=False)
-#     v1sub = (v1up-np.mean(v1up[-20:]))-(v1down-np.mean(v1down[-20:]))
-#     v1int = simps(v1sub, time)
-#     v2sub = (v2up-np.mean(v1up[-20:]))-(v1down-np.mean(v1down[-20:]))
-#     v2int = simps(v2sub, time)
-#     xup = np.sqrt((v1up)**2+(v2up)**2)
-#     xdown = np.sqrt((v1down)**2+(v2down)**2)
-#     xup = xup-np.mean(xup[-20:])
-#     xdown = xdown-np.mean(xdown[-20:])
-#     xsub = xup-xdown
-#     xint = simps(xsub, time)
-    d = process_se(d, win)
-    
-    
-    return d
-
-
 def max_phase(devices, ave=4, ch=1):
     phs = np.zeros(3)
     dph = 5
@@ -469,7 +380,7 @@ def max_phase(devices, ave=4, ch=1):
                     if ph<0:
                         ph = ph + 360
                 break
-    devices.synth.ch[0].phase = (ph)
+    devices.synth.instrument[0].phase = (ph)
     return ph
 
 
@@ -575,12 +486,12 @@ def setup_experiment(parameters, devices, sweep):
                    'Hahn Echo': 3,
                    'EDFS': 4,
                    'Freq Sweep': 5,
-                    'Phase Sweep': 6}
+                    'Phase Sweep': 6,
+                  'Inversion Sweep': 7}
     function_select = {'Phase': subback_phase,
                        'Delay': subback_delay,
                        'Both': subback_phasedelay,
-                           'None': subback_none,
-                           'Autophase': subback_autophase}
+                           'None': subback_none}
     func = function_select[parameters['subtract']]
     wait = parameters['wait']
     sweep_range = ps.drange(parameters['sweep_start'],
@@ -592,7 +503,8 @@ def setup_experiment(parameters, devices, sweep):
                              'delay_sweep',
                              'psu_field',
                              'synth_c_freqs',
-                                 'phase_sweep'],
+                                 'phase_sweep',
+                            'fpga_nutation_delay'],
                   'loop': [ps.FunctionScan(pulse_time, sweep_range, dt=wait),
                            ps.PropertyScan({'fpga': sweep_range},
                                            prop='nutation_width', dt=wait),
@@ -603,14 +515,17 @@ def setup_experiment(parameters, devices, sweep):
                                            prop='field', dt=wait),
                            ps.PropertyScan({'synth': sweep_range},
                                            prop='c_freqs', dt=wait),
-                           ps.FunctionScan(phase_sweep, sweep_range, dt=wait)],
+                           ps.FunctionScan(phase_sweep, sweep_range, dt=wait),
+                           ps.PropertyScan({'fpga': sweep_range},
+                                           prop='nutation_delay', dt=wait)],
                   'file': ['PSweep',
                            'Rabi',
                            'T1',
                            'Hahn',
                            'EDFS',
                            'EFSweep',
-                               'PhiSweep']
+                               'PhiSweep',
+                          'T1']
                   }
     run_n = expt_select[parameters['expt']]
     parameters['y_name'] = setup_vars['y_name'][run_n]

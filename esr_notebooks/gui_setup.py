@@ -22,8 +22,7 @@ tdivs = []
 for n in range(9, -1, -1):
     tdivs += [2*10**-n, 4*10**-n, 10*10**-n]#[2.5*10**-n, 5*10**-n, 10*10**-n]
 
-scopes = {'TBS1052C': ps.Tektronix1052B,
-          'MSO24': ps.TektronixMSO2}
+scopes = {'MSO24': ps.TektronixMSO2}
 
 sweep_list = ['Pulse Sweep',
               'Phase Sweep',
@@ -31,9 +30,10 @@ sweep_list = ['Pulse Sweep',
               'Period Sweep',
               'Hahn Echo',
               'EDFS',
-              'Freq Sweep']
+              'Freq Sweep',
+              'Inversion Sweep']
 
-bimod_sweep_list = ['A Pulse Sweep',
+twotone_sweep_list = ['A Pulse Sweep',
               'B Pulse Sweep',
               'Both Pulse Sweep',
               'B Rabi',
@@ -43,7 +43,11 @@ bimod_sweep_list = ['A Pulse Sweep',
               'A Freq Sweep',
               'B Freq Sweep',
               'Both Freq Sweep',
-              'DEER']
+              'DEER',
+              'A Power Sweep',
+                'B Power Sweep',
+        'Hole Burning',
+        'Hole Burning Freq Sweep']
 
 # Load the Resource Manager if it hasn't been done yet
 if not hasattr(ps, 'rm'):
@@ -160,15 +164,15 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
                 'save': {'save_dir': ipw.Text(layout=wwid, description='Data Dir'),
                          'file_name': ipw.Text(layout=wwid, description='File Name')},
                 'measure': {'subtract': ipw.Dropdown(layout=nwid, 
-                                                     options=['Phase', 'Delay', 'Both', 'None', 'Autophase'],
+                                                     options=['Phase', 'Delay', 'Both', 'None'],
                                                      description='Sub Method'),
                             'reps': ipw.BoundedIntText(layout=nwid, min=1, max=1000,
                                                        description='Reps'),
                             'expt': ipw.Dropdown(layout=nwid,
                                                  options=sweep_list,
                                                  description='Experiment'),
-                            'bimod_expt': ipw.Dropdown(layout=nwid,
-                                                 options=bimod_sweep_list,
+                            'twotone_expt': ipw.Dropdown(layout=nwid,
+                                                 options=twotone_sweep_list,
                                                  description='Experiment'),
                             'psexpt': ipw.Dropdown(layout=nwid,
                                                  options=['Freq Sweep',
