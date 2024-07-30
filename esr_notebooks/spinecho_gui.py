@@ -28,7 +28,7 @@ secont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
              'save': [['save_dir', 'file_name']],
              'measure': [['ave_reps', 'wait', 'sweep2'],
                          ['expt', 'sweep_start', 'sweep_end', 'sweep_step'],
-                         ['expt2', 'sweep_start2', 'sweep_end2', 'sweep_step2'],
+                         ['expt2', 'sweep2_start', 'sweep2_end', 'sweep2_step'],
                          ['integrate', 'init', 'turn_off']],
              }
 
