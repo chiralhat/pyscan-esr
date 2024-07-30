@@ -26,8 +26,9 @@ secont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
                             ['phase', 'pulses', 'loopback']],
              'psu': [['field', 'gauss_amps', 'current_limit']],
              'save': [['save_dir', 'file_name']],
-             'measure': [['ave_reps', 'expt', 'wait'],
-                         ['sweep_start', 'sweep_end', 'sweep_step'],
+             'measure': [['ave_reps', 'wait', 'sweep2'],
+                         ['expt', 'sweep_start', 'sweep_end', 'sweep_step'],
+                         ['expt2', 'sweep_start2', 'sweep_end2', 'sweep_step2'],
                          ['integrate', 'init', 'turn_off']],
              }
 

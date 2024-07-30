@@ -154,6 +154,13 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
                             'sweep_start': ipw.FloatText(layout=nwid, description='Sweep Start'),
                             'sweep_end': ipw.FloatText(layout=nwid, description='Sweep End'),
                             'sweep_step': ipw.FloatText(layout=nwid, description='Sweep Step'),
+                            'sweep2': ipw.Checkbox(description='Second sweep?'),
+                            'expt2': ipw.Dropdown(layout=nwid,
+                                                 options=sweep_list,
+                                                 description='Experiment 2'),
+                            'sweep2_start': ipw.FloatText(layout=nwid, description='Sweep 2 Start'),
+                            'sweep2_end': ipw.FloatText(layout=nwid, description='Sweep 2 End'),
+                            'sweep2_step': ipw.FloatText(layout=nwid, description='Sweep 2 Step'),
                             'turn_off': ipw.Checkbox(description='Turn off after sweep?'),
                             'integrate': ipw.Checkbox(description='Integral only')}
                 }
