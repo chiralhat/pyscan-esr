@@ -28,6 +28,7 @@ scopes = {'TBS1052C': ps.Tektronix1052B,
 sweep_list = ['Pulse Sweep',
               'Phase Sweep',
               'Rabi',
+              'Inversion Sweep',
               'Period Sweep',
               'Hahn Echo',
               'EDFS',
@@ -71,80 +72,51 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
                                                           description='RF Addr'),
                             'psu_address': ipw.Dropdown(options=res_list,
                                                           description='PSU Addr'),
-                            'use_psu': ipw.Checkbox(layout=wwid, description='Use PSU? (No magnet if not)')},
-                'synth': {'freq': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
-                                                       description='Freq (MHz)'),
-                          'freq1': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
+                            'use_psu': ipw.Checkbox(layout=wwid, description='Use PSU? (No magnet if not)'),
+                           'use_temp': ipw.Checkbox(layout=wwid, description='Use Lakeshore?')},
+                'rfsoc': {'freq': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
                                                        description='Ch1 Freq (MHz)'),
                           'freq2': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
                                                        description='Ch2 Freq (MHz)'),
-                          'freq_start': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
-                                                       description='Freq Start (MHz)'),
-                          'freq_end': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
-                                                       description='Freq End (MHz)'),
-                          'freq_step': ipw.BoundedFloatText(min=0.00001, max=14999, step=0.00001, layout=nwid,
-                                                       description='Freq Step (MHz)'),
-                          'detune': ipw.BoundedFloatText(layout=nwid, min=-5000, max=5000, step=0.00001,
-                                                         description='Detuning'),
-                          'port': ipw.Dropdown(layout=nwid, options=[('1', 1), ('2', 2), ('Both', 0)],
-                                               description='Output Port'),
-                          'power': ipw.BoundedFloatText(layout=nwid, min=-50, max=19, step=0.01,
-                                                        description='Ch1 Power (dBm)'),
-                          'power2': ipw.BoundedFloatText(layout=nwid, min=-50, max=19, step=0.01,
-                                                         description='Ch2 Power'),
+                          'gain': ipw.BoundedIntText(layout=nwid, min=0, max=32500, step=1,
+                                                        description='Ch1 Gain'),
+                          'gain2': ipw.BoundedIntText(layout=nwid, min=0, max=32500, step=1,
+                                                         description='Ch2 Gain'),
                           'phase': ipw.BoundedFloatText(layout=nwid, min=0, max=360, step=0.01,
                                                         description='Phase'),
-                          'att': ipw.Checkbox(layout=nwid, description='Attenuator?'),
-                          'att1': ipw.Checkbox(layout=nwid, description='Ch1 Attenuator?'),
-                          'att2': ipw.Checkbox(layout=nwid, description='Ch2 Attenuator?')},
-                'fpga': {'delay': ipw.BoundedFloatText(layout=nwid, min=10, max=652100, step=10,
-                                                       description='Delay (ns)'),
-                         'delay1': ipw.BoundedFloatText(layout=nwid, min=10, max=652100, step=10,
+                         'delay': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=1,
                                                        description='Ch1 Delay (ns)'),
-                         'delay2': ipw.BoundedFloatText(layout=nwid, min=10, max=652100, step=10,
+                         'delay2': ipw.BoundedFloatText(layout=nwid, min=10, max=652100, step=1,
                                                        description='Ch2 Delay (ns)'),
-                         'pulse1': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=10,
-                                                        description='90 Pulse (ns)'),
-                         'pulse2': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=10,
-                                                        description='180 Pulse (ns)'),
-                         'mult': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=0.001,
-                                                        description='180 Pulse Mult'),
-                         'pulse1_1': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=10,
+                         'pulse1_1': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=1,
                                                         description='Ch1 90 Pulse (ns)'),
-                         'pulse1_2': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=10,
+                         'pulse1_2': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=1,
                                                         description='Ch1 180 Pulse (ns)'),
                          'mult1': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=0.001,
                                                         description='Ch1 180 Pulse Mult'),
-                         'pulse2_1': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=10,
+                         'pulse2_1': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=1,
                                                         description='Ch2 90 Pulse (ns)'),
-                         'pulse2_2': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=10,
+                         'pulse2_2': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=1,
                                                         description='Ch2 180 Pulse (ns)'),
                          'mult2': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=0.001,
                                                         description='Ch2 180 Pulse Mult'),
-                         'p2start': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=10,
+                         'p2start': ipw.BoundedFloatText(layout=nwid, min=0, max=652100, step=1,
                                                         description='Ch2 Pulse Offset (ns)'),
-                         'period': ipw.BoundedFloatText(10e6, min=10, max=20e9, step=10,
-                                                         description='Period'),
-                         'cpmg': ipw.Dropdown(layout=nwid, options=cpmgs, description='# 180 Pulses'),
-                         'block': ipw.Checkbox(layout=nwid, description='Block Pulses'),
+                         'period': ipw.BoundedFloatText(100, min=0.1, max=20e9, step=0.001,
+                                                         description='Repetition Time (us)'),
+                         'pulses': ipw.Dropdown(layout=nwid, options=cpmgs, description='# 180 Pulses'),
                          'phase_sub': ipw.Checkbox(layout=nwid, description='Auto Phase Sub'),
-                         'pulse_block': ipw.BoundedFloatText(layout=nwid, min=0, max=2560, step=10,
-                                                    description='Block Delay (ns)'),
-                         'nutation_delay': ipw.BoundedFloatText(6e5, min=0, max=655360, step=10,
+                         'nutation_delay': ipw.BoundedFloatText(6e5, layout=nwid, min=0, max=655360, step=1,
                                                                 description='Nut. Delay (ns)'),# style=lstyle),
-                         'nutation_width': ipw.BoundedFloatText(layout=nwid, min=0, max=655360, step=10,
+                         'nutation_length': ipw.BoundedFloatText(layout=nwid, min=0, max=655360, step=1,
                                                                 description='Nut. Pulse Width'),
-                         'pre_att': ipw.BoundedFloatText(layout=nwid, min=0, max=31.5, step=0.5,
-                                                         description='Input Attenuation (Ω)')},
-                'scope': {'ave': ipw.BoundedFloatText(layout=nwid, min=0, max=10240, step=1,
-                                                      description='Ave'),#'ave': ipw.Dropdown(layout=nwid, options=aves, description='Ave'),
-                          'scale': ipw.BoundedFloatText(layout=nwid, min=0, max=voltage_limits[-1],
-                                                        step=0.002, description='Scale (V)'),
+                          'soft_avgs': ipw.BoundedIntText(layout=nwid, min=1, max=1e7, step=1,
+                                                      description='Ave'),
                           'h_offset': ipw.BoundedFloatText(layout=nwid, min=-1e5, max=1e5,
-                                                           description='Time Offset (ns)'),
-                          'tdiv': ipw.Dropdown(layout=nwid, options=tdivs,
-                                               description='Time Scale (s)'),
-                          'v_offset': ipw.Checkbox(description='Vert Offset?')},
+                                                           description='Time Offset (us)'),
+                          'readout_length': ipw.BoundedFloatText(layout=nwid, min=0, max=5, step=0.001,
+                                               description='Readout Length (us)'),
+                         'loopback': ipw.Checkbox(layout=nwid, description='Loopback')},
                 'psu': {'field': ipw.BoundedFloatText(min=0, max=2500, step=0.1, layout=nwid,
                                                        description='Magnetic Field (G)'),
                         'field_start': ipw.BoundedFloatText(min=0, max=2500, step=0.1, layout=nwid,
@@ -162,7 +134,7 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
                 'measure': {'subtract': ipw.Dropdown(layout=nwid, 
                                                      options=['Phase', 'Delay', 'Both', 'None', 'Autophase'],
                                                      description='Sub Method'),
-                            'reps': ipw.BoundedIntText(layout=nwid, min=1, max=1000,
+                            'ave_reps': ipw.BoundedIntText(layout=nwid, min=1, max=1000,
                                                        description='Reps'),
                             'expt': ipw.Dropdown(layout=nwid,
                                                  options=sweep_list,
@@ -182,11 +154,8 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
                             'sweep_start': ipw.FloatText(layout=nwid, description='Sweep Start'),
                             'sweep_end': ipw.FloatText(layout=nwid, description='Sweep End'),
                             'sweep_step': ipw.FloatText(layout=nwid, description='Sweep Step'),
-                            'int_start': ipw.FloatText(layout=nwid, description='Int. Window (μs): Pre'),
-                            'int_end': ipw.FloatText(layout=nwid, description='Post Delay'),
-                            'int_start2': ipw.FloatText(layout=nwid, description='Int. Window 2 (μs): Pre'),
-                            'int_end2': ipw.FloatText(layout=nwid, description='Post Delay 2'),
-                            'turn_off': ipw.Checkbox(description='Turn off after sweep?'),}
+                            'turn_off': ipw.Checkbox(description='Turn off after sweep?'),
+                            'integrate': ipw.Checkbox(description='Integral only')}
                 }
                 
 
@@ -213,41 +182,6 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
 #     with output:
 #         clear_output(wait=True)
 #         display(ax.figure)
-
-
-def read(sig, devices, output, fig):
-    """
-    Read the oscilloscope and plot it in the output window.
-
-    Parameters
-    ----------
-    sig : pyscan ItemAttribute
-        Signal object for accessing the scope data. Updated by this function.
-    devices : pyscan ItemAttribute
-        Devices object for accessing the acquisition equipment.
-    output : ipyWidgets Output
-        Output window.
-    fig : pyplot Figure
-        Figure used to plot the scope data.
-
-    Returns
-    -------
-    None.
-
-    """
-    devices.scope.read_vxy(d=sig)
-    for ax in fig.axes:
-        ax.remove()
-    ax = fig.add_subplot(111)
-    ax.plot(sig.time*1e6, sig.volt1, color='yellow', label='CH1')
-    ax.plot(sig.time*1e6, sig.volt2, color='b', label='CH2')
-    ax.plot(sig.time*1e6, sig.x, color='g', label='AMP')
-    ax.set_xlabel('Time (μs)')
-    ax.set_ylabel('Subtracted Signal (V)')
-    ax.legend()
-    with output:
-        clear_output(wait=True)
-        display(ax.figure)
 
 
 def run_sweep(sweep, parameters):#, output, fig):
@@ -319,7 +253,7 @@ def init_controls(controls, parcont, parameters, cdict):
 
 
 def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
-    def gui_function(sig, devices, sweep):
+    def gui_function(sig, devices, sweep, soc):
         """
         
 
@@ -376,29 +310,15 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
                 pickle.dump(parameters, f)
                 
             inst = ps.ItemAttribute()
-            if not hasattr(devices, 'scope'):
-                saddr = parameters['scope_address']
-                inst.scope = ps.new_instrument(visa_string=saddr)
-                model = inst.scope.query('*IDN?').split(',')[1]
-                sleep(0.25)
-                devices.scope = scopes[model](inst.scope)
-                # inst.bk2190e = ps.new_instrument(visa_string=saddr)
-                # devices.scope = ps.BKPrecision2190E(inst.bk2190e)
-                devices.scope.initialize_waveforms()
-            if not hasattr(devices, 'fpga'):
-                faddr = parameters['fpga_address'].split('ASRL')[-1].split('::')[0]
-                inst.ecp5 = ps.new_instrument(serial_string=faddr)
-                devices.fpga = ps.ecp5evn(inst.ecp5)
-            if not hasattr(devices, 'synth'):
-                waddr = parameters['synth_address'].split('ASRL')[-1].split('::')[0]
-                devices.synth = ps.WindfreakSynthHD(waddr)
             if not hasattr(devices, 'psu') and parameters['use_psu']:
                 waddr = parameters['psu_address'].split('ASRL')[-1].split('::')[0]
                 devices.psu = ps.GPD3303S(waddr)
-            if not hasattr(devices, 'ls335'):
+            if not hasattr(devices, 'ls335') and parameters['use_temp']:
                 devices.ls335 = ps.Lakeshore335()
+                ttemp = devices.ls335.get_temp()
+                # while 
             if (parameters['init'] or btn.description=='Initialize'):
-                init_expt(devices, parameters, sweep) # TODO: Fix the runinfo, expt bit (put into new dict?)
+                init_expt(devices, parameters, sweep, soc) # TODO: Fix the runinfo, expt bit (put into new dict?)
                 conn_ind.value = 1
 
 
@@ -413,8 +333,8 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
         def turnoff(btn):
             if 'expt' in sweep.keys():
                 sweep['expt'].runinfo.running = False
-            devices.synth.power_off()
-            devices.psu.output = False
+            if parameters['use_psu']:
+                devices.psu.output = False
         
         with output:
             fig = plt.figure(figsize=(8, 5))
@@ -436,14 +356,14 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
         def read_mon(btn):
             run_ind.value = 1
             set_pars(btn)
-            read(sig, devices, output, fig)
+            read(sig, parameters, soc, output, fig)
             run_ind.value = 0
         
         
         def monitor(btn):
             run_ind.value = 1
             set_pars(btn)
-            single_run(sig, parameters, devices, output, fig)
+            single_run(sig, parameters, soc, output, fig)
             run_ind.value = 0
 
         
@@ -455,7 +375,6 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
             devices.__dict__.clear()
             conn_ind.value = 0
             run_ind.value = 0
-
         
         goButton = ipw.Button(description='Initialize')
         goButton.on_click(init_btn)
@@ -474,7 +393,7 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
     
         offButton = ipw.Button(description='Output Off')
         offButton.on_click(turnoff)
-
+    
         closeButton = ipw.Button(description='Disconnect')
         closeButton.on_click(disconnect)
     

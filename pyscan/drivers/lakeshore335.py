@@ -23,15 +23,22 @@ class Lakeshore335():
         self.instrument = Model335(baud)
         self.query = self.instrument.query
         self.write = self.instrument.command
+        self.instrument = Model335(baud)
+        self.query = self.instrument.query
+        self.write = self.instrument.command
         # self.setpoint(self.get_temp(), track=0)
-        self.ramp(0)
-        self.output('Read')
+        self.ramp(00)
+        self.output('Read''Read')
         self.heater('Read')
 
     
     def close(self):
         self.instrument.disconnect_usb()
     
+    
+    def close(self):
+        self.instrument.disconnect_usb()
+
     
     def get_temp(self):
         tstr = self.query('KRDG?', check_errors=False)

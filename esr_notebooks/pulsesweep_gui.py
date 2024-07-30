@@ -10,7 +10,7 @@ plt.rc('mathtext', fontset='cm')
 default_file = 'ps_defaults.pkl'
 
 # These are all the controls to add for this GUI
-pscont_keys = {'devices': [['psu_address', 'use_psu']],
+pscont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
                 'rfsoc': [['freq', 'gain', 'period', 'loopback'],
                             ['pulse1_1','soft_avgs', 'h_offset', 'readout_length']],
              'psu': [['field', 'gauss_amps', 'current_limit']],

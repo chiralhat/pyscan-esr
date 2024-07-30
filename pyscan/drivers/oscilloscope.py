@@ -288,7 +288,7 @@ class Oscilloscope(InstrumentDriver):
         scale: boolean, optional
             Autoscale the scope, by default True
         """
-        delay = p['pulse1']+p['pulse2']+2*p['delay']
+        delay = 0#p['pulse1']+p['pulse2']+2*p['delay']
         pre_off = p['h_offset']
         time_div = p['tdiv']
         scale = p['scale']
