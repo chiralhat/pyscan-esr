@@ -189,11 +189,11 @@ class CPMGProgram(RabiProgram):
         nutdelay = self.cfg["nutation_delay"]/1000
         gain = self.cfg["gain"]
         gain2 = gain if gain<10000 else gain-10000
-        offset = 0 if self.cfg["loopback"] else (pulses+1)*(delay+tpi2)
+        offset = 0 if self.cfg["loopback"] else (pulses+1)*(delay+tpi2)+tpi2
         trig_offset = self.us2cycles(0.25+nutwidth+self.cfg["h_offset"]+offset)
         nut_length = self.us2cycles(nutwidth, gen_ch=res_ch)
         if nut_length>2:
-            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, phase=0, length=nut_length)
+            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, phase=90, length=nut_length)
             self.pulse(ch=self.cfg["res_ch"])
         
         # self.sync(self.nutation_register.page, self.nutation_register.addr)
@@ -280,7 +280,7 @@ def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):
         return imean, qmean, xmean
     
     
-def fourier_signal(d, fstart=3, fstop=100):
+def fourier_signal(d, fstart=1, fstop=50):
     d.fourier = [np.abs(rfft(sig)) for sig in [d.x, d.i, d.q]]
     d.fourier.append(np.sqrt(d.fourier[:][1]**2+d.fourier[:][2]**2))
     d.ffreqs = rfftfreq(len(d.x), d.time[1]-d.time[0])
@@ -289,7 +289,7 @@ def fourier_signal(d, fstart=3, fstop=100):
     for n in range(flen):
         try:
             lordat = np.array([d.ffreqs, -d.fourier[n]])[:, fstart:fstop]
-            d.ffit[n] = lor_fit(lordat)[0]
+            d.ffit[n] = ps.lor_fit(lordat)[0]
         except:
             0
     d.xfamp, d.ifamp, d.qfamp, d.xxfamp = [-fit[1] for fit in d.ffit]
