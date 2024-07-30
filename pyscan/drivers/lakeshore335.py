@@ -19,21 +19,14 @@ class Lakeshore335():
     '''
 
     def __init__(self, baud=57600):
-
-        self.instrument = Model335(baud)
-        self.query = self.instrument.query
-        self.write = self.instrument.command
+        
         self.instrument = Model335(baud)
         self.query = self.instrument.query
         self.write = self.instrument.command
         # self.setpoint(self.get_temp(), track=0)
-        self.ramp(00)
-        self.output('Read''Read')
+        self.ramp(0)
+        self.output('Read')
         self.heater('Read')
-
-    
-    def close(self):
-        self.instrument.disconnect_usb()
     
     
     def close(self):
