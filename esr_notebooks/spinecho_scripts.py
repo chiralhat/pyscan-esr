@@ -167,7 +167,7 @@ def setup_experiment(parameters, devices, sweep, soc):
                              'freq_sweep',
                                  'phase_sweep',
                             'inversion_sweep',
-                            'pulses'],
+                            'cpmg_sweep'],
                   'scan': [[ps.FunctionScan(pulse_time, s_range, dt=wait),
                            ps.FunctionScan(rabi_sweep, s_range, dt=wait),
                            ps.FunctionScan(period_sweep, s_range, dt=wait),
