@@ -300,16 +300,16 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
             for k, v in val_controls.items():
                 parameters[k] = v.value
 
-            if 'reps' in parameters.keys():
-                reps = parameters['reps']
+            if 'ave_reps' in parameters.keys():
+                reps = parameters['ave_reps']
             else:
                 reps = 1
             if 'period' in parameters.keys():
                 period = parameters['period']
             else:
                 period = 500
-            tmult = period/1e9*2*reps if period>1e6 else 2*reps
-            parameters['subtime'] = parameters['ave']*tmult
+            tmult = period/1e6*4*reps
+            parameters['subtime'] = parameters['soft_avgs']*tmult
             datestr = date.today().strftime('%y%m%d')
             fname = datestr+str(parameters['file_name'])+'_'
             parameters['outfile'] = str(Path(parameters['save_dir']) / fname)
