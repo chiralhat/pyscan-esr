@@ -274,12 +274,12 @@ def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):
             x = np.abs(i+1j*q)
         return time, i, q, x
     else:
-        if pulses<2:
-            imean, qmean = [iqs[0][0]+iqs[0][3]-iqs[0][1]-iqs[0][2] for iqs in iq_list]
-        else:
-            ns = [[n*pulses, (n+1)*pulses] for n in [0, 3, 1, 2]]
-            imean, qmean = [iqs[0][ns[0][0]:ns[0][1]]+iqs[0][ns[1][0]:ns[1][1]]-iqs[0][ns[2][0]:ns[2][1]]-iqs[0][ns[3][0]:ns[3][1]]
-                             for iqs in iq_list]
+        # if pulses<2:
+        imean, qmean = [iqs[0][0]+iqs[0][3]-iqs[0][1]-iqs[0][2] for iqs in iq_list]
+        # else:
+        #     ns = [[n*pulses, (n+1)*pulses] for n in [0, 3, 1, 2]]
+        #     imean, qmean = [iqs[0][ns[0][0]:ns[0][1]]+iqs[0][ns[1][0]:ns[1][1]]-iqs[0][ns[2][0]:ns[2][1]]-iqs[0][ns[3][0]:ns[3][1]]
+        #                      for iqs in iq_list]
         xmean = np.abs(imean+1j*qmean)
         return imean, qmean, xmean
     
