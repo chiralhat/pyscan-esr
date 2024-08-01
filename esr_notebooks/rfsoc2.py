@@ -185,11 +185,13 @@ class CPMGProgram(RabiProgram):
         tpi2 = self.cfg["pulse1_1"]/1000
         tpi = self.cfg["pulse1_2"]/1000
         delay = self.cfg["delay"]/1000
+        delay_pi2 = delay-tpi2
+        delay_pi = 2*delay-tpi
         nutwidth = self.cfg["nutation_length"]/1000
         nutdelay = self.cfg["nutation_delay"]/1000
         gain = self.cfg["gain"]
         gain2 = gain if gain<10000 else gain-10000
-        offset = 0 if self.cfg["loopback"] else (pulses+1)*(delay+tpi2)+tpi2
+        offset = 0 if self.cfg["loopback"] else delay+(2*pulses-1)*delay#+(pulses-1)*(delay_pi)
         trig_offset = self.us2cycles(0.25+nutwidth+self.cfg["h_offset"]+offset)
         nut_length = self.us2cycles(nutwidth, gen_ch=res_ch)
         if nut_length>2:
@@ -207,14 +209,16 @@ class CPMGProgram(RabiProgram):
         self.pulse(ch=res_ch)
         
         #self.sync(self.delay_register.page, self.delay_register.addr)
+        self.synci(self.us2cycles(delay_pi2))
         
         for n in np.arange(pulses):
-            self.synci(self.us2cycles(delay))
 
             # self.sync(self.delay_register.page, self.delay_register.addr)
             self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
                                      length=self.us2cycles(tpi, gen_ch=res_ch))
             self.pulse(ch=self.cfg["res_ch"])
+
+            self.synci(self.us2cycles(delay_pi))
 
             #self.trigger(adcs=self.ro_chs)#,
                          #pins=[0])#,

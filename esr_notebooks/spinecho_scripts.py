@@ -103,6 +103,7 @@ def setup_measure_function(soc, integrate):
             expt.t = d.time
 
         d.current_time = time()
+        d.echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
 
         if 'ls335' in devices.keys():
             d.temp = devices.ls335.get_temp()
@@ -140,6 +141,8 @@ def setup_experiment(parameters, devices, sweep, soc):
         parameters['freq'] = freq
     def inversion_sweep(delay):
         parameters['nutation_delay'] = delay
+    def cpmg_sweep(pulses):
+        parameters['pulses'] = pulses
     expt_select = {'Pulse Sweep': 0,
                    'Rabi': 1,
                    'Period Sweep': 2,
@@ -147,7 +150,8 @@ def setup_experiment(parameters, devices, sweep, soc):
                    'EDFS': 4,
                    'Freq Sweep': 5,
                     'Phase Sweep': 6,
-                  'Inversion Sweep': 7}
+                  'Inversion Sweep': 7,
+                  'CPMG': 8}
     wait = parameters['wait']
     sweep_range = ps.drange(parameters['sweep_start'],
                             parameters['sweep_step'],
@@ -162,7 +166,8 @@ def setup_experiment(parameters, devices, sweep, soc):
                              'psu_field',
                              'freq_sweep',
                                  'phase_sweep',
-                            'inversion_sweep'],
+                            'inversion_sweep',
+                            'pulses'],
                   'scan': [[ps.FunctionScan(pulse_time, s_range, dt=wait),
                            ps.FunctionScan(rabi_sweep, s_range, dt=wait),
                            ps.FunctionScan(period_sweep, s_range, dt=wait),
@@ -171,7 +176,8 @@ def setup_experiment(parameters, devices, sweep, soc):
                                            prop='field', dt=wait),
                            ps.FunctionScan(freq_sweep, s_range, dt=wait),
                            ps.FunctionScan(phase_sweep, s_range, dt=wait),
-                           ps.FunctionScan(inversion_sweep, s_range, dt=wait)]
+                           ps.FunctionScan(inversion_sweep, s_range, dt=wait),
+                           ps.FunctionScan(cpmg_sweep, s_range, dt=wait)]
                            for s_range in [sweep_range, sweep2_range]],
                   'file': ['PSweep',
                            'Rabi',
@@ -180,7 +186,8 @@ def setup_experiment(parameters, devices, sweep, soc):
                            'EDFS',
                            'EFSweep',
                                'PhiSweep',
-                          'T1']
+                          'T1',
+                          'CPMG']
                   }
     run_1 = expt_select[parameters['expt']]
     run_2 = expt_select[parameters['expt2']]
