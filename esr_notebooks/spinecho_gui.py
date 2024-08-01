@@ -55,6 +55,8 @@ def read(sig, config, soc, output, fig):
     None.
 
     """
+    single = config['single']
+    avgs = config['soft_avgs']
     config['single'] = True
     config['soft_avgs'] = 1
     prog = CPMGProgram(soc, config)
@@ -73,6 +75,8 @@ def read(sig, config, soc, output, fig):
     with output:
         clear_output(wait=True)
         display(ax.figure)
+    config['single'] = single
+    config['soft_avgs'] = avgs
 
 
 def single_shot(sig, config, soc, output, fig):
@@ -97,6 +101,7 @@ def single_shot(sig, config, soc, output, fig):
     None.
 
     """
+    single = config['single']
     config['single'] = config['loopback']
     prog = CPMGProgram(soc, config)
     measure_phase(prog, soc, sig)
@@ -114,6 +119,7 @@ def single_shot(sig, config, soc, output, fig):
     with output:
         clear_output(wait=True)
         display(ax.figure)
+    config['single'] = single
         
 
 def init_experiment(devices, parameters, sweep, soc):
