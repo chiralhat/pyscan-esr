@@ -108,13 +108,16 @@ def setup_measure_function(soc, integrate):
             d.temp = devices.ls335.get_temp()
 
         if runinfo._indicies[0]==(runinfo._dims[0]-1):
-            expt.elapsed_time = expt.current_time-expt.start_time
-            if runinfo.parameters['turn_off'] and runinfo.parameters['use_psu']:
-                devices.psu.field = 0
-                devices.psu.output = False
-            if runinfo.parameters['expt']=='Phase Sweep':
-                sigs = list(expt.v1int[:-1])+[d.v1int]
-                expt.maxphase = phase_fit(expt.phase_sweep, sigs)
+            if runinfo.parameters['sweep2'] and not runinfo._indicies[1]==(runinfo._dims[1]-1):
+                pass
+            else:
+                expt.elapsed_time = expt.current_time-expt.start_time
+                if runinfo.parameters['turn_off'] and runinfo.parameters['use_psu']:
+                    devices.psu.field = 0
+                    devices.psu.output = False
+                if runinfo.parameters['expt']=='Phase Sweep':
+                    sigs = list(expt.v1int[:-1])+[d.v1int]
+                    expt.maxphase = phase_fit(expt.phase_sweep, sigs)
         return d
 
     return measure_echo
@@ -149,6 +152,9 @@ def setup_experiment(parameters, devices, sweep, soc):
     sweep_range = ps.drange(parameters['sweep_start'],
                             parameters['sweep_step'],
                             parameters['sweep_end'])
+    sweep2_range = ps.drange(parameters['sweep2_start'],
+                            parameters['sweep2_step'],
+                            parameters['sweep2_end'])
     setup_vars = {'y_name': ['pulse_time',
                              'rabi_sweep',
                              'period_sweep',
@@ -157,15 +163,16 @@ def setup_experiment(parameters, devices, sweep, soc):
                              'freq_sweep',
                                  'phase_sweep',
                             'inversion_sweep'],
-                  'scan': [ps.FunctionScan(pulse_time, sweep_range, dt=wait),
-                           ps.FunctionScan(rabi_sweep, sweep_range, dt=wait),
-                           ps.FunctionScan(period_sweep, sweep_range, dt=wait),
-                           ps.FunctionScan(delay_sweep, sweep_range, dt=wait),
-                           ps.PropertyScan({'psu': sweep_range},
+                  'scan': [[ps.FunctionScan(pulse_time, s_range, dt=wait),
+                           ps.FunctionScan(rabi_sweep, s_range, dt=wait),
+                           ps.FunctionScan(period_sweep, s_range, dt=wait),
+                           ps.FunctionScan(delay_sweep, s_range, dt=wait),
+                           ps.PropertyScan({'psu': s_range},
                                            prop='field', dt=wait),
-                           ps.FunctionScan(freq_sweep, sweep_range, dt=wait),
-                           ps.FunctionScan(phase_sweep, sweep_range, dt=wait),
-                           ps.FunctionScan(inversion_sweep, sweep_range, dt=wait)],
+                           ps.FunctionScan(freq_sweep, s_range, dt=wait),
+                           ps.FunctionScan(phase_sweep, s_range, dt=wait),
+                           ps.FunctionScan(inversion_sweep, s_range, dt=wait)]
+                           for s_range in [sweep_range, sweep2_range]],
                   'file': ['PSweep',
                            'Rabi',
                            'Period',
@@ -184,10 +191,10 @@ def setup_experiment(parameters, devices, sweep, soc):
         fname += '_looptest'
         parameters['ave_reps'] = 1
     runinfo = ps.RunInfo()
-    runinfo.scan0 = setup_vars['scan'][run_1]
-    if parameters['sweep2']:
+    runinfo.scan0 = setup_vars['scan'][0][run_1]
+    if parameters['sweep2']:#TODO: Fix sweep range in functions for sweep2
         parameters['y_name2'] = setup_vars['y_name'][run_2]
-        runinfo.scan1 = setup_vars['scan'][run_2]
+        runinfo.scan1 = setup_vars['scan'][1][run_2]
         fname = setup_vars['file'][run_2] + '_' + fname
     def progfunc(parameters):
         return CPMGProgram(soc, parameters)
