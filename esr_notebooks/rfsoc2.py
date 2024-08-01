@@ -252,21 +252,21 @@ def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):
     """
     if decimated:
         if single:
-            if pulses<2:
-                i, q = iq_list[:2]
-                time = soc.cycles2us(np.arange(len(i)), ro_ch=ro)
-            else:
-                i, q = iq_list[:][:2]
-                time = soc.cycles2us(np.arange(len(i[0])), ro_ch=ro)
+            # if pulses<2:
+            i, q = iq_list[:2]
+            time = soc.cycles2us(np.arange(len(i)), ro_ch=ro)
+            # else:
+            #     i, q = iq_list[:][:2]
+            #     time = soc.cycles2us(np.arange(len(i[0])), ro_ch=ro)
             x = np.abs(i+1j*q)
         else:
-            if pulses<2:
-                i, q = iq_list[0]+iq_list[3]-iq_list[1]-iq_list[2]
-                time = soc.cycles2us(np.arange(len(i)), ro_ch=ro)
-            else:
-                ns = [[(0+n),(3*pulses+n),(pulses+n),(2*pulses+n)] for n in np.arange(pulses)]
-                i, q = np.transpose([iq_list[n[0]]+iq_list[n[1]]-iq_list[n[2]]-iq_list[n[3]] for n in ns], axes=(1, 0, 2))
-                time = soc.cycles2us(np.arange(len(i[0])), ro_ch=ro)
+            # if pulses<2:
+            i, q = iq_list[0]+iq_list[3]-iq_list[1]-iq_list[2]
+            time = soc.cycles2us(np.arange(len(i)), ro_ch=ro)
+            # else:
+            #     ns = [[(0+n),(3*pulses+n),(pulses+n),(2*pulses+n)] for n in np.arange(pulses)]
+            #     i, q = np.transpose([iq_list[n[0]]+iq_list[n[1]]-iq_list[n[2]]-iq_list[n[3]] for n in ns], axes=(1, 0, 2))
+            #     time = soc.cycles2us(np.arange(len(i[0])), ro_ch=ro)
             x = np.abs(i+1j*q)
         return time, i, q, x
     else:
