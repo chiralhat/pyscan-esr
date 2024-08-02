@@ -85,6 +85,67 @@ def sback(sig, backnum=100):
     return sig-np.mean(sig[-backnum:])
 
 
+def try_fit(func, dat, guess):
+    try:
+        fit = ps.func_fit(func, dat, guess)
+    except:
+        fit = np.zeros((2, len(guess)))
+    return fit
+
+
+def end_func(d, expt, run, dim=0):
+    if dim==0:
+        sigs = list(expt.xmean[:-1])+[d.xmean]
+    else:
+        sigs = list(expt.xmean[:-1, dim[1]])+[d.xmean]
+    if 'fit' not in expt.keys() and not dim==0:
+        expt.fit = np.zeros((dim[0], 2, 4))
+        expt.out = np.zeros(dim[0])
+        expt.outerr = np.zeros(dim[0])
+    if run=="Rabi Sweep": # Rabi sweep
+        rabidat = np.array([expt.nutation_width, sigs])
+        guess = [sigs.min(), sigs.max(), expt.nutation_width[-1]/2, expt.nutation_width[-1]/2]
+        fit = try_fit(ps.rabifitnophi, rabidat, guess)
+        if dim==0:
+            expt.fit, expt.out, expt.outerr = fit, *fit[:, 2]/2
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]/2
+    elif run=="Hahn Echo" or run=="CPMG": # Hahn or CPMG sweep
+        if dim==0:
+            delays = list(expt.echo_delay[:-1])+[d.echo_delay]
+        else:
+            delays = list(expt.echo_delay[:-1, dim[1]])+[d.echo_delay]
+        deldat = np.array([delays, sigs])
+        try:
+            fit = np.array(ps.exp_fit_norange(deldat, 1, 1)[:2])
+        except:
+            fit = np.zeros((2, 4))
+        if dim==0:
+            fit, expt.out, expt.outerr = fit, *fit[:, 2]
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]
+    elif run=="Phase Sweep": # Phase sweep
+        phasedat = np.array([expt.phase_sweep, sigs])
+        try:
+            fit, maxphase, pherr = phase_fit(phasedat)
+        except:
+            fit, maxphase, pherr = np.zeros((2, 4)), 0, 0
+        if dim==0:
+            fit, expt.out, expt.outerr = fit, maxphase, pherr
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, maxphase, pherr
+    elif run=="Inversion Sweep": # Inversion sweep
+        invdat = np.array([expt.nutation_delay, sigs])
+        try:
+            fit = np.array(ps.exp_fit_norange(invdat, 1, 1)[:2])
+        except:
+            fit = np.zeros((2, 4))
+        if dim==0:
+            fit, expt.out, expt.outerr = fit, *fit[:, 2]
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]
+
+
 def setup_measure_function(soc, integrate):
     def measure_echo(expt):
         """
@@ -109,6 +170,11 @@ def setup_measure_function(soc, integrate):
             d.temp = devices.ls335.get_temp()
 
         if runinfo._indicies[0]==(runinfo._dims[0]-1):
+            if runinfo.parameters['sweep2']:
+                dim = [runinfo._dims[1], runinfo.indicies[1]]
+            else:
+                dim = 0
+            end_func(d, expt, runinfo.parameters['expt'], dim)
             if runinfo.parameters['sweep2'] and not runinfo._indicies[1]==(runinfo._dims[1]-1):
                 pass
             else:
@@ -116,9 +182,6 @@ def setup_measure_function(soc, integrate):
                 if runinfo.parameters['turn_off'] and runinfo.parameters['use_psu']:
                     devices.psu.field = 0
                     devices.psu.output = False
-                if runinfo.parameters['expt']=='Phase Sweep':
-                    sigs = list(expt.v1int[:-1])+[d.v1int]
-                    expt.maxphase = phase_fit(expt.phase_sweep, sigs)
         return d
 
     return measure_echo
@@ -214,10 +277,11 @@ def setup_experiment(parameters, devices, sweep, soc):
     sweep['runinfo'] = runinfo
 
 
-def phase_fit(phase, sig):
+def phase_fit(dat):
+    phase, sig = dat
     guess = [0, np.max(sig), np.pi/180, 0]
-    fit = func_fit(sinefit, np.array([phase, sig]), guess)[0]
-    return (90-fit[-1]*180/np.pi+90*(1-np.sign(fit[1]))) % 360
+    fit = func_fit(sinefit, np.array([phase, sig]), guess)
+    return fit, ((90-fit[0][-1]*180/np.pi+90*(1-np.sign(fit[0][1]))) % 360), fit[1][-1]
 
 
 def setup_sweep_sequence(parameters, devices, sweep):
