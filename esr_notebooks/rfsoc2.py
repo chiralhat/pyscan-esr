@@ -343,6 +343,8 @@ def measure_decay(prog, soc, d=0, ro=0, progress=False):
     
     fourier_signal(d)
 
+    d.time += prog.cfg['h_offset']
+
     return d
 
 
@@ -375,6 +377,8 @@ def measure_phase(prog, soc, d=0, ro=0, progress=False):
         d.x = d.x/reps
 
     d.imean, d.qmean, d.xmean = [np.mean(sig) for sig in [d.i, d.q, d.x]]
+
+    d.time += prog.cfg['h_offset']
     
     return d
 
