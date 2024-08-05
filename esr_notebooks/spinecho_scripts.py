@@ -111,11 +111,7 @@ def end_func(d, expt, run, dim=0):
         else:
             expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]/2
     elif run=="Hahn Echo" or run=="CPMG": # Hahn or CPMG sweep
-        if dim==0:
-            delays = list(expt.echo_delay[:-1])+[d.echo_delay]
-        else:
-            delays = list(expt.echo_delay[:-1, dim[1]])+[d.echo_delay]
-        deldat = np.array([delays, sigs])
+        deldat = np.array([expt.echo_delay, sigs])
         try:
             fit = np.array(ps.exp_fit_norange(deldat, 1, 1)[:2])
         except:
@@ -164,7 +160,6 @@ def setup_measure_function(soc, integrate):
             expt.t = d.time
 
         d.current_time = time()
-        d.echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
 
         if 'ls335' in devices.keys():
             d.temp = devices.ls335.get_temp()
@@ -225,12 +220,12 @@ def setup_experiment(parameters, devices, sweep, soc):
     setup_vars = {'y_name': ['pulse_time',
                              'rabi_sweep',
                              'period_sweep',
-                             'delay_sweep',
+                             'echo_delay',
                              'psu_field',
                              'freq_sweep',
                                  'phase_sweep',
                             'inversion_sweep',
-                            'cpmg_sweep'],
+                            'echo_delay'],
                   'scan': [[ps.FunctionScan(pulse_time, s_range, dt=wait),
                            ps.FunctionScan(rabi_sweep, s_range, dt=wait),
                            ps.FunctionScan(period_sweep, s_range, dt=wait),

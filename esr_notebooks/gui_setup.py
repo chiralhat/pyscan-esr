@@ -355,9 +355,20 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
         def start_sweep(btn):
             run_ind.value = 1
             set_pars(btn)
-            expt = ps.Sweep(sweep['runinfo'], devices, sweep['name'])
+            runinfo = sweep['runinfo']
+            expt = ps.Sweep(runinfo, devices, sweep['name'])
             sweep['expt'] = expt
             run_sweep(sweep, parameters)#, measout, mfig)
+            if parameters['expt']=="Hahn Echo":
+                sweep['expt'].echo_delay = 2*runinfo.scan0.scan_dict['delay_sweep']*runinfo.parameters['pulses']
+            elif parameters['expt']=="CPMG":
+                sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
+            elif parameters['sweep2'] and parameters['expt2']=="Hahn Echo":
+                sweep['expt'].echo_delay = 2*runinfo.scan1.scan_dict['delay_sweep']*runinfo.parameters['pulses']
+            elif parameters['sweep2'] and parameters['expt2']=="CPMG":
+                sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan1.scan_dict['cpmg_sweep']
+            else:
+                sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
             run_ind.value = 0
 
         
