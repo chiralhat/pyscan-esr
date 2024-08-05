@@ -102,7 +102,7 @@ def end_func(d, expt, run, dim=0):
         expt.fit = np.zeros((dim[0], 2, 4))
         expt.out = np.zeros(dim[0])
         expt.outerr = np.zeros(dim[0])
-    if run=="Rabi Sweep": # Rabi sweep
+    if run=="Rabi": # Rabi sweep
         rabidat = np.array([expt.nutation_width, sigs])
         guess = [sigs.min(), sigs.max(), expt.nutation_width[-1]/2, expt.nutation_width[-1]/2]
         fit = try_fit(ps.rabifitnophi, rabidat, guess)
@@ -131,7 +131,7 @@ def end_func(d, expt, run, dim=0):
         else:
             expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, maxphase, pherr
     elif run=="Inversion Sweep": # Inversion sweep
-        invdat = np.array([expt.nutation_delay, sigs])
+        invdat = np.array([expt.inversion_sweep, sigs])
         try:
             fit = np.array(ps.exp_fit_norange(invdat, 1, 1)[:2])
         except:
