@@ -360,7 +360,7 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
             sweep['expt'] = expt
             run_sweep(sweep, parameters)#, measout, mfig)
             if parameters['expt']=="Hahn Echo":
-                sweep['expt'].echo_delay = 2*runinfo.scan0.scan_dict['delay_sweep']*runinfo.parameters['pulses']
+                sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
             elif parameters['expt']=="CPMG":
                 sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
             elif parameters['sweep2'] and parameters['expt2']=="Hahn Echo":

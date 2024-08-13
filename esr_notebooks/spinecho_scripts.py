@@ -103,8 +103,8 @@ def end_func(d, expt, run, dim=0):
         expt.out = np.zeros(dim[0])
         expt.outerr = np.zeros(dim[0])
     if run=="Rabi": # Rabi sweep
-        rabidat = np.array([expt.nutation_width, sigs])
-        guess = [sigs.min(), sigs.max(), expt.nutation_width[-1]/2, expt.nutation_width[-1]/2]
+        rabidat = np.array([expt.rabi_sweep, sigs])
+        guess = [sigs.min(), sigs.max(), rabidat[0][-1]/2, rabidat[0][-1]/2]
         fit = try_fit(ps.rabifitnophi, rabidat, guess)
         if dim==0:
             expt.fit, expt.out, expt.outerr = fit, *fit[:, 2]/2
