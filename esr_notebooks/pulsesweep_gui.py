@@ -87,7 +87,6 @@ def single_shot(sig, config, soc, output, fig):
     None.
 
     """
-    config['single'] = config['loopback']
     prog = CPMGProgram(soc, config)
     measure_decay(prog, soc, sig)
     freq = config['freq']
@@ -113,7 +112,7 @@ def single_shot(sig, config, soc, output, fig):
         
 
 def init_experiment(devices, parameters, sweep, soc):
-    parameters['pulses'] = 1
+    parameters['pulses'] = 0
     parameters['pulse1_2'] = parameters['pulse1_1']
     parameters['pi2_phase'] = 0
     parameters['pi_phase'] = 90
