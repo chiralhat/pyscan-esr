@@ -37,67 +37,7 @@ def plot_mesh(x, y, z, xlab='', ylab='', zlab='', bar=True, ax=False, cax=False,
     return c
 
 
-class HahnEchoProgram(QickRegisterManagerMixin, AveragerProgram):
-    def initialize(self):
-        cfg=self.cfg   
-        res_ch = cfg["res_ch"]
-        
-        readout_length = [self.us2cycles(cfg["readout_length"], ro_ch=ch) for ch in cfg["ro_chs"]]
-        length = self.us2cycles(cfg["length"], gen_ch=res_ch)
-        delay = self.us2cycles(cfg['delay'])
-
-        # set the nyquist zone
-        self.declare_gen(ch=cfg["res_ch"], nqz=1)
-        
-        # configure the readout lengths and downconversion frequencies (ensuring it is an available DAC frequency)
-        for n, ch in enumerate(cfg["ro_chs"]):
-            self.declare_readout(ch=ch, length=readout_length[n],
-                                 freq=cfg["pulse_freq"], gen_ch=cfg["res_ch"])
-
-        # convert frequency to DAC frequency (ensuring it is an available ADC frequency)
-        freq = self.freq2reg(cfg["pulse_freq"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
-        gain = cfg["pulse_gain"]
-
-        self.default_pulse_registers(ch=res_ch, style="const", freq=freq,
-                                         length=length)
-        
-        self.delay_register = self.new_gen_reg(res_ch,
-                                               name='delay',
-                                               init_val=delay)
-        
-        self.synci(200)  # give processor some time to configure pulses
-    
-    def hahn_echo(self, ph1, ph2, tstart=0):
-        tpi2 = self.cfg["length"]
-        delay = self.cfg["delay"]
-        trig_offset = self.us2cycles(0.28+self.cfg["adc_trig_offset"]+2*(tpi2+delay))
-        self.trigger(adcs=self.ro_chs,
-                     pins=[0], 
-                     adc_trig_offset=trig_offset)#,
-                     #t=tstart)#tstart+offset+2*delay+2*tpi2)
-        self.set_pulse_registers(ch=self.cfg["res_ch"], gain=22500, phase=ph1)
-        self.pulse(ch=self.cfg["res_ch"])#, t=tstart)
-        
-        self.sync(self.delay_register.page, self.delay_register.addr)
-        
-        self.set_pulse_registers(ch=self.cfg["res_ch"], gain=32500, phase=ph2)
-        self.pulse(ch=self.cfg["res_ch"])#, t=tstart+delay)
-        
-        self.wait_all()
-        self.sync_all(self.us2cycles(self.cfg["relax_delay"]))
-        
-    def body(self):
-        phase1 = [self.deg2reg(self.cfg["pi2_phase"]+ph, gen_ch=self.cfg["res_ch"])
-                  for ph in [0, 180, 180, 0]]
-        phase2 = [self.deg2reg(self.cfg["pi_phase"]+ph, gen_ch=self.cfg["res_ch"])
-                  for ph in [0, 0, 180, 180]]
-        if self.cfg['single']:
-            self.hahn_echo(phase1[0], phase2[0], self.us2cycles(self.cfg['tstart']))
-        else:
-            [self.hahn_echo(phase1[n], phase2[n]) for n in np.arange(4)]
-
-
-class RabiProgram(QickRegisterManagerMixin, AveragerProgram):
+class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
     def initialize(self):
         cfg=self.cfg   
         res_ch = cfg["res_ch"]
@@ -134,52 +74,8 @@ class RabiProgram(QickRegisterManagerMixin, AveragerProgram):
                                                init_val=tstart)
         
         self.synci(200)  # give processor some time to configure pulses
-    
-    def hahn_echo(self, ph1, ph2, tstart=0):
-        res_ch = self.cfg["res_ch"]
-        tpi2 = self.cfg["pulse1_1"]/1000
-        tpi = self.cfg["pulse1_2"]/1000
-        delay = self.cfg["delay"]/1000
-        trig_offset = self.us2cycles(0.33+self.cfg["adc_trig_offset"]+delay+self.cfg['nutation_length']/1000)#2*(tpi2+delay))
-        nut_length = self.us2cycles(self.cfg["nutation_length"]/1000, gen_ch=res_ch)
-        if nut_length>2:
-            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=32500, phase=0, length=nut_length)
-            self.pulse(ch=self.cfg["res_ch"])
-        
-        self.sync(self.nutation_register.page, self.nutation_register.addr)
-
-        self.set_pulse_registers(ch=self.cfg["res_ch"], gain=22500, phase=ph1,
-                                 length=self.us2cycles(tpi2, gen_ch=res_ch))
-        self.pulse(ch=self.cfg["res_ch"])
-        
-        self.sync(self.delay_register.page, self.delay_register.addr)
-        
-        self.set_pulse_registers(ch=self.cfg["res_ch"], gain=32500, phase=ph2,
-                                 length=self.us2cycles(tpi, gen_ch=res_ch))
-        self.pulse(ch=self.cfg["res_ch"])
-        
-        self.trigger(adcs=self.ro_chs,
-                     pins=[0],
-                     adc_trig_offset=trig_offset)
-        
-        self.wait_all()
-        self.sync_all(self.us2cycles(self.cfg["period"]))
-        
-    def body(self):
-        phase1 = [self.deg2reg(self.cfg["pi2_phase"]+ph, gen_ch=self.cfg["res_ch"])
-                  for ph in [0, 180, 180, 0]]
-        phase2 = [self.deg2reg(self.cfg["pi_phase"]+ph, gen_ch=self.cfg["res_ch"])
-                  for ph in [0, 0, 180, 180]]
-        
-        #tstart = self.cfg["nut_length"]+self.cfg["nut_delay"]
-        
-        if self.cfg['single']:
-            self.hahn_echo(phase1[0], phase2[0])
-        else:
-            [self.hahn_echo(phase1[n], phase2[n]) for n in np.arange(4)]
 
 
-class CPMGProgram(RabiProgram):
     def cpmg(self, ph1, ph2, phdel=0, pulses=1, tstart=0):
         res_ch = self.cfg["res_ch"]
         tpi2 = self.cfg["pulse1_1"]/1000
@@ -230,6 +126,7 @@ class CPMGProgram(RabiProgram):
         
         self.wait_all()
         self.sync_all(self.us2cycles(self.cfg["period"]))
+        
         
     def body(self):
         phase1 = [self.deg2reg(self.cfg["pi2_phase"]+ph, gen_ch=self.cfg["res_ch"])
