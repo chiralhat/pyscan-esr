@@ -87,7 +87,7 @@ def sback(sig, backnum=100):
 
 def try_fit(func, dat, guess):
     try:
-        fit = ps.func_fit(func, dat, guess)
+        fit = np.array(ps.func_fit(func, dat, guess)[:2])
     except:
         fit = np.zeros((2, len(guess)))
     return fit
@@ -104,7 +104,7 @@ def end_func(d, expt, run, dim=0):
         expt.outerr = np.zeros(dim[0])
     if run=="Rabi": # Rabi sweep
         rabidat = np.array([expt.rabi_sweep, sigs])
-        guess = [sigs.min(), sigs.max(), rabidat[0][-1]/2, rabidat[0][-1]/2]
+        guess = [rabidat[1].min(), rabidat[1].max(), rabidat[0][-1]/2, rabidat[0][-1]/2]
         fit = try_fit(ps.rabifitnophi, rabidat, guess)
         if dim==0:
             expt.fit, expt.out, expt.outerr = fit, *fit[:, 2]/2
