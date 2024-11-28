@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.fft import rfft, rfftfreq
 from qick import *
 from qick.asm_v1 import QickRegisterManagerMixin
+from collections import defaultdict
 
 """
 I need to implement running each different kind of experiment. Can probably move everything into one class.
@@ -38,6 +39,64 @@ def plot_mesh(x, y, z, xlab='', ylab='', zlab='', bar=True, ax=False, cax=False,
 
 
 class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
+    def trigger_no_off(self, adcs=None, pins=None, adc_trig_offset=0, t=0, rp=0, r_out=31):
+        """
+        Adapted from qick-dawg.
+        Method that is a slight modificaiton of qick.QickProgram.trigger().
+        This method does not turn off the PMOD pins, thus also does not require a width parameter
+
+        Parameters
+        ----------
+        adcs : list of int
+            List of readout channels to trigger (index in 'readouts' list) [0], [1], or [0, 1]
+        pins : list of int
+            List of marker pins to pulsem, i.e. PMOD channels.
+            Use the pin numbers in the QickConfig printout.
+        adc_trig_offset : int, optional
+            Offset time at which the ADC is triggered (in tProc cycles)
+        t : int, optional
+            The number of tProc cycles at which the ADC trigger starts
+        rp : int, optional
+            Register page
+        r_out : int, optional
+            Register number
+        """
+        if adcs is None:
+            adcs = []
+        if pins is None:
+            pins = []
+        if not adcs and not pins:
+            raise RuntimeError("must pulse at least one ADC or pin")
+
+        outdict = defaultdict(int)
+        for ro in adcs:
+            rocfg = self.soccfg['readouts'][ro]
+            outdict[rocfg['trigger_port']] |= (1 << rocfg['trigger_bit'])
+            # update trigger count for this readout
+            self.ro_chs[ro]['trigs'] += 1
+        for pin in pins:
+            pincfg = self.soccfg['tprocs'][0]['output_pins'][pin]
+            outdict[pincfg[1]] |= (1 << pincfg[2])
+
+        t_start = t
+        if adcs:
+            t_start += adc_trig_offset
+            # update timestamps with the end of the readout window
+            for adc in adcs:
+                ts = self.get_timestamp(ro_ch=adc)
+                if t_start < ts:
+                    print("Readout time %d appears to conflict with previous readout ending at %f?" % (t, ts))
+                # convert from readout clock to tProc clock
+                ro_length = self.ro_chs[adc]['length']
+                ro_length *= self.soccfg['fs_proc'] / self.soccfg['readouts'][adc]['f_fabric']
+                self.set_timestamp(t_start + ro_length, ro_ch=adc)
+
+        for outport, out in outdict.items():
+            self.regwi(rp, r_out, out, f'out = 0b{out:>016b}')
+            self.seti(outport, rp, r_out, t_start, f'ch =0 out = ${r_out} @t = {t}')
+            #self.seti(outport, rp, 0, t_end, f'ch =0 out = 0 @t = {t}')
+
+
     def initialize(self):
         cfg=self.cfg   
         res_ch = cfg["res_ch"]
@@ -98,6 +157,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         self.synci(self.us2cycles(nutdelay))
         
         self.trigger(adcs=self.ro_chs,
+                    # pins=[0],
                     adc_trig_offset=trig_offset)
 
         self.set_pulse_registers(ch=res_ch, gain=gain2, phase=ph1,
@@ -123,11 +183,13 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
             # self.sync_all(0)#self.us2cycles(2*delay-tpi2-1.2))#-self.cfg['readout_length
             # self.sync(self.delay_register.page, self.delay_register.addr)
             # self.sync(self.tpi2_register.page, self.tpi2_register.addr)
+
+        self.synci(self.us2cycles(delay_pi))
         
         self.wait_all()
         self.sync_all(self.us2cycles(self.cfg["period"]))
         
-        
+
     def body(self):
         phase1 = [self.deg2reg(self.cfg["pi2_phase"]+ph, gen_ch=self.cfg["res_ch"])
                   for ph in [0, 180, 180, 0]]
@@ -135,7 +197,8 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
                   for ph in [0, 0, 180, 180]]
         phase_delta = self.deg2reg(self.cfg["cpmg_phase"], gen_ch=self.cfg["res_ch"])
         
-        #tstart = self.cfg["nut_length"]+self.cfg["nut_delay"]
+        self.trigger_no_off(pins=[0])
+        self.synci(self.us2cycles(0.1))
         
         if self.cfg['single']:
             self.cpmg(phase1[0], phase2[0], phase_delta, self.cfg["pulses"])

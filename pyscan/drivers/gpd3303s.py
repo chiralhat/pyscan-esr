@@ -152,10 +152,10 @@ class GPD3303S():
         
         
     def set_magnet(self, p):
+        self.output = True
         self.gauss = p['gauss_amps']
         self.current_limit = p['current_limit']
         self.field = p['field']
-        self.output = True
         
         
     def set_magnet_sweep(self, p):
