@@ -37,67 +37,7 @@ def plot_mesh(x, y, z, xlab='', ylab='', zlab='', bar=True, ax=False, cax=False,
     return c
 
 
-class HahnEchoProgram(QickRegisterManagerMixin, AveragerProgram):
-    def initialize(self):
-        cfg=self.cfg   
-        res_ch = cfg["res_ch"]
-        
-        readout_length = [self.us2cycles(cfg["readout_length"], ro_ch=ch) for ch in cfg["ro_chs"]]
-        length = self.us2cycles(cfg["length"], gen_ch=res_ch)
-        delay = self.us2cycles(cfg['delay'])
-
-        # set the nyquist zone
-        self.declare_gen(ch=cfg["res_ch"], nqz=1)
-        
-        # configure the readout lengths and downconversion frequencies (ensuring it is an available DAC frequency)
-        for n, ch in enumerate(cfg["ro_chs"]):
-            self.declare_readout(ch=ch, length=readout_length[n],
-                                 freq=cfg["pulse_freq"], gen_ch=cfg["res_ch"])
-
-        # convert frequency to DAC frequency (ensuring it is an available ADC frequency)
-        freq = self.freq2reg(cfg["pulse_freq"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
-        gain = cfg["pulse_gain"]
-
-        self.default_pulse_registers(ch=res_ch, style="const", freq=freq,
-                                         length=length)
-        
-        self.delay_register = self.new_gen_reg(res_ch,
-                                               name='delay',
-                                               init_val=delay)
-        
-        self.synci(200)  # give processor some time to configure pulses
-    
-    def hahn_echo(self, ph1, ph2, tstart=0):
-        tpi2 = self.cfg["length"]
-        delay = self.cfg["delay"]
-        trig_offset = self.us2cycles(0.28+self.cfg["adc_trig_offset"]+2*(tpi2+delay))
-        self.trigger(adcs=self.ro_chs,
-                     pins=[0], 
-                     adc_trig_offset=trig_offset)#,
-                     #t=tstart)#tstart+offset+2*delay+2*tpi2)
-        self.set_pulse_registers(ch=self.cfg["res_ch"], gain=22500, phase=ph1)
-        self.pulse(ch=self.cfg["res_ch"])#, t=tstart)
-        
-        self.sync(self.delay_register.page, self.delay_register.addr)
-        
-        self.set_pulse_registers(ch=self.cfg["res_ch"], gain=32500, phase=ph2)
-        self.pulse(ch=self.cfg["res_ch"])#, t=tstart+delay)
-        
-        self.wait_all()
-        self.sync_all(self.us2cycles(self.cfg["relax_delay"]))
-        
-    def body(self):
-        phase1 = [self.deg2reg(self.cfg["pi2_phase"]+ph, gen_ch=self.cfg["res_ch"])
-                  for ph in [0, 180, 180, 0]]
-        phase2 = [self.deg2reg(self.cfg["pi_phase"]+ph, gen_ch=self.cfg["res_ch"])
-                  for ph in [0, 0, 180, 180]]
-        if self.cfg['single']:
-            self.hahn_echo(phase1[0], phase2[0], self.us2cycles(self.cfg['tstart']))
-        else:
-            [self.hahn_echo(phase1[n], phase2[n]) for n in np.arange(4)]
-
-
-class RabiProgram(QickRegisterManagerMixin, AveragerProgram):
+class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
     def initialize(self):
         cfg=self.cfg   
         res_ch = cfg["res_ch"]
@@ -134,66 +74,24 @@ class RabiProgram(QickRegisterManagerMixin, AveragerProgram):
                                                init_val=tstart)
         
         self.synci(200)  # give processor some time to configure pulses
-    
-    def hahn_echo(self, ph1, ph2, tstart=0):
-        res_ch = self.cfg["res_ch"]
-        tpi2 = self.cfg["pulse1_1"]/1000
-        tpi = self.cfg["pulse1_2"]/1000
-        delay = self.cfg["delay"]/1000
-        trig_offset = self.us2cycles(0.33+self.cfg["adc_trig_offset"]+delay+self.cfg['nutation_length']/1000)#2*(tpi2+delay))
-        nut_length = self.us2cycles(self.cfg["nutation_length"]/1000, gen_ch=res_ch)
-        if nut_length>2:
-            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=32500, phase=0, length=nut_length)
-            self.pulse(ch=self.cfg["res_ch"])
-        
-        self.sync(self.nutation_register.page, self.nutation_register.addr)
-
-        self.set_pulse_registers(ch=self.cfg["res_ch"], gain=22500, phase=ph1,
-                                 length=self.us2cycles(tpi2, gen_ch=res_ch))
-        self.pulse(ch=self.cfg["res_ch"])
-        
-        self.sync(self.delay_register.page, self.delay_register.addr)
-        
-        self.set_pulse_registers(ch=self.cfg["res_ch"], gain=32500, phase=ph2,
-                                 length=self.us2cycles(tpi, gen_ch=res_ch))
-        self.pulse(ch=self.cfg["res_ch"])
-        
-        self.trigger(adcs=self.ro_chs,
-                     pins=[0],
-                     adc_trig_offset=trig_offset)
-        
-        self.wait_all()
-        self.sync_all(self.us2cycles(self.cfg["period"]))
-        
-    def body(self):
-        phase1 = [self.deg2reg(self.cfg["pi2_phase"]+ph, gen_ch=self.cfg["res_ch"])
-                  for ph in [0, 180, 180, 0]]
-        phase2 = [self.deg2reg(self.cfg["pi_phase"]+ph, gen_ch=self.cfg["res_ch"])
-                  for ph in [0, 0, 180, 180]]
-        
-        #tstart = self.cfg["nut_length"]+self.cfg["nut_delay"]
-        
-        if self.cfg['single']:
-            self.hahn_echo(phase1[0], phase2[0])
-        else:
-            [self.hahn_echo(phase1[n], phase2[n]) for n in np.arange(4)]
 
 
-class CPMGProgram(RabiProgram):
     def cpmg(self, ph1, ph2, phdel=0, pulses=1, tstart=0):
         res_ch = self.cfg["res_ch"]
         tpi2 = self.cfg["pulse1_1"]/1000
         tpi = self.cfg["pulse1_2"]/1000
         delay = self.cfg["delay"]/1000
+        delay_pi2 = delay-tpi2
+        delay_pi = 2*delay-tpi
         nutwidth = self.cfg["nutation_length"]/1000
         nutdelay = self.cfg["nutation_delay"]/1000
         gain = self.cfg["gain"]
         gain2 = gain if gain<10000 else gain-10000
-        offset = 0 if self.cfg["loopback"] else (pulses+1)*(delay+tpi2)
+        offset = 0 if self.cfg["loopback"] else delay+(2*pulses-1)*delay#+(pulses-1)*(delay_pi)
         trig_offset = self.us2cycles(0.25+nutwidth+self.cfg["h_offset"]+offset)
         nut_length = self.us2cycles(nutwidth, gen_ch=res_ch)
         if nut_length>2:
-            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, phase=0, length=nut_length)
+            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, phase=90, length=nut_length)
             self.pulse(ch=self.cfg["res_ch"])
         
         # self.sync(self.nutation_register.page, self.nutation_register.addr)
@@ -207,14 +105,16 @@ class CPMGProgram(RabiProgram):
         self.pulse(ch=res_ch)
         
         #self.sync(self.delay_register.page, self.delay_register.addr)
+        self.synci(self.us2cycles(delay_pi2))
         
         for n in np.arange(pulses):
-            self.synci(self.us2cycles(delay))
 
             # self.sync(self.delay_register.page, self.delay_register.addr)
             self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
                                      length=self.us2cycles(tpi, gen_ch=res_ch))
             self.pulse(ch=self.cfg["res_ch"])
+
+            self.synci(self.us2cycles(delay_pi))
 
             #self.trigger(adcs=self.ro_chs)#,
                          #pins=[0])#,
@@ -226,6 +126,7 @@ class CPMGProgram(RabiProgram):
         
         self.wait_all()
         self.sync_all(self.us2cycles(self.cfg["period"]))
+        
         
     def body(self):
         phase1 = [self.deg2reg(self.cfg["pi2_phase"]+ph, gen_ch=self.cfg["res_ch"])
@@ -252,35 +153,35 @@ def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):
     """
     if decimated:
         if single:
-            if pulses<2:
-                i, q = iq_list[:2]
-                time = soc.cycles2us(np.arange(len(i)), ro_ch=ro)
-            else:
-                i, q = iq_list[:][:2]
-                time = soc.cycles2us(np.arange(len(i[0])), ro_ch=ro)
+            # if pulses<2:
+            i, q = iq_list[:2]
+            time = soc.cycles2us(np.arange(len(i)), ro_ch=ro)
+            # else:
+            #     i, q = iq_list[:][:2]
+            #     time = soc.cycles2us(np.arange(len(i[0])), ro_ch=ro)
             x = np.abs(i+1j*q)
         else:
-            if pulses<2:
-                i, q = iq_list[0]+iq_list[3]-iq_list[1]-iq_list[2]
-                time = soc.cycles2us(np.arange(len(i)), ro_ch=ro)
-            else:
-                ns = [[(0+n),(3*pulses+n),(pulses+n),(2*pulses+n)] for n in np.arange(pulses)]
-                i, q = np.transpose([iq_list[n[0]]+iq_list[n[1]]-iq_list[n[2]]-iq_list[n[3]] for n in ns], axes=(1, 0, 2))
-                time = soc.cycles2us(np.arange(len(i[0])), ro_ch=ro)
+            # if pulses<2:
+            i, q = iq_list[0]+iq_list[3]-iq_list[1]-iq_list[2]
+            time = soc.cycles2us(np.arange(len(i)), ro_ch=ro)
+            # else:
+            #     ns = [[(0+n),(3*pulses+n),(pulses+n),(2*pulses+n)] for n in np.arange(pulses)]
+            #     i, q = np.transpose([iq_list[n[0]]+iq_list[n[1]]-iq_list[n[2]]-iq_list[n[3]] for n in ns], axes=(1, 0, 2))
+            #     time = soc.cycles2us(np.arange(len(i[0])), ro_ch=ro)
             x = np.abs(i+1j*q)
         return time, i, q, x
     else:
-        if pulses<2:
-            imean, qmean = [iqs[0][0]+iqs[0][3]-iqs[0][1]-iqs[0][2] for iqs in iq_list]
-        else:
-            ns = [[n*pulses, (n+1)*pulses] for n in [0, 3, 1, 2]]
-            imean, qmean = [iqs[0][ns[0][0]:ns[0][1]]+iqs[0][ns[1][0]:ns[1][1]]-iqs[0][ns[2][0]:ns[2][1]]-iqs[0][ns[3][0]:ns[3][1]]
-                             for iqs in iq_list]
+        # if pulses<2:
+        imean, qmean = [iqs[0][0]+iqs[0][3]-iqs[0][1]-iqs[0][2] for iqs in iq_list]
+        # else:
+        #     ns = [[n*pulses, (n+1)*pulses] for n in [0, 3, 1, 2]]
+        #     imean, qmean = [iqs[0][ns[0][0]:ns[0][1]]+iqs[0][ns[1][0]:ns[1][1]]-iqs[0][ns[2][0]:ns[2][1]]-iqs[0][ns[3][0]:ns[3][1]]
+        #                      for iqs in iq_list]
         xmean = np.abs(imean+1j*qmean)
         return imean, qmean, xmean
     
     
-def fourier_signal(d, fstart=3, fstop=100):
+def fourier_signal(d, fstart=1, fstop=50):
     d.fourier = [np.abs(rfft(sig)) for sig in [d.x, d.i, d.q]]
     d.fourier.append(np.sqrt(d.fourier[:][1]**2+d.fourier[:][2]**2))
     d.ffreqs = rfftfreq(len(d.x), d.time[1]-d.time[0])
@@ -289,7 +190,7 @@ def fourier_signal(d, fstart=3, fstop=100):
     for n in range(flen):
         try:
             lordat = np.array([d.ffreqs, -d.fourier[n]])[:, fstart:fstop]
-            d.ffit[n] = lor_fit(lordat)[0]
+            d.ffit[n] = ps.lor_fit(lordat)[0]
         except:
             0
     d.xfamp, d.ifamp, d.qfamp, d.xxfamp = [-fit[1] for fit in d.ffit]
@@ -339,6 +240,8 @@ def measure_decay(prog, soc, d=0, ro=0, progress=False):
     
     fourier_signal(d)
 
+    d.time += prog.cfg['h_offset']
+
     return d
 
 
@@ -371,6 +274,8 @@ def measure_phase(prog, soc, d=0, ro=0, progress=False):
         d.x = d.x/reps
 
     d.imean, d.qmean, d.xmean = [np.mean(sig) for sig in [d.i, d.q, d.x]]
+
+    d.time += prog.cfg['h_offset']
     
     return d
 

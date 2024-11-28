@@ -85,6 +85,63 @@ def sback(sig, backnum=100):
     return sig-np.mean(sig[-backnum:])
 
 
+def try_fit(func, dat, guess):
+    try:
+        fit = np.array(ps.func_fit(func, dat, guess)[:2])
+    except:
+        fit = np.zeros((2, len(guess)))
+    return fit
+
+
+def end_func(d, expt, run, dim=0):
+    if dim==0:
+        sigs = list(expt.xmean[:-1])+[d.xmean]
+    else:
+        sigs = list(expt.xmean[:-1, dim[1]])+[d.xmean]
+    if 'fit' not in expt.keys() and not dim==0:
+        expt.fit = np.zeros((dim[0], 2, 4))
+        expt.out = np.zeros(dim[0])
+        expt.outerr = np.zeros(dim[0])
+    if run=="Rabi": # Rabi sweep
+        rabidat = np.array([expt.rabi_sweep, sigs])
+        guess = [rabidat[1].min(), rabidat[1].max(), rabidat[0][-1]/2, rabidat[0][-1]/2]
+        fit = try_fit(ps.rabifitnophi, rabidat, guess)
+        if dim==0:
+            expt.fit, expt.out, expt.outerr = fit, *fit[:, 2]/2
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]/2
+    elif run=="Hahn Echo" or run=="CPMG": # Hahn or CPMG sweep
+        deldat = np.array([expt.echo_delay, sigs])
+        try:
+            fit = np.array(ps.exp_fit_norange(deldat, 1, 1)[:2])
+        except:
+            fit = np.zeros((2, 4))
+        if dim==0:
+            fit, expt.out, expt.outerr = fit, *fit[:, 2]
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]
+    elif run=="Phase Sweep": # Phase sweep
+        phasedat = np.array([expt.phase_sweep, sigs])
+        try:
+            fit, maxphase, pherr = phase_fit(phasedat)
+        except:
+            fit, maxphase, pherr = np.zeros((2, 4)), 0, 0
+        if dim==0:
+            fit, expt.out, expt.outerr = fit, maxphase, pherr
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, maxphase, pherr
+    elif run=="Inversion Sweep": # Inversion sweep
+        invdat = np.array([expt.inversion_sweep, sigs])
+        try:
+            fit = np.array(ps.exp_fit_norange(invdat, 1, 1)[:2])
+        except:
+            fit = np.zeros((2, 4))
+        if dim==0:
+            fit, expt.out, expt.outerr = fit, *fit[:, 2]
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]
+
+
 def setup_measure_function(soc, integrate):
     def measure_echo(expt):
         """
@@ -108,13 +165,18 @@ def setup_measure_function(soc, integrate):
             d.temp = devices.ls335.get_temp()
 
         if runinfo._indicies[0]==(runinfo._dims[0]-1):
-            expt.elapsed_time = expt.current_time-expt.start_time
-            if runinfo.parameters['turn_off'] and runinfo.parameters['use_psu']:
-                devices.psu.field = 0
-                devices.psu.output = False
-            if runinfo.parameters['expt']=='Phase Sweep':
-                sigs = list(expt.v1int[:-1])+[d.v1int]
-                expt.maxphase = phase_fit(expt.phase_sweep, sigs)
+            if runinfo.parameters['sweep2']:
+                dim = [runinfo._dims[1], runinfo.indicies[1]]
+            else:
+                dim = 0
+            end_func(d, expt, runinfo.parameters['expt'], dim)
+            if runinfo.parameters['sweep2'] and not runinfo._indicies[1]==(runinfo._dims[1]-1):
+                pass
+            else:
+                expt.elapsed_time = expt.current_time-expt.start_time
+                if runinfo.parameters['turn_off'] and runinfo.parameters['use_psu']:
+                    devices.psu.field = 0
+                    devices.psu.output = False
         return d
 
     return measure_echo
@@ -137,6 +199,8 @@ def setup_experiment(parameters, devices, sweep, soc):
         parameters['freq'] = freq
     def inversion_sweep(delay):
         parameters['nutation_delay'] = delay
+    def cpmg_sweep(pulses):
+        parameters['pulses'] = pulses
     expt_select = {'Pulse Sweep': 0,
                    'Rabi': 1,
                    'Period Sweep': 2,
@@ -144,28 +208,35 @@ def setup_experiment(parameters, devices, sweep, soc):
                    'EDFS': 4,
                    'Freq Sweep': 5,
                     'Phase Sweep': 6,
-                  'Inversion Sweep': 7}
+                  'Inversion Sweep': 7,
+                  'CPMG': 8}
     wait = parameters['wait']
     sweep_range = ps.drange(parameters['sweep_start'],
                             parameters['sweep_step'],
                             parameters['sweep_end'])
+    sweep2_range = ps.drange(parameters['sweep2_start'],
+                            parameters['sweep2_step'],
+                            parameters['sweep2_end'])
     setup_vars = {'y_name': ['pulse_time',
                              'rabi_sweep',
                              'period_sweep',
-                             'delay_sweep',
+                             'echo_delay',
                              'psu_field',
                              'freq_sweep',
                                  'phase_sweep',
-                            'inversion_sweep'],
-                  'loop': [ps.FunctionScan(pulse_time, sweep_range, dt=wait),
-                           ps.FunctionScan(rabi_sweep, sweep_range, dt=wait),
-                           ps.FunctionScan(period_sweep, sweep_range, dt=wait),
-                           ps.FunctionScan(delay_sweep, sweep_range, dt=wait),
-                           ps.PropertyScan({'psu': sweep_range},
+                            'inversion_sweep',
+                            'echo_delay'],
+                  'scan': [[ps.FunctionScan(pulse_time, s_range, dt=wait),
+                           ps.FunctionScan(rabi_sweep, s_range, dt=wait),
+                           ps.FunctionScan(period_sweep, s_range, dt=wait),
+                           ps.FunctionScan(delay_sweep, s_range, dt=wait),
+                           ps.PropertyScan({'psu': s_range},
                                            prop='field', dt=wait),
-                           ps.FunctionScan(freq_sweep, sweep_range, dt=wait),
-                           ps.FunctionScan(phase_sweep, sweep_range, dt=wait),
-                           ps.FunctionScan(inversion_sweep, sweep_range, dt=wait)],
+                           ps.FunctionScan(freq_sweep, s_range, dt=wait),
+                           ps.FunctionScan(phase_sweep, s_range, dt=wait),
+                           ps.FunctionScan(inversion_sweep, s_range, dt=wait),
+                           ps.FunctionScan(cpmg_sweep, s_range, dt=wait)]
+                           for s_range in [sweep_range, sweep2_range]],
                   'file': ['PSweep',
                            'Rabi',
                            'Period',
@@ -173,17 +244,23 @@ def setup_experiment(parameters, devices, sweep, soc):
                            'EDFS',
                            'EFSweep',
                                'PhiSweep',
-                          'T1']
+                          'T1',
+                          'CPMG']
                   }
-    run_n = expt_select[parameters['expt']]
-    parameters['y_name'] = setup_vars['y_name'][run_n]
-    fname = setup_vars['file'][run_n]
+    run_1 = expt_select[parameters['expt']]
+    run_2 = expt_select[parameters['expt2']]
+    parameters['y_name'] = setup_vars['y_name'][run_1]
+    fname = setup_vars['file'][run_1]
     if parameters['loopback']:
         parameters['single'] = True
         fname += '_looptest'
         parameters['ave_reps'] = 1
     runinfo = ps.RunInfo()
-    runinfo.loop0 = setup_vars['loop'][run_n]
+    runinfo.scan0 = setup_vars['scan'][0][run_1]
+    if parameters['sweep2']:#TODO: Fix sweep range in functions for sweep2
+        parameters['y_name2'] = setup_vars['y_name'][run_2]
+        runinfo.scan1 = setup_vars['scan'][1][run_2]
+        fname = setup_vars['file'][run_2] + '_' + fname
     def progfunc(parameters):
         return CPMGProgram(soc, parameters)
     runinfo.progfunc = progfunc
@@ -195,10 +272,11 @@ def setup_experiment(parameters, devices, sweep, soc):
     sweep['runinfo'] = runinfo
 
 
-def phase_fit(phase, sig):
+def phase_fit(dat):
+    phase, sig = dat
     guess = [0, np.max(sig), np.pi/180, 0]
-    fit = func_fit(sinefit, np.array([phase, sig]), guess)[0]
-    return (90-fit[-1]*180/np.pi+90*(1-np.sign(fit[1]))) % 360
+    fit = func_fit(sinefit, np.array([phase, sig]), guess)
+    return fit, ((90-fit[0][-1]*180/np.pi+90*(1-np.sign(fit[0][1]))) % 360), fit[1][-1]
 
 
 def setup_sweep_sequence(parameters, devices, sweep):

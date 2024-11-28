@@ -18,7 +18,7 @@ plt.rc('mathtext', fontset='cm')
 default_file = 'se_defaults.pkl'
 
 # These are all the controls to add for this GUI
-secont_keys = {'devices': [['psu_address', 'use_psu']],
+secont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
                 'rfsoc': [['freq', 'gain', 'period'],
                             ['delay', 'pulse1_1', 'mult1'],
                             ['nutation_delay', 'nutation_length'],
@@ -26,8 +26,9 @@ secont_keys = {'devices': [['psu_address', 'use_psu']],
                             ['phase', 'pulses', 'loopback']],
              'psu': [['field', 'gauss_amps', 'current_limit']],
              'save': [['save_dir', 'file_name']],
-             'measure': [['ave_reps', 'expt', 'wait'],
-                         ['sweep_start', 'sweep_end', 'sweep_step'],
+             'measure': [['ave_reps', 'wait', 'sweep2'],
+                         ['expt', 'sweep_start', 'sweep_end', 'sweep_step'],
+                         ['expt2', 'sweep2_start', 'sweep2_end', 'sweep2_step'],
                          ['integrate', 'init', 'turn_off']],
              }
 
@@ -54,6 +55,8 @@ def read(sig, config, soc, output, fig):
     None.
 
     """
+    single = config['single']
+    avgs = config['soft_avgs']
     config['single'] = True
     config['soft_avgs'] = 1
     prog = CPMGProgram(soc, config)
@@ -72,6 +75,8 @@ def read(sig, config, soc, output, fig):
     with output:
         clear_output(wait=True)
         display(ax.figure)
+    config['single'] = single
+    config['soft_avgs'] = avgs
 
 
 def single_shot(sig, config, soc, output, fig):
@@ -96,6 +101,7 @@ def single_shot(sig, config, soc, output, fig):
     None.
 
     """
+    single = config['single']
     config['single'] = config['loopback']
     prog = CPMGProgram(soc, config)
     measure_phase(prog, soc, sig)
@@ -113,6 +119,7 @@ def single_shot(sig, config, soc, output, fig):
     with output:
         clear_output(wait=True)
         display(ax.figure)
+    config['single'] = single
         
 
 def init_experiment(devices, parameters, sweep, soc):

@@ -72,6 +72,7 @@ def setup_measure_function(soc, function):
             if runinfo.parameters['turn_off']:
                 soc.reset_gens()
                 if runinfo.parameters['use_psu']:
+                    devices.psu.field = 0
                     devices.psu.output = False
 
         return d

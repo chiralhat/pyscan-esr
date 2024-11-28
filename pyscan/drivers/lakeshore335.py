@@ -19,7 +19,7 @@ class Lakeshore335():
     '''
 
     def __init__(self, baud=57600):
-
+        
         self.instrument = Model335(baud)
         self.query = self.instrument.query
         self.write = self.instrument.command
@@ -27,11 +27,11 @@ class Lakeshore335():
         self.ramp(0)
         self.output('Read')
         self.heater('Read')
-
+    
     
     def close(self):
         self.instrument.disconnect_usb()
-    
+
     
     def get_temp(self):
         tstr = self.query('KRDG?', check_errors=False)

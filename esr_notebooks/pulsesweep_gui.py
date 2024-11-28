@@ -10,7 +10,7 @@ plt.rc('mathtext', fontset='cm')
 default_file = 'ps_defaults.pkl'
 
 # These are all the controls to add for this GUI
-pscont_keys = {'devices': [['psu_address', 'use_psu']],
+pscont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
                 'rfsoc': [['freq', 'gain', 'period', 'loopback'],
                             ['pulse1_1','soft_avgs', 'h_offset', 'readout_length']],
              'psu': [['field', 'gauss_amps', 'current_limit']],
@@ -87,7 +87,6 @@ def single_shot(sig, config, soc, output, fig):
     None.
 
     """
-    config['single'] = config['loopback']
     prog = CPMGProgram(soc, config)
     measure_decay(prog, soc, sig)
     freq = config['freq']
@@ -113,7 +112,7 @@ def single_shot(sig, config, soc, output, fig):
         
 
 def init_experiment(devices, parameters, sweep, soc):
-    parameters['pulses'] = 1
+    parameters['pulses'] = 0
     parameters['pulse1_2'] = parameters['pulse1_1']
     parameters['pi2_phase'] = 0
     parameters['pi_phase'] = 90
@@ -124,6 +123,7 @@ def init_experiment(devices, parameters, sweep, soc):
     parameters['nutation_delay'] = 5000
     parameters['nutation_length'] = 0
     parameters['reps'] = 1
+    parameters['sweep2'] = 0
     if parameters['use_psu']:
         devices.psu.set_magnet(parameters)
     setup_experiment(parameters, devices, sweep, soc)
