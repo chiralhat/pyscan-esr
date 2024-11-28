@@ -118,8 +118,9 @@ def init_experiment(devices, parameters, sweep, soc):
     parameters['pi_phase'] = 90
     parameters['delay'] = 300
     parameters['cpmg_phase'] = 0
-    parameters['res_ch'] = 0
-    parameters['ro_chs'] = [0]
+    channel = 1 if parameters['loopback'] else 0
+    parameters['res_ch'] = channel
+    parameters['ro_chs'] = [channel]
     parameters['nutation_delay'] = 5000
     parameters['nutation_length'] = 0
     parameters['reps'] = 1
