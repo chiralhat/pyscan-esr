@@ -8,13 +8,13 @@ import spinecho_scripts
 import pyscan as ps
 import rfsoc2
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QToolBar, QComboBox, QPushButton,
     QLabel, QVBoxLayout, QHBoxLayout, QSplitter, QScrollArea, QToolBox,
     QFrame, QGroupBox, QFormLayout, QLineEdit, QSpinBox, QDoubleSpinBox,
     QCheckBox, QPlainTextEdit
 )
-from PyQt6.QtCore import Qt
+from PyQt5.QtCore import Qt
 
 
 class MainWindow(QMainWindow):
