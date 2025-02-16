@@ -1,6 +1,7 @@
-def main():
-    print("All good!")
+import matplotlib.pyplot as plt
 
+x = [1, 2, 3, 4, 5]
+y = [1, 2, 3, 4, 5]
 
-if __name__ == "__main__":
-    main()
+plt.plot(x, y)
+plt.show()
