@@ -11,7 +11,6 @@ import pyscan as ps
 import rfsoc2
 
 import matplotlib.pyplot as plt
-from IPython.display import display, clear_output
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QToolBar, QComboBox, QPushButton,
@@ -382,10 +381,11 @@ class MainWindow(QMainWindow):
         self.rightSplitter.addWidget(self.indicatorArea)
 
         # Initialize data objects
-        self.devices = ps.ItemAttribute()  # store scope, psu, etc.
-        self.sig = ps.ItemAttribute()      # store measurement data
-        self.sweep = {}                    # dictionary with 'expt', 'runinfo', etc.
-        self.soc = None                   # can store your rfsoc2 object if needed
+        if 'devices' not in globals():
+            self.devices = ps.ItemAttribute()
+            self.sig = ps.ItemAttribute()
+            self.sweep = {}
+        self.soc = QickSoc()          
 
         # set default indexes, etc.
         self.hSplitter.setStretchFactor(0, 1)
