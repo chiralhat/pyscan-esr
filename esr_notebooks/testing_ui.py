@@ -4,9 +4,14 @@ from pathlib import Path
 
 # Bring in your existing logic:
 import pulsesweep_scripts
+import pulsesweep_gui
+import spinecho_gui
 import spinecho_scripts
 import pyscan as ps
 import rfsoc2
+
+import matplotlib.pyplot as plt
+from IPython.display import display, clear_output
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QToolBar, QComboBox, QPushButton,
@@ -393,6 +398,18 @@ class MainWindow(QMainWindow):
     def collectPulsedParams(self):
         """Return a dict of parameters from the Pulsed Frequency Sweep controls 
            that pulsesweep_scripts expects.
+
+           ### THESE ARE THE PARAMS THAT SHOULD BE THERE????
+           These are all the controls to add for this GUI
+pscont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
+                'rfsoc': [['freq', 'gain', 'period', 'loopback'],
+                            ['pulse1_1','soft_avgs', 'h_offset', 'readout_length']],
+             'psu': [['field', 'gauss_amps', 'current_limit']],
+             'save': [['save_dir', 'file_name']],
+             'measure': [['ave_reps', 'psexpt', 'wait'],
+                         ['sweep_start', 'sweep_end', 'sweep_step'],
+                         ['integrate', 'init', 'turn_off']],
+             }
         """
         p = {}
         p["freq"] = self.pulsed_freq.value()
@@ -642,11 +659,11 @@ class MainWindow(QMainWindow):
         experiment = self.comboExperimentType.currentText()
         if experiment == "Pulsed Frequency Sweep":
             p = self.collectPulsedParams()
-            pulsesweep_scripts.read(self.sig, p, self.soc, None, None)
+            pulsesweep_gui.read(self.sig, p, self.soc, None, None)
             self.errorLog.appendPlainText("Pulsed read performed.")
         else:
             p = self.collectSpinEchoParams()
-            spinecho_scripts.read(self.sig, p, self.soc, None, None)
+            spinecho_gui.read(self.sig, p, self.soc, None, None)
             self.errorLog.appendPlainText("Spin Echo read performed.")
 
         # Potentially display new data in the plot area or update indicators
@@ -658,11 +675,11 @@ class MainWindow(QMainWindow):
         experiment = self.comboExperimentType.currentText()
         if experiment == "Pulsed Frequency Sweep":
             p = self.collectPulsedParams()
-            pulsesweep_scripts.single_shot(self.sig, p, self.soc, None, None)
+            pulsesweep_gui.single_shot(self.sig, p, self.soc, None, None)
             self.errorLog.appendPlainText("Pulsed single-shot run.")
         else:
             p = self.collectSpinEchoParams()
-            spinecho_scripts.single_shot(self.sig, p, self.soc, None, None)
+            pulsesweep_gui.single_shot(self.sig, p, self.soc, None, None)
             self.errorLog.appendPlainText("Spin Echo single-shot run.")
 
         # If you want to update indicators or show data, do it here.
@@ -670,6 +687,9 @@ class MainWindow(QMainWindow):
 
         # If final fit parameters are available after single shot or after sweep:
         # self.lbl_fitParams.setText("some fit results")
+
+
+
 
 def main():
     app = QApplication(sys.argv)
