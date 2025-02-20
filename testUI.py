@@ -1,16 +1,87 @@
-from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-                             QSpinBox, QSplitter, QScrollArea, QLabel, QFrame, QComboBox, 
-                             QGroupBox, QFormLayout, QSizePolicy, QCheckBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem)
+from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QPushButton,
+                             QSplitter, QScrollArea, QLabel, QFrame, QComboBox, QSizePolicy, 
+                             QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem)
 from PyQt5.QtCore import Qt
-
 import sys
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+
+
+class MatplotlibCanvas(FigureCanvas):
+    """ Matplotlib canvas to display graphs inside PyQt5 UI """
+    def __init__(self):
+        self.fig, self.ax = plt.subplots()
+        super().__init__(self.fig)
+        self.plot_placeholder()
+
+    def plot_placeholder(self):
+        """Generate a simple placeholder plot."""
+        self.ax.clear()
+        self.ax.plot([0, 1, 2, 3], [0, 1, 4, 9], marker='o', linestyle='-')
+        self.ax.set_title("Placeholder Graph")
+        self.ax.set_xlabel("X Axis")
+        self.ax.set_ylabel("Y Axis")
+        self.draw()
+
+
+class DynamicSettingsPanel(QWidget):
+    """ Settings panel with dynamically loaded settings """
+    def __init__(self):
+        super().__init__()
+        self.main_layout = QVBoxLayout(self)
+        self.settings_tree = QTreeWidget()
+        self.settings_tree.setHeaderHidden(False)
+        self.settings_tree.setColumnCount(2)
+        self.settings_tree.setHeaderLabels(["Setting", "Value"])
+        self.main_layout.addWidget(self.settings_tree)
+
+    def load_settings(self, settings):
+        """ Populate the settings panel dynamically """
+        self.settings_tree.clear()
+
+        for group_name, group_settings in settings.get("groups", {}).items():
+            group_item = QTreeWidgetItem([group_name])
+            self.settings_tree.addTopLevelItem(group_item)
+
+            for setting in group_settings:
+                item = QTreeWidgetItem([setting["name"]])
+                group_item.addChild(item)
+                widget = self.create_setting_widget(setting)
+                if widget:
+                    self.settings_tree.setItemWidget(item, 1, widget)
+
+    def create_setting_widget(self, setting):
+        """ Create appropriate widget based on setting type """
+        if setting["type"] == "spin":
+            widget = QSpinBox()
+            widget.setMinimum(setting["min"])
+            widget.setMaximum(setting["max"])
+            widget.setValue(setting["default"])
+        elif setting["type"] == "double_spin":
+            widget = QDoubleSpinBox()
+            widget.setMinimum(setting["min"])
+            widget.setMaximum(setting["max"])
+            widget.setValue(setting["default"])
+        elif setting["type"] == "combo":
+            widget = QComboBox()
+            widget.addItems(setting["options"])
+            widget.setCurrentText(setting["default"])
+        elif setting["type"] == "check":
+            widget = QCheckBox()
+            widget.setChecked(setting["default"])
+        else:
+            widget = QLabel("N/A")
+        return widget
+
+
 class ExperimentSettingsManager:
+    """ Handles loading different experiment settings into the UI """
     def __init__(self, settings_panel, experiment_dropdown):
         self.settings_panel = settings_panel
         self.experiment_dropdown = experiment_dropdown
-        self.experiment_dropdown.addItems(["Pulse Frequency Sweep", "Spin Echo"])
         self.experiment_dropdown.currentTextChanged.connect(self.update_settings_panel)
 
+        # Example Experiment Settings
         self.experiment_templates = {
             "Pulse Frequency Sweep": {
                 "main": [],
@@ -87,121 +158,115 @@ class ExperimentSettingsManager:
         }
         self.update_settings_panel("Pulse Frequency Sweep")
 
-    
     def update_settings_panel(self, experiment_type):
         self.settings_panel.load_settings(self.experiment_templates.get(experiment_type, {"main": [], "groups": {}}))
 
-class DynamicSettingsPanel(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.main_layout = QVBoxLayout(self)
-        self.settings_tree = QTreeWidget()
-        self.settings_tree.setHeaderHidden(False)
-        self.settings_tree.setColumnCount(2)
-        self.settings_tree.setHeaderLabels(["Setting", "Value"])
-        self.main_layout.addWidget(self.settings_tree)
-    
-    def load_settings(self, settings):
-        self.settings_tree.clear()
-        
-        for group_name, group_settings in settings.get("groups", {}).items():
-            group_item = QTreeWidgetItem([group_name])
-            self.settings_tree.addTopLevelItem(group_item)
-            for setting in group_settings:
-                item = QTreeWidgetItem([setting["name"]])
-                group_item.addChild(item)
-                widget = self.create_setting_widget(setting)
-                if widget:
-                    self.settings_tree.setItemWidget(item, 1, widget)
-    
-    def create_setting_widget(self, setting):
-        if setting["type"] == "spin":
-            widget = QSpinBox()
-            widget.setMinimum(setting["min"])
-            widget.setMaximum(setting["max"])
-            widget.setValue(setting["default"])
-        elif setting["type"] == "double_spin":
-            widget = QDoubleSpinBox()
-            widget.setMinimum(setting["min"])
-            widget.setMaximum(setting["max"])
-            widget.setValue(setting["default"])
-        elif setting["type"] == "combo":
-            widget = QComboBox()
-            widget.addItems(setting["options"])
-            widget.setCurrentText(setting["default"])
-        elif setting["type"] == "check":
-            widget = QCheckBox()
-            widget.setChecked(setting["default"])
-        else:
-            widget = QLabel("N/A")
-        return widget
-
 
 class ExperimentUI(QWidget):
+    """ Main UI Class """
     def __init__(self):
         super().__init__()
         self.initUI()
 
     def initUI(self):
         main_layout = QVBoxLayout(self)
+
+        # Top Menu Bar
         top_menu = QHBoxLayout()
-        
+
+        # File Action Buttons (Replaces Dropdown)
+        file_buttons_widget = QWidget()
+        file_buttons_layout = QGridLayout(file_buttons_widget)
+
+        self.save_exp_btn = QPushButton("Save Experiment")
+        self.new_exp_btn = QPushButton("New Experiment")
+        self.save_exp_as_btn = QPushButton("Save Experiment As")
+        self.open_exp_btn = QPushButton("Open Experiment")
+
+        file_buttons_layout.addWidget(self.save_exp_btn, 0, 0)
+        file_buttons_layout.addWidget(self.new_exp_btn, 0, 1)
+        file_buttons_layout.addWidget(self.save_exp_as_btn, 1, 0)
+        file_buttons_layout.addWidget(self.open_exp_btn, 1, 1)
+
+        top_menu.addWidget(file_buttons_widget)
+
+        # Experiment Selection
         self.experiment_dropdown = QComboBox()
-        self.experiment_dropdown.addItems(["Pulse Frequency Sweep"])
+        self.experiment_dropdown.addItems(["Pulse Frequency Sweep", "Spin Echo"])
         self.experiment_dropdown.currentTextChanged.connect(self.change_experiment_type)
 
-        self.file_menu = QComboBox()
-        self.file_menu.addItems(["Open Experiment", "Save Experiment", "Save Experiment As", "New Experiment"])
-        
-        self.run_menu = QComboBox()
-        self.run_menu.addItems(["Run Experiment", "Stop Experiment"])
-        
-        self.plot_menu = QComboBox()
-        self.plot_menu.addItems(["Save All Plot Recordings"])
-        
-        top_menu.addWidget(QLabel("File:"))
-        top_menu.addWidget(self.file_menu)
+        self.run_button = QPushButton("Run Experiment")
+        self.run_button.clicked.connect(self.toggle_run_experiment)
+
+
+        self.plot_menu = QCheckBox("Save All Plot Recordings")
+
         top_menu.addWidget(QLabel("Experiment:"))
         top_menu.addWidget(self.experiment_dropdown)
         top_menu.addWidget(QLabel("Run:"))
-        top_menu.addWidget(self.run_menu)
+        top_menu.addWidget(self.run_button)
         top_menu.addWidget(QLabel("Plots:"))
         top_menu.addWidget(self.plot_menu)
-        
+
         main_layout.addLayout(top_menu)
-        
+
+        # Main Splitter (Left: Settings, Right: Output)
         main_splitter = QSplitter(Qt.Horizontal)
+
+        # Settings Panel
         self.settings_panel = DynamicSettingsPanel()
         settings_scroll = QScrollArea()
         settings_scroll.setWidgetResizable(True)
         settings_scroll.setWidget(self.settings_panel)
 
+        # Output Section (Graphs & Error Log)
         output_container = QSplitter(Qt.Vertical)
-        graph_section = QLabel("Graphs Area")
-        graph_section.setFrameShape(QFrame.Box)
-        graph_section.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        
+
+        # Graphs Panel
+        graph_section_widget = QWidget()
+        graph_layout = QVBoxLayout(graph_section_widget)
+
+        # Add three Matplotlib Graphs
+        self.graphs = [MatplotlibCanvas() for _ in range(3)]
+        for graph in self.graphs:
+            graph_layout.addWidget(graph)
+
+        output_container.addWidget(graph_section_widget)
+
+        # Error Log Panel
         error_log = QLabel("Error Log")
         error_log.setFrameShape(QFrame.Box)
         error_log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        
-        output_container.addWidget(graph_section)
         output_container.addWidget(error_log)
-        
+
+        # Adding to Main Splitter
         main_splitter.addWidget(settings_scroll)
         main_splitter.addWidget(output_container)
         main_layout.addWidget(main_splitter)
+
         self.setLayout(main_layout)
 
+        # Load initial settings
         self.settings_manager = ExperimentSettingsManager(self.settings_panel, self.experiment_dropdown)
         self.change_experiment_type("Pulse Frequency Sweep")
 
     def change_experiment_type(self, experiment_type):
+        """ Handle changes in experiment selection """
         self.settings_manager.update_settings_panel(experiment_type)
 
+    def toggle_run_experiment(self):
+        """ Toggle between Run and Stop Experiment states """
+        if self.run_button.text() == "Run Experiment":
+            self.run_button.setText("Stop Experiment")
+        else:
+            self.run_button.setText("Run Experiment")
 
-if __name__ == "__main__":
+def main():
     app = QApplication(sys.argv)
     ex = ExperimentUI()
     ex.show()
     sys.exit(app.exec_())
+
+    
+if __name__ == "__main__":
+    main()
