@@ -15,12 +15,10 @@ class MatplotlibCanvas(FigureCanvas):
         self.plot_placeholder()
 
     def plot_placeholder(self):
-        """Generate a simple placeholder plot."""
+        """Generate a simple placeholder plot with larger margins."""
         self.ax.clear()
         self.ax.plot([0, 1, 2, 3], [0, 1, 4, 9], marker='o', linestyle='-')
-        self.ax.set_title("Placeholder Graph")
-        self.ax.set_xlabel("X Axis")
-        self.ax.set_ylabel("Y Axis")
+        self.fig.subplots_adjust(left=0.3, right=0.8, top=0.8, bottom=0.3)  # Adjust margins
         self.draw()
 
 
@@ -190,23 +188,27 @@ class ExperimentUI(QWidget):
 
         top_menu.addWidget(file_buttons_widget)
 
-        # Experiment Selection
-        self.experiment_dropdown = QComboBox()
-        self.experiment_dropdown.addItems(["Pulse Frequency Sweep", "Spin Echo"])
-        self.experiment_dropdown.currentTextChanged.connect(self.change_experiment_type)
+        # Template Selection
+        self.template_dropdown = QComboBox()
+        self.template_dropdown.addItems(["Pulse Frequency Sweep", "Spin Echo"])
+        self.template_dropdown.currentTextChanged.connect(self.change_experiment_type)
+
+        top_menu.addWidget(self.template_dropdown)
+
+
+        # Run Experiment and Save Recordings
+        self.run_and_save_recordings_widget = QWidget()
+        self.run_and_save_recordings_layout = QGridLayout(self.run_and_save_recordings_widget)
 
         self.run_button = QPushButton("Run Experiment")
         self.run_button.clicked.connect(self.toggle_run_experiment)
 
-
         self.plot_menu = QCheckBox("Save All Plot Recordings")
 
-        top_menu.addWidget(QLabel("Experiment:"))
-        top_menu.addWidget(self.experiment_dropdown)
-        top_menu.addWidget(QLabel("Run:"))
-        top_menu.addWidget(self.run_button)
-        top_menu.addWidget(QLabel("Plots:"))
-        top_menu.addWidget(self.plot_menu)
+        self.run_and_save_recordings_layout.addWidget(self.run_button, 1, 0)
+        self.run_and_save_recordings_layout.addWidget(self.plot_menu, 0, 0)
+
+        top_menu.addWidget(self.run_and_save_recordings_widget)
 
         main_layout.addLayout(top_menu)
 
@@ -221,10 +223,12 @@ class ExperimentUI(QWidget):
 
         # Output Section (Graphs & Error Log)
         output_container = QSplitter(Qt.Vertical)
+        output_container.setSizes([100, 100])
 
         # Graphs Panel
         graph_section_widget = QWidget()
         graph_layout = QVBoxLayout(graph_section_widget)
+        graph_layout.setContentsMargins(100, 50, 100, 50)
 
         # Add three Matplotlib Graphs
         self.graphs = [MatplotlibCanvas() for _ in range(3)]
@@ -247,7 +251,7 @@ class ExperimentUI(QWidget):
         self.setLayout(main_layout)
 
         # Load initial settings
-        self.settings_manager = ExperimentSettingsManager(self.settings_panel, self.experiment_dropdown)
+        self.settings_manager = ExperimentSettingsManager(self.settings_panel, self.template_dropdown)
         self.change_experiment_type("Pulse Frequency Sweep")
 
     def change_experiment_type(self, experiment_type):
