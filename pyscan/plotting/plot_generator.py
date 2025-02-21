@@ -43,7 +43,7 @@ class PlotGenerator(object):
         inputs = ['x_name', 'x_range',
                   'y_name', 'y_range',
                   'data_name', 'data_range',
-                  'index3D',
+                  'index3D', 'transpose',
                   'analysis_function', 'analysis_args']
 
         for key in inputs:
@@ -100,7 +100,7 @@ class PlotGenerator(object):
         '''
         if self.d == 1:
             return
-        if self.expt.runinfo.ndim == 1:
+        if self.expt.runinfo.ndim == 1 and self.y_name is None:
             self.y_name = 'y_indicies'
             self.y = np.array(range(self.data.shape[1]))
             self.other_y = ''
@@ -144,6 +144,9 @@ class PlotGenerator(object):
                 self.index3D = 0
             self.data_name = self.data_name + '[{}/{}]'.format(self.index3D, self.data.shape[2])
             self.data = self.data[:, :, self.index3D]
+           
+        if self.transpose is not None:
+            self.data = self.data.T
 
     def get_title(self):
         '''
