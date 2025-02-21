@@ -1,11 +1,23 @@
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QPushButton,
                              QSplitter, QScrollArea, QLabel, QFrame, QComboBox, QSizePolicy, 
-                             QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem)
+                             QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem, 
+                             QMessageBox, QLineEdit)
 from PyQt5.QtCore import Qt
 import sys
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+
+class PopUpMenu(QMessageBox):
+    """ Basic pop-up menu """
+    def __init__(self, title="Notification", message="This is a pop-up message"):
+        super().__init__()
+        self.setWindowTitle(title)
+        self.setText(message)
+        self.setStandardButtons(QMessageBox.Ok)
+
+    def show_popup(self):
+        self.exec_()
 
 class MatplotlibCanvas(FigureCanvas):
     """ Matplotlib canvas to display graphs inside PyQt5 UI """
@@ -18,7 +30,7 @@ class MatplotlibCanvas(FigureCanvas):
         """Generate a simple placeholder plot with larger margins."""
         self.ax.clear()
         self.ax.plot([0, 1, 2, 3], [0, 1, 4, 9], marker='o', linestyle='-')
-        self.fig.subplots_adjust(left=0.3, right=0.8, top=0.8, bottom=0.3)  # Adjust margins
+        self.fig.subplots_adjust(left=0.1, right=0.9, top=0.8, bottom=0.3)  # Adjust margins
         self.draw()
 
 
@@ -31,7 +43,22 @@ class DynamicSettingsPanel(QWidget):
         self.settings_tree.setHeaderHidden(False)
         self.settings_tree.setColumnCount(2)
         self.settings_tree.setHeaderLabels(["Setting", "Value"])
-        self.main_layout.addWidget(self.settings_tree)
+        
+        self.settings_scroll = QScrollArea()
+        self.settings_scroll.setWidgetResizable(True)
+        self.settings_scroll.setWidget(self.settings_tree)
+        
+        self.main_layout.addWidget(self.settings_scroll)
+        
+        # Static Bottom Menu Bar
+        self.bottom_menu = QHBoxLayout()
+        self.save_template_btn = QPushButton("Save Template")
+        # self.save_template_btn.clicked.connect(self.show_save_template_popup())
+
+        self.bottom_menu.addStretch()
+        self.bottom_menu.addWidget(self.save_template_btn)
+        
+        self.main_layout.addLayout(self.bottom_menu)
 
     def load_settings(self, settings):
         """ Populate the settings panel dynamically """
@@ -71,6 +98,15 @@ class DynamicSettingsPanel(QWidget):
             widget = QLabel("N/A")
         return widget
 
+    # def show_save_template_popup(self):
+    #     popup = PopUpMenu("Save Template", "Feature coming soon!")
+    #     layout = QVBoxLayout()
+    #     name_input = QLineEdit()
+    #     layout.addWidget(name_input)
+    #     widget = QWidget()
+    #     widget.setLayout(layout)
+    #     popup.layout().addWidget(widget)
+    #     popup.show_popup()
 
 class ExperimentSettingsManager:
     """ Handles loading different experiment settings into the UI """
@@ -180,6 +216,9 @@ class ExperimentUI(QWidget):
         self.new_exp_btn = QPushButton("New Experiment")
         self.save_exp_as_btn = QPushButton("Save Experiment As")
         self.open_exp_btn = QPushButton("Open Experiment")
+        self.open_exp_btn.clicked.connect(self.show_open_experiment_popup)
+        self.new_exp_btn.clicked.connect(self.show_new_experiment_popup)
+        self.save_exp_as_btn.clicked.connect(self.show_save_experiment_as_popup)
 
         file_buttons_layout.addWidget(self.save_exp_btn, 0, 0)
         file_buttons_layout.addWidget(self.new_exp_btn, 0, 1)
@@ -265,10 +304,22 @@ class ExperimentUI(QWidget):
         else:
             self.run_button.setText("Run Experiment")
 
+    def show_open_experiment_popup(self):
+        popup = PopUpMenu("Open Experiment", "Feature coming soon!")
+        popup.show_popup()
+    
+    def show_save_experiment_as_popup(self):
+        popup = PopUpMenu("Save Experiment As", "Feature coming soon!")
+        popup.show_popup()
+    
+    def show_new_experiment_popup(self):
+        popup = PopUpMenu("New Experiment", "Feature coming soon!")
+        popup.show_popup()
+
 def main():
     app = QApplication(sys.argv)
     ex = ExperimentUI()
-    ex.show()
+    ex.showFullScreen()
     sys.exit(app.exec_())
 
     
