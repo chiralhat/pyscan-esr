@@ -368,10 +368,10 @@ def init_app():
 
 def main():
     init_app()
-    app = QApplication(sys.argv)
-    ex = ExperimentUI()
-    ex.showFullScreen()
-    sys.exit(app.exec_())
+#     app = QApplication(sys.argv)
+#     ex = ExperimentUI()
+#     ex.showFullScreen()
+#     sys.exit(app.exec_())
 
     
 if __name__ == "__main__":
