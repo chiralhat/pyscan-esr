@@ -21,7 +21,7 @@ pscont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
              }
 
 
-def read(sig, config, soc, output, fig):
+def read_unprocessed(sig, config, soc, output, fig):
     """
     Take and plot a single background-subtracted measurement.
 
@@ -65,7 +65,7 @@ def read(sig, config, soc, output, fig):
 
 # I need to set up a new way of measuring, using the phase-based subtraction,
 # which might do a better job of showing what is actually coming from the resonator
-def single_shot(sig, config, soc, output, fig):
+def read_processed(sig, config, soc, output, fig):
     """
     Take and plot a single background-subtracted measurement.
 
@@ -129,6 +129,3 @@ def init_experiment(devices, parameters, sweep, soc):
         devices.psu.set_magnet(parameters)
     setup_experiment(parameters, devices, sweep, soc)
 
-
-pulsesweep_gui = gs.init_gui(pscont_keys, init_experiment, default_file, 
-    single_shot, gs.run_sweep, read)

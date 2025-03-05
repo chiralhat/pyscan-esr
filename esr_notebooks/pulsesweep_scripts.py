@@ -111,3 +111,6 @@ def setup_experiment(parameters, devices, sweep, soc):
 
     sweep['name'] = parameters['outfile']+fname
     sweep['runinfo'] = runinfo
+
+
+

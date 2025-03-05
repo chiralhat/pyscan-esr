@@ -33,7 +33,7 @@ secont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
              }
 
 
-def read(sig, config, soc, output, fig):
+def read_unprocessed(sig, config, soc, output, fig):
     """
     Take and plot a single background-subtracted measurement.
 
@@ -79,7 +79,7 @@ def read(sig, config, soc, output, fig):
     config['soft_avgs'] = avgs
 
 
-def single_shot(sig, config, soc, output, fig):
+def read_processed(sig, config, soc, output, fig):
     """
     Take and plot a single background-subtracted measurement.
 
@@ -135,7 +135,3 @@ def init_experiment(devices, parameters, sweep, soc):
     if parameters['use_psu'] and not parameters['loopback']:
         devices.psu.set_magnet(parameters)
     setup_experiment(parameters, devices, sweep, soc)
-    
-
-spinecho_gui = gs.init_gui(secont_keys, init_experiment, default_file, 
-    single_shot, gs.run_sweep, read)

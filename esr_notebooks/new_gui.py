@@ -16,37 +16,30 @@ from datetime import date, datetime
 from pathlib import Path
 from pulsesweep_gui import *
 from spinecho_gui import *
+import pickle
+import pyvisa
+import pulsesweep_gui as psg
+import spinecho_gui as seg
 
 import os
 
-## SYDNEY CONSTRUCTION ZONE
+# [ this is stuff that was at the top of gui_setup.py:
+lstyle = {'description_width': 'initial'}
+cpmgs = range(1, 256)
+aves = [1, 4, 16, 64, 128, 256]
+voltage_limits = [0.002, 10]
+tdivs = []
+for n in range(9, -1, -1):
+    tdivs += [2*10**-n, 4*10**-n, 10*10**-n]#[2.5*10**-n, 5*10**-n, 10*10**-n]
 
-# import time
-# import importlib
-# import mymodule
-# from watchdog.observers import Observer
-# from watchdog.events import FileSystemEventHandler
+scopes = {'TBS1052C': ps.Tektronix1052B,
+          'MSO24': ps.TektronixMSO2}
 
-# class ReloadHandler(FileSystemEventHandler):
-#     def on_modified(self, event):
-#         if event.src_path.endswith("mymodule.py"):
-#             print("Module changed, reloading...")
-#             importlib.reload(mymodule)
+if not hasattr(ps, 'rm'):
+    ps.rm = pyvisa.ResourceManager('@py')
+res_list = ps.rm.list_resources()
+# ...]
 
-# event_handler = ReloadHandler()
-# observer = Observer()
-# observer.schedule(event_handler, path=".", recursive=False)
-# observer.start()
-
-# try:
-#     while True:
-#         time.sleep(1)
-# except KeyboardInterrupt:
-#     observer.stop()
-# observer.join()
-
-
-####
 
 class PopUpMenu(QMessageBox):
     """ Basic pop-up menu """
@@ -235,12 +228,95 @@ class ExperimentSettingsManager:
     def update_settings_panel(self, experiment_type):
         self.settings_panel.load_settings(self.experiment_templates.get(experiment_type, {"main": [], "groups": {}}))
 
+class Experiment():
+    """
+    Stores the actual experiment parameters and the functions that 
+    need to get run for the experiment. This basically
+    functions as an the jupyter notebook and the init_gui function call
+    at the end of the "experimentType_gui.py. Thats why I import those files as 
+    seg (Spin Echo GUI) and psg (Pulse Sweep GUI).
+    """
+    ui = None
+    
+    parameters = {}
+    sweep = {}
+    devices = None
+    sig = None
+    exp_type = None
+    soc = None
+    soccfg = None
+    default_file = None
 
-class ExperimentUI(QWidget):
+    # Functions unique to experiments which will be attached to buttons:
+    # These will be obtained from experimentType_gui.py
+    read_unprocessed_function = None
+    read_processed_function = None
+    sweep_function = None
+
+
+    def __init__(self):
+        self.ui = ExperimentUI()
+
+        # This was taken from the top of the notebook files, 
+        # might need to get looked at more [...
+        self.devices = ps.ItemAttribute()
+        self.sig = ps.ItemAttribute()
+        self.soc = QickSoc()
+        self.soccfg = self.soc
+        self.parameters = {}
+        self.sweep = {}
+        #...]
+        self.init_experiment() #this will do the rest of the initializion needed
+    
+    def init_experiment(self, exp_type = "Spin Echo"):
+        """
+        Initializing the class variables that differ for each experiment
+        
+        this should also get run every time that we switch an experiment"""
+        self.exp_type = exp_type
+        if exp_type == "Pulse Frequency Sweep":
+            self.default_file = 'ps_defaults.pkl'
+            psg.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
+            
+            self.read_unprocessed_function = psg.read_unprocessed
+            self.read_processed_function = psg.read_processed
+            self.sweep_function = self.run_sweep
+            self.ui.init_gui_button_functions(self.read_unprocessed_function, 
+                                              self.read_processed_function,
+                                              self.sweep_function)
+            
+        elif exp_type == "Spin Echo":
+            self.default_file = 'se_defaults.pkl'
+            seg.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
+            
+            self.read_unprocessed_function = seg.read_unprocessed
+            self.read_processed_function = seg.read_processed
+            self.sweep_function = self.run_sweep
+            self.ui.init_gui_button_functions(self.read_unprocessed_function, 
+                                              self.read_processed_function,
+                                              self.sweep_function)
+        #TO IMPLEMENT: call function in UI that shows the proper settings in the UI based on the experiment type
+        # this is currently happening in the ExperimentSettingsManager class right now, but
+        # I need to investigate this further
+        
+
+    def run_sweep(self):#, output, fig):
+        """Runs a sweep."""
+        self.sweep['expt'].start_time = time()
+        self.sweep['expt'].start_thread()
+    
+    #MIGHT WANT TO MOVE SOME FUNCTIONS that are in the bottom of ExperimentUI that 
+    #don't really pertain to the UI to here (read_mon, etc)
+
+    
+class ExperimentUI(Experiment, QWidget):
     """ Main UI Class """
+    experiment = None
+
     def __init__(self):
         super().__init__()
         self.initUI()
+        self.experiment = Experiment()
 
     def initUI(self):
         main_layout = QVBoxLayout(self)
@@ -333,6 +409,78 @@ class ExperimentUI(QWidget):
         self.settings_manager = ExperimentSettingsManager(self.settings_panel, self.template_dropdown)
         self.change_experiment_type("Pulse Frequency Sweep")
 
+    def init_gui_button_functions(self, read_unprocessed_function, read_processed_function, sweep_function):
+        """
+        Links up each function to each button (for functions that are unique to each experiment).
+
+        NOTE: might just want to have this link up ALL functions functions to the buttons
+
+        This basically does what the gui_function() function does in gui_setup.py"""
+        #NEED TO IMPLEMENT
+        pass
+
+    def set_pars(self, devices):
+        """Read through the settings tree and load them into a parameters dictionary."""
+        
+        #this used to be the code in gui_setup.py that looped through all
+        #the controls and updated the parameters with the values in the controls
+        tree = self.settings_panel.settings_tree
+        root = tree.invisibleRootItem()
+        for i in range(root.childCount()):
+            group_item = root.child(i)
+            # Loop over each setting in the group
+            for j in range(group_item.childCount()):
+                item = group_item.child(j)
+                key = item.text(0)  # The setting name
+                widget = tree.itemWidget(item, 1)
+                
+                # Get the widget's value based on its type
+                if isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+                    value = widget.value()
+                elif isinstance(widget, QComboBox):
+                    value = widget.currentText()
+                elif isinstance(widget, QCheckBox):
+                    value = widget.isChecked()
+                elif isinstance(widget, QLabel):
+                    value = widget.text()
+                else:
+                    value = None  # Fallback if widget type is not handled
+                
+                self.parameters[key] = value
+
+        #this stuff below is unchanged from gui_setup.py [...
+        if 'ave_reps' in self.parameters.keys():
+            reps = self.parameters['ave_reps']
+        else:
+            reps = 1
+        if 'period' in self.parameters.keys():
+            period = self.parameters['period']
+        else:
+            period = 500
+        tmult = period/1e6*4*reps
+        self.parameters['subtime'] = self.parameters['soft_avgs']*tmult
+        datestr = date.today().strftime('%y%m%d')
+        fname = datestr+str(self.parameters['file_name'])+'_'
+        self.parameters['outfile'] = str(Path(self.parameters['save_dir']) / fname)
+        with open(default_file, 'wb') as f:
+            pickle.dump(self.parameters, f)
+            
+        inst = ps.ItemAttribute()
+        if not hasattr(devices, 'psu') and self.parameters['use_psu']:
+            waddr = self.parameters['psu_address'].split('ASRL')[-1].split('::')[0]
+            devices.psu = ps.GPD3303S(waddr)
+        if not hasattr(devices, 'ls335') and self.parameters['use_temp']:
+            devices.ls335 = ps.Lakeshore335()
+            ttemp = devices.ls335.get_temp()
+        #...]
+
+        #NEED TO FIGURE THIS OUT
+        if (self.parameters['init'] or btn.description=='Initialize'):
+            init_expt(devices, parameters, sweep, soc) # TODO: Fix the runinfo, expt bit (put into new dict?)
+            conn_ind.value = 1
+
+
+
     def change_experiment_type(self, experiment_type):
         """ Handle changes in experiment selection """
         self.settings_manager.update_settings_panel(experiment_type)
@@ -355,19 +503,108 @@ class ExperimentUI(QWidget):
     def show_new_experiment_popup(self):
         popup = PopUpMenu("New Experiment", "Feature coming soon!")
         popup.show_popup()
-        
-def init_app():
-        if 'devices' not in globals():
-            devices = ps.ItemAttribute()
-            sig = ps.ItemAttribute()
-            sweep = {}
 
-        soc = QickSoc()
-        soccfg = soc
-        print("it worked!")
+
+    #THE FOLLOWING WAS TAKEN FROM GUI_SETUP.PY
+    #Haven't looked at it yet, just copy pasted. Need to make this not have errors
+    #[...
+    def init_btn(btn):
+        run_ind.value = 1
+        set_pars(btn)
+        run_ind.value = 0
+
+    def stopsweep(btn):
+        sweep['expt'].runinfo.running = False
+    
+    def turnoff(btn):
+        if 'expt' in sweep.keys():
+            sweep['expt'].runinfo.running = False
+        if parameters['use_psu']:
+            devices.psu.output = False
+    
+    with output:
+        fig = plt.figure(figsize=(8, 5))
+    #         setup_plot(output, fig)
+
+    with measout:
+        mfig = plt.figure(figsize=(8, 5))
+
+
+    def start_sweep(btn):
+        run_ind.value = 1
+        set_pars(btn)
+        runinfo = sweep['runinfo']
+        expt = ps.Sweep(runinfo, devices, sweep['name'])
+        sweep['expt'] = expt
+        if parameters['expt']=="Hahn Echo":
+            sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
+        elif parameters['expt']=="CPMG":
+            sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
+        elif parameters['sweep2'] and parameters['expt2']=="Hahn Echo":
+            sweep['expt'].echo_delay = 2*runinfo.scan1.scan_dict['delay_sweep']*runinfo.parameters['pulses']
+        elif parameters['sweep2'] and parameters['expt2']=="CPMG":
+            sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan1.scan_dict['cpmg_sweep']
+        else:
+            sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
+        run_sweep(sweep, parameters)#, measout, mfig)
+        run_ind.value = 0
+
+    
+    def read_mon(btn):
+        run_ind.value = 1
+        set_pars(btn)
+        read(sig, parameters, soc, output, fig)
+        run_ind.value = 0
+    
+    
+    def monitor(btn):
+        run_ind.value = 1
+        set_pars(btn)
+        single_run(sig, parameters, soc, output, fig)
+        run_ind.value = 0
+
+    
+    def disconnect(btn):
+        run_ind.value = 1
+        turnoff(btn)
+        for key in devices.keys():
+            devices[key].close()
+        devices.__dict__.clear()
+        conn_ind.value = 0
+        run_ind.value = 0
+    
+    goButton = ipw.Button(description='Initialize')
+    goButton.on_click(init_btn)
+
+    readButton = ipw.Button(description='Read Scope')
+    readButton.on_click(read_mon)
+
+    monButton = ipw.Button(description='Run (No Save)')
+    monButton.on_click(monitor)
+
+    startButton = ipw.Button(description='Start Sweep')
+    startButton.on_click(start_sweep)
+
+    stopButton = ipw.Button(description='Stop Sweep')
+    stopButton.on_click(stopsweep)
+
+    offButton = ipw.Button(description='Output Off')
+    offButton.on_click(turnoff)
+
+    closeButton = ipw.Button(description='Disconnect')
+    closeButton.on_click(disconnect)
+
+    controls += [ipw.HBox([goButton, readButton, monButton, startButton, stopButton, run_ind])]
+    controls += [ipw.HBox([offButton, closeButton, conn_ind])]
+    
+    # mtab = measure_select()
+    controls += [ipw.HBox([output, measout])]
+
+    con_panel = ipw.VBox(controls)
+    #...]
+
 
 def main():
-    init_app()
     app = QApplication(sys.argv)
     ex = ExperimentUI()
     ex.showFullScreen()
