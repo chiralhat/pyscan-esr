@@ -308,41 +308,81 @@ class Experiment():
     #MIGHT WANT TO MOVE SOME FUNCTIONS that are in the bottom of ExperimentUI that 
     #don't really pertain to the UI to here (read_mon, etc)
 
-    
+
+#================================================================================
+class ExperimentType:
+    def __init__(self, type):
+        self.type = type #string indicating experiment type
+
+
+    def read_processed_function():
+        if self.type = "Spin Echo":
+            
+
+    def read_unprocessed_function():
+        pass 
+
+
 class ExperimentUI(Experiment, QWidget):
     """ Main UI Class """
-    experiment = None
 
     def __init__(self):
         super().__init__()
-        self.initUI()
-        self.experiment = Experiment()
+        self.screen = self.initUI()
+        self.experiments = [ExperimentType("Spin Echo"), ExperimentType("Pulse Frequency Sweep")]
+        self.current_experiment = self.experiments[0]
+        self.temp_params = {} #list of all of the current parameter values for each setting in the settings panel
 
-    def initUI(self):
+
+    def init_UI(self):
+        """Initializes each individual component of the UI - Top menu bar, 
+        Settings panel, bottom menu bar, Graphs panel, and Error log - and 
+        adds them to the main_layout variable which is a PyQt5 QVBoxLayout
+        object."""
+        
+        top_menu = self.init_top_menu_bar()
+        settings_panel = self.init_settings_panel()
+        graphs_panel = self.init
+
         main_layout = QVBoxLayout(self)
+        #Add all components to main_layout
+        main_layout.addLayout(top_menu)
+        main_layout.addLayout(settings_panel)
+        main_layout.addLayout(graphs_panel)
+        main_layout.addLayout(bottom_menu_bar)
+        main_layout.addLayout(error_log)
+        return main_layout
 
         # Top Menu Bar
+    def init_top_menu_bar(self):
+        """This function initializes the top menu bar of the PyQt5 GUI with layout
+        and all buttons.
+        @return top_menu -- a PyQt5 QHBoxLayout container holding the buttons"""
         top_menu = QHBoxLayout()
 
-        # File Action Buttons (Replaces Dropdown)
         file_buttons_widget = QWidget()
         file_buttons_layout = QGridLayout(file_buttons_widget)
+        
+        self.read_unprocessed_btn = QPushButton("Read Unprocessed")
+        self.read_unprocessed_btn.clicked.connect(self.current_experiment.read_unprocessed_function)
+        self.read_processed_btn = QPushButton("Read Processed")
+        self.read_processed_btn.clicked.connect(self.current_experiment.read_processed_function)
+        self.sweep_start_stop_btn = QPushButton("Start Sweep")
+        self.sweep_start_stop_btn.clicked.connect(self.current_experiment.sweep_start_stop_function)
+        self.off_btn = QPushButton("Hardware Off")
+        self.off_btn.clicked.connect(self.current_experiment.off_btn_function)
 
-        self.save_exp_btn = QPushButton("Save Experiment")
-        self.new_exp_btn = QPushButton("New Experiment")
-        self.save_exp_as_btn = QPushButton("Save Experiment As")
-        self.open_exp_btn = QPushButton("Open Experiment")
-        self.open_exp_btn.clicked.connect(self.show_open_experiment_popup)
-        self.new_exp_btn.clicked.connect(self.show_new_experiment_popup)
-        self.save_exp_as_btn.clicked.connect(self.show_save_experiment_as_popup)
 
-        file_buttons_layout.addWidget(self.save_exp_btn, 0, 0)
-        file_buttons_layout.addWidget(self.new_exp_btn, 0, 1)
-        file_buttons_layout.addWidget(self.save_exp_as_btn, 1, 0)
-        file_buttons_layout.addWidget(self.open_exp_btn, 1, 1)
+        file_buttons_layout.addWidget(self.read_unprocessed_btn, 0, 0)
+        file_buttons_layout.addWidget(self.read_processed_btn, 0, 1)
+        file_buttons_layout.addWidget(self.sweep_start_stop_btn, 1, 0)
+        file_buttons_layout.addWidget(self.off_btn, 1, 1)
 
         top_menu.addWidget(file_buttons_widget)
 
+        return top_menu
+    
+    def temp(self):
         # Template Selection
         self.template_dropdown = QComboBox()
         self.template_dropdown.addItems(["Pulse Frequency Sweep", "Spin Echo"])
@@ -356,7 +396,7 @@ class ExperimentUI(Experiment, QWidget):
         self.run_and_save_recordings_layout = QGridLayout(self.run_and_save_recordings_widget)
 
         self.run_button = QPushButton("Run Experiment")
-        self.run_button.clicked.connect(self.toggle_run_experiment)
+        self.sweep_stop_start_btn.clicked.connect(self.toggle_start_stop_sweep)
 
         self.plot_menu = QCheckBox("Save All Plot Recordings")
 
@@ -365,7 +405,6 @@ class ExperimentUI(Experiment, QWidget):
 
         top_menu.addWidget(self.run_and_save_recordings_widget)
 
-        main_layout.addLayout(top_menu)
 
         # Main Splitter (Left: Settings, Right: Output)
         main_splitter = QSplitter(Qt.Horizontal)
@@ -485,12 +524,12 @@ class ExperimentUI(Experiment, QWidget):
         """ Handle changes in experiment selection """
         self.settings_manager.update_settings_panel(experiment_type)
 
-    def toggle_run_experiment(self):
-        """ Toggle between Run and Stop Experiment states """
-        if self.run_button.text() == "Run Experiment":
-            self.run_button.setText("Stop Experiment")
+    def toggle_start_stop_sweep(self):
+        """ Toggle between Run and Stop Sweep states """
+        if self.sweep_start_stop_btn.text() == "Start Sweep":
+            self.sweep_start_stop_btn.setText("Stop Sweep")
         else:
-            self.run_button.setText("Run Experiment")
+            self.sweep_start_stop_btn.setText("Start Sweep")
 
     def show_open_experiment_popup(self):
         popup = PopUpMenu("Open Experiment", "Feature coming soon!")
