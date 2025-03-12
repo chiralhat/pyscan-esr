@@ -93,7 +93,7 @@ class DynamicSettingsPanel(QWidget):
         
         self.main_layout.addLayout(self.bottom_menu)
 
-    def load_settings(self, settings):
+    def load_settings_panel(self, settings):
         """ Populate the settings panel dynamically """
         self.settings_tree.clear()
 
@@ -512,9 +512,13 @@ class ExperimentUI(QWidget):
         self.change_experiment_type("Pulse Frequency Sweep")
 
     def change_experiment_type(self, experiment_type):
-        self.settings_panel.load_settings(self.experiment_templates.get(experiment_type, {"main": [], "groups": {}}))
+        self.current_experiment.stop_sweep()
         self.current_experiment = self.experiments[experiment_type]
         self.temp_parameters = {}
+        print("FINISH IMPLEMENTING")
+        #change function assigned to each button
+        self.settings_panel.load_settings_panel(self.experiment_templates.get(experiment_type, {"main": [], "groups": {}}))
+
 
     def read_and_set_parameters(self): 
         #this used to be the code in gui_setup.py that looped through all
