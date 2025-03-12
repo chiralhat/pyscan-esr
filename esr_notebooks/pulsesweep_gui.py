@@ -3,12 +3,6 @@ from IPython.display import display, clear_output
 import gui_setup as gs
 from pulsesweep_scripts import *
 
-plt.rc('lines', lw=2)
-plotfont = {'family': 'serif', 'size': 16}
-plt.rc('font', **plotfont)
-plt.rc('mathtext', fontset='cm')
-default_file = 'ps_defaults.pkl'
-
 # These are all the controls to add for this GUI
 pscont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
                 'rfsoc': [['freq', 'gain', 'period', 'loopback'],
@@ -21,7 +15,7 @@ pscont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
              }
 
 
-def read_unprocessed(sig, config, soc, output, fig):
+def read_unprocessed(sig, config, soc, fig):
     """
     Take and plot a single background-subtracted measurement.
 
@@ -65,7 +59,7 @@ def read_unprocessed(sig, config, soc, output, fig):
 
 # I need to set up a new way of measuring, using the phase-based subtraction,
 # which might do a better job of showing what is actually coming from the resonator
-def read_processed(sig, config, soc, output, fig):
+def read_processed(sig, config, soc, fig):
     """
     Take and plot a single background-subtracted measurement.
 
@@ -106,9 +100,10 @@ def read_processed(sig, config, soc, output, fig):
     ypt = sig.x.max()*np.array([0.75, 0.65])
     ax.text(xpt, ypt[0], fitstr)
     ax.text(xpt, ypt[1], freqstr)
-    with output:
-        clear_output(wait=True)
-        display(ax.figure)
+    # OUTPUT:
+    # with output:
+    #     clear_output(wait=True)
+    #     display(ax.figure)
         
 
 def init_experiment(devices, parameters, sweep, soc):

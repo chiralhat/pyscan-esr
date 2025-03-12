@@ -3,19 +3,11 @@ from IPython.display import display, clear_output
 from spinecho_scripts import *
 import gui_setup as gs
 
-# Set up the plots to be pretty
-plt.rc('lines', lw=2)
-plotfont = {'family': 'serif', 'size': 16}
-plt.rc('font', **plotfont)
-plt.rc('mathtext', fontset='cm')
-
 # function_select = {'Phase': subback_phase,
 #                    'Delay': subback_delay,
 #                    'Both': subback_phasedelay,
 #                        'None': subback_none,
 #                        'Autophase': subback_autophase}
-
-default_file = 'se_defaults.pkl'
 
 # These are all the controls to add for this GUI
 secont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
@@ -33,7 +25,7 @@ secont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
              }
 
 
-def read_unprocessed(sig, config, soc, output, fig):
+def read_unprocessed(sig, config, soc, fig):
     """
     Take and plot a single background-subtracted measurement.
 
@@ -79,7 +71,7 @@ def read_unprocessed(sig, config, soc, output, fig):
     config['soft_avgs'] = avgs
 
 
-def read_processed(sig, config, soc, output, fig):
+def read_processed(sig, config, soc, fig):
     """
     Take and plot a single background-subtracted measurement.
 

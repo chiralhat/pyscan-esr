@@ -20,6 +20,7 @@ import pickle
 import pyvisa
 import pulsesweep_gui as psg
 import spinecho_gui as seg
+import pyscan as ps
 
 import os
 
@@ -313,15 +314,46 @@ class Experiment():
 class ExperimentType:
     def __init__(self, type):
         self.type = type #string indicating experiment type
+        self.soc = QickSoc()
+        self.soccfg = self.soc
+        self.devices = ps.ItemAttribute()
+        self.sig = ps.ItemAttribute()
+        
+        self.parameters = {} #input
+        self.sweep = {} #outputut 
+
+        if self.type == "Spin Echo":
+            self.default_file = "se_defaults.pkl"
+        elif self.type == "Pulse Frequency Sweep":
+            self.default_file = "ps_defaults.pkl"
+
+    def read_processed_function(self):
+        """"
+        Takes a snapshot of the current state and processes it before displaying it
+        """
+        if self.type == "Spin Echo":
+            seg.read_processed(self.sig, self.config, self.soc, self.fig)
+        elif self.type == "Pulse Frequency Sweep":
+            psg.read_processed(self.sig, self.config, self.soc, self.fig)
+
+    def read_unprocessed_function(self):
+        """"
+        Takes a snapshot of the current state and doesn't process it before display it
+        """
+        if self.type == "Spin Echo":
+            seg.read_unprocessed(self.sig, self.config, self.soc, self.fig)
+        elif self.type == "Pulse Frequency Sweep":
+            psg.read_unprocessed(self.sig, self.config, self.soc, self.fig)
+    
+    def run_sweep_function(self):
+        pass
+    
+    def init_experiment_function(self):
+        pass
 
 
-    def read_processed_function():
-        if self.type = "Spin Echo":
-            
-
-    def read_unprocessed_function():
-        pass 
-
+    
+        
 
 class ExperimentUI(Experiment, QWidget):
     """ Main UI Class """
@@ -329,7 +361,10 @@ class ExperimentUI(Experiment, QWidget):
     def __init__(self):
         super().__init__()
         self.screen = self.initUI()
-        self.experiments = [ExperimentType("Spin Echo"), ExperimentType("Pulse Frequency Sweep")]
+        self.setLayout(self.screen)
+        self.experiments = [ExperimentType("Spin Echo"), 
+                            ExperimentType("Pulse Frequency Sweep"),
+                            ]
         self.current_experiment = self.experiments[0]
         self.temp_params = {} #list of all of the current parameter values for each setting in the settings panel
 
@@ -340,18 +375,29 @@ class ExperimentUI(Experiment, QWidget):
         adds them to the main_layout variable which is a PyQt5 QVBoxLayout
         object."""
         
+        #Create the components
         top_menu = self.init_top_menu_bar()
         settings_panel = self.init_settings_panel()
-        graphs_panel = self.init
+        graphs_panel = self.init_graphs_panel()
+        bottom_menu_bar = self.init_bottom_menu_bar()
+        error_log = self.init_error_log()
 
-        main_layout = QVBoxLayout(self)
-        #Add all components to main_layout
-        main_layout.addLayout(top_menu)
-        main_layout.addLayout(settings_panel)
-        main_layout.addLayout(graphs_panel)
-        main_layout.addLayout(bottom_menu_bar)
-        main_layout.addLayout(error_log)
-        return main_layout
+        #Separates the settings panel from the graphs panel
+        main_splitter = QSplitter(Qt.Horizontal)
+
+        #Create the main layout
+        screen = QVBoxLayout(self)
+        
+        #Add all components to screen
+        screen.addLayout(top_menu)
+        screen.addWidget(settings_panel)
+        screen.addLayout(graphs_panel)
+        screen.addLayout(bottom_menu_bar)
+        screen.addLayout(error_log)
+
+        # Adding horizontal splitter
+        screen.addWidget(main_splitter)
+        return screen
 
         # Top Menu Bar
     def init_top_menu_bar(self):
@@ -360,55 +406,82 @@ class ExperimentUI(Experiment, QWidget):
         @return top_menu -- a PyQt5 QHBoxLayout container holding the buttons"""
         top_menu = QHBoxLayout()
 
+        # This section creates buttons that involve the current file: Save Experiment, New Experiment, etc. and adds them to the menu_bar
         file_buttons_widget = QWidget()
         file_buttons_layout = QGridLayout(file_buttons_widget)
-        
-        self.read_unprocessed_btn = QPushButton("Read Unprocessed")
-        self.read_unprocessed_btn.clicked.connect(self.current_experiment.read_unprocessed_function)
-        self.read_processed_btn = QPushButton("Read Processed")
-        self.read_processed_btn.clicked.connect(self.current_experiment.read_processed_function)
-        self.sweep_start_stop_btn = QPushButton("Start Sweep")
-        self.sweep_start_stop_btn.clicked.connect(self.current_experiment.sweep_start_stop_function)
-        self.off_btn = QPushButton("Hardware Off")
-        self.off_btn.clicked.connect(self.current_experiment.off_btn_function)
+
+        save_exp_btn = QPushButton("Save Experiment")
+        new_exp_btn = QPushButton("New Experiment")
+        save_exp_as_btn = QPushButton("Save Experiment As")
+        open_exp_btn = QPushButton("Open Experiment")
+        open_exp_btn.clicked.connect(self.show_open_experiment_popup)
+        new_exp_btn.clicked.connect(self.show_new_experiment_popup)
+        save_exp_as_btn.clicked.connect(self.show_save_experiment_as_popup)
 
 
-        file_buttons_layout.addWidget(self.read_unprocessed_btn, 0, 0)
-        file_buttons_layout.addWidget(self.read_processed_btn, 0, 1)
-        file_buttons_layout.addWidget(self.sweep_start_stop_btn, 1, 0)
-        file_buttons_layout.addWidget(self.off_btn, 1, 1)
+        file_buttons_layout.addWidget(save_exp_btn, 0, 0)
+        file_buttons_layout.addWidget(new_exp_btn, 0, 1)
+        file_buttons_layout.addWidget(save_exp_as_btn, 1, 0)
+        file_buttons_layout.addWidget(open_exp_btn, 1, 1)
 
         top_menu.addWidget(file_buttons_widget)
 
-        return top_menu
+        self.init_experiment_specific_buttons(top_menu)
+        self.init_settings_panel() #need to finish implementing
+
+
+    def init_experiment_specific_buttons(self, top_menu):
+        """
+        This section creates buttons, assigns the proper functions to them, and then
+        adds them to the top menu bar.
+        """
+        experiment_buttons_widget = QWidget()
+        experiment_buttons_layout = QGridLayout(experiment_buttons_widget)
+        
+        read_unprocessed_btn = QPushButton("Read Unprocessed")
+        read_unprocessed_btn.clicked.connect(self.current_experiment.read_unprocessed_function)
+        read_processed_btn = QPushButton("Read Processed")
+        read_processed_btn.clicked.connect(self.current_experiment.read_processed_function)
+        sweep_start_stop_btn = QPushButton("Start Sweep")
+        sweep_start_stop_btn.clicked.connect(self.current_experiment.sweep_start_stop_function)
+        off_btn = QPushButton("Hardware Off")
+        off_btn.clicked.connect(self.current_experiment.off_btn_function)
+
+        experiment_buttons_layout.addWidget(read_unprocessed_btn, 0, 0)
+        experiment_buttons_layout.addWidget(read_processed_btn, 0, 1)
+        experiment_buttons_layout.addWidget(sweep_start_stop_btn, 1, 0)
+        experiment_buttons_layout.addWidget(self.off_btn, 1, 1)
+
+        top_menu.addWidget(experiment_buttons_widget)
     
-    def temp(self):
         # Template Selection
-        self.template_dropdown = QComboBox()
-        self.template_dropdown.addItems(["Pulse Frequency Sweep", "Spin Echo"])
-        self.template_dropdown.currentTextChanged.connect(self.change_experiment_type)
+        template_dropdown = QComboBox()
+        template_dropdown.addItems(["Pulse Frequency Sweep", "Spin Echo"])
+        template_dropdown.currentTextChanged.connect(self.change_experiment_type)
 
-        top_menu.addWidget(self.template_dropdown)
+        # Create the indicator for running sweep
+        sweep_running_indicator = QLabel("•")
+        sweep_running_indicator.setFixedSize(10, 10)  # Set the size of the indicator
+        sweep_running_indicator.setStyleSheet("background-color: red;")  # Set initial color to red
+        
+        #Run Experiment and Save Recordings
+        run_and_save_recordings_widget = QWidget()
+        run_and_save_recordings_layout = QGridLayout(self.run_and_save_recordings_widget)
 
+        run_experiment_button = QPushButton("Run Experiment")
+        run_experiment_button.clicked.connect(self.toggle_start_stop_sweep)
 
-        # Run Experiment and Save Recordings
-        self.run_and_save_recordings_widget = QWidget()
-        self.run_and_save_recordings_layout = QGridLayout(self.run_and_save_recordings_widget)
+        plot_menu = QCheckBox("Save All Plot Recordings")
 
-        self.run_button = QPushButton("Run Experiment")
-        self.sweep_stop_start_btn.clicked.connect(self.toggle_start_stop_sweep)
-
-        self.plot_menu = QCheckBox("Save All Plot Recordings")
-
-        self.run_and_save_recordings_layout.addWidget(self.run_button, 1, 0)
-        self.run_and_save_recordings_layout.addWidget(self.plot_menu, 0, 0)
+        run_and_save_recordings_layout.addWidget(run_experiment_button, 1, 0)
+        run_and_save_recordings_layout.addWidget(sweep_running_indicator)
+        self.run_and_save_recordings_layout.addWidget(plot_menu, 0, 0)
 
         top_menu.addWidget(self.run_and_save_recordings_widget)
 
+        return top_menu
 
-        # Main Splitter (Left: Settings, Right: Output)
-        main_splitter = QSplitter(Qt.Horizontal)
-
+    def init_settings_panel(self):
         # Settings Panel
         self.settings_panel = DynamicSettingsPanel()
         settings_scroll = QScrollArea()
@@ -437,12 +510,6 @@ class ExperimentUI(Experiment, QWidget):
         error_log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         output_container.addWidget(error_log)
 
-        # Adding to Main Splitter
-        main_splitter.addWidget(settings_scroll)
-        main_splitter.addWidget(output_container)
-        main_layout.addWidget(main_splitter)
-
-        self.setLayout(main_layout)
 
         # Load initial settings
         self.settings_manager = ExperimentSettingsManager(self.settings_panel, self.template_dropdown)
@@ -553,6 +620,8 @@ class ExperimentUI(Experiment, QWidget):
         run_ind.value = 0
 
     def stopsweep(btn):
+        # Changes the indicator color to red
+        self.sweep_running_indicator.setStyleSheet("background-color: red;")
         sweep['expt'].runinfo.running = False
     
     def turnoff(btn):
@@ -570,6 +639,9 @@ class ExperimentUI(Experiment, QWidget):
 
 
     def start_sweep(btn):
+        # Changes the indicator color to green
+        self.sweep_running_indicator.setStyleSheet("background-color: green;")
+        
         run_ind.value = 1
         set_pars(btn)
         runinfo = sweep['runinfo']
