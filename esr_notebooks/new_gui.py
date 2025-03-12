@@ -229,86 +229,6 @@ class ExperimentSettingsManager:
     def update_settings_panel(self, experiment_type):
         self.settings_panel.load_settings(self.experiment_templates.get(experiment_type, {"main": [], "groups": {}}))
 
-class Experiment():
-    """
-    Stores the actual experiment parameters and the functions that 
-    need to get run for the experiment. This basically
-    functions as an the jupyter notebook and the init_gui function call
-    at the end of the "experimentType_gui.py. Thats why I import those files as 
-    seg (Spin Echo GUI) and psg (Pulse Sweep GUI).
-    """
-    ui = None
-    
-    parameters = {}
-    sweep = {}
-    devices = None
-    sig = None
-    exp_type = None
-    soc = None
-    soccfg = None
-    default_file = None
-
-    # Functions unique to experiments which will be attached to buttons:
-    # These will be obtained from experimentType_gui.py
-    read_unprocessed_function = None
-    read_processed_function = None
-    sweep_function = None
-
-
-    def __init__(self):
-        self.ui = ExperimentUI()
-
-        # This was taken from the top of the notebook files, 
-        # might need to get looked at more [...
-        self.devices = ps.ItemAttribute()
-        self.sig = ps.ItemAttribute()
-        self.soc = QickSoc()
-        self.soccfg = self.soc
-        self.parameters = {}
-        self.sweep = {}
-        #...]
-        self.init_experiment() #this will do the rest of the initializion needed
-    
-    def init_experiment(self, exp_type = "Spin Echo"):
-        """
-        Initializing the class variables that differ for each experiment
-        
-        this should also get run every time that we switch an experiment"""
-        self.exp_type = exp_type
-        if exp_type == "Pulse Frequency Sweep":
-            self.default_file = 'ps_defaults.pkl'
-            psg.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
-            
-            self.read_unprocessed_function = psg.read_unprocessed
-            self.read_processed_function = psg.read_processed
-            self.sweep_function = self.run_sweep
-            self.ui.init_gui_button_functions(self.read_unprocessed_function, 
-                                              self.read_processed_function,
-                                              self.sweep_function)
-            
-        elif exp_type == "Spin Echo":
-            self.default_file = 'se_defaults.pkl'
-            seg.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
-            
-            self.read_unprocessed_function = seg.read_unprocessed
-            self.read_processed_function = seg.read_processed
-            self.sweep_function = self.run_sweep
-            self.ui.init_gui_button_functions(self.read_unprocessed_function, 
-                                              self.read_processed_function,
-                                              self.sweep_function)
-        #TO IMPLEMENT: call function in UI that shows the proper settings in the UI based on the experiment type
-        # this is currently happening in the ExperimentSettingsManager class right now, but
-        # I need to investigate this further
-        
-
-    def run_sweep(self):#, output, fig):
-        """Runs a sweep."""
-        self.sweep['expt'].start_time = time()
-        self.sweep['expt'].start_thread()
-    
-    #MIGHT WANT TO MOVE SOME FUNCTIONS that are in the bottom of ExperimentUI that 
-    #don't really pertain to the UI to here (read_mon, etc)
-
 
 #================================================================================
 class ExperimentType:
@@ -350,6 +270,11 @@ class ExperimentType:
     
     def init_experiment_function(self):
         pass
+
+    def run_sweep_function(self):#, output, fig):
+        """Runs a sweep."""
+        self.sweep['expt'].start_time = time()
+        self.sweep['expt'].start_thread()
 
 
     
@@ -463,7 +388,7 @@ class ExperimentUI(Experiment, QWidget):
         sweep_running_indicator = QLabel("•")
         sweep_running_indicator.setFixedSize(10, 10)  # Set the size of the indicator
         sweep_running_indicator.setStyleSheet("background-color: red;")  # Set initial color to red
-        
+        s
         #Run Experiment and Save Recordings
         run_and_save_recordings_widget = QWidget()
         run_and_save_recordings_layout = QGridLayout(self.run_and_save_recordings_widget)
