@@ -52,9 +52,10 @@ def read_unprocessed(sig, config, soc, fig):
     ax.set_ylabel('Signal (a.u.)')
     #[ax.axvline(x=w*1e6, color='purple', ls='--') for w in win]
     ax.legend()
-    with output:
-        clear_output(wait=True)
-        display(ax.figure)
+    #OUTPUT: need to figure this part out
+    # with output:
+    #     clear_output(wait=True)
+    #     display(ax.figure)
 
 
 # I need to set up a new way of measuring, using the phase-based subtraction,
@@ -100,7 +101,7 @@ def read_processed(sig, config, soc, fig):
     ypt = sig.x.max()*np.array([0.75, 0.65])
     ax.text(xpt, ypt[0], fitstr)
     ax.text(xpt, ypt[1], freqstr)
-    # OUTPUT:
+    # OUTPUT: need to figure this poart out
     # with output:
     #     clear_output(wait=True)
     #     display(ax.figure)
@@ -123,4 +124,3 @@ def init_experiment(devices, parameters, sweep, soc):
     if parameters['use_psu']:
         devices.psu.set_magnet(parameters)
     setup_experiment(parameters, devices, sweep, soc)
-

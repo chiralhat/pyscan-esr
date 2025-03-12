@@ -21,7 +21,6 @@ import pyvisa
 import pulsesweep_gui as psg
 import spinecho_gui as seg
 import pyscan as ps
-
 import os
 
 # [ this is stuff that was at the top of gui_setup.py:
@@ -221,42 +220,22 @@ EXPERIMENT_TEMPLATES = {
 class ExperimentType:
     def __init__(self, type):
         self.type = type #string indicating experiment type
+
+        #harware releated:
         self.soc = QickSoc()
         self.soccfg = self.soc
         self.devices = ps.ItemAttribute()
         self.sig = ps.ItemAttribute()
         
         self.parameters = {} #input
-        self.sweep = {} #outputut 
+        self.sweep = {} #output 
 
+        #for saving the parameters you entered into the settings panel
         if self.type == "Spin Echo":
             self.default_file = "se_defaults.pkl"
         elif self.type == "Pulse Frequency Sweep":
             self.default_file = "ps_defaults.pkl"
-            
-    def read_mon(btn):
-        running_indicator = 1
-        set_pars(btn)
-        read(sig, parameters, soc, output, fig)
-        running_indicator = 0
 
-    def read_processed(self):
-        """"
-        Takes a snapshot of the current state and processes it before displaying it
-        """
-        if self.type == "Spin Echo":
-            seg.read_processed(self.sig, self.config, self.soc, self.fig)
-        elif self.type == "Pulse Frequency Sweep":
-            psg.read_processed(self.sig, self.config, self.soc, self.fig)
-
-    def read_unprocessed(self):
-        """"
-        Takes a snapshot of the current state and doesn't process it before display it
-        """
-        if self.type == "Spin Echo":
-            seg.read_unprocessed(self.sig, self.config, self.soc, self.fig)
-        elif self.type == "Pulse Frequency Sweep":
-            psg.read_unprocessed(self.sig, self.config, self.soc, self.fig)
 
     def init_pyscan_experiment(self):
         """
@@ -268,43 +247,7 @@ class ExperimentType:
         elif self.type == "Pulse Frequency Sweep":
             psg.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
 
-    def run_sweep(self):#, output, fig):
-        """actually runs a sweep"""
-        self.sweep['expt'].start_time = time()
-        self.sweep['expt'].start_thread()
-    
-    def start_sweep(self):
-        """starts up the hardware to run an experiment"""
-        runinfo = sweep['runinfo']
-        expt = ps.Sweep(runinfo, devices, sweep['name'])
-        sweep['expt'] = expt
-        if parameters['expt']=="Hahn Echo":
-            sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
-        elif parameters['expt']=="CPMG":
-            sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
-        elif parameters['sweep2'] and parameters['expt2']=="Hahn Echo":
-            sweep['expt'].echo_delay = 2*runinfo.scan1.scan_dict['delay_sweep']*runinfo.parameters['pulses']
-        elif parameters['sweep2'] and parameters['expt2']=="CPMG":
-            sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan1.scan_dict['cpmg_sweep']
-        else:
-            sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
-        run_sweep(sweep, parameters)#, measout, mfig)
-        run_ind.value = 0
-
-    def stop_sweep(self):
-        """Stops a sweep"""
-        self.sweep['expt'].runinfo.running = False
-        
-    def hardware_off(self):
-        """
-        turns off the hardware
-        """
-        if 'expt' in self.sweep.keys():
-            self.sweep['expt'].runinfo.running = False
-        if self.parameters['use_psu']:
-            self.devices.psu.output = False
-
-    def set_parameters(self, devices, parameters):
+    def set_parameters(self, parameters):
         """
         Takes in parameters read from the settings panel in the UI, 
         copies them into the paremeters dictionary, and then modifies them sligthly
@@ -332,12 +275,12 @@ class ExperimentType:
             pickle.dump(self.parameters, f)
             
         inst = ps.ItemAttribute()
-        if not hasattr(devices, 'psu') and self.parameters['use_psu']:
+        if not hasattr(self.devices, 'psu') and self.parameters['use_psu']:
             waddr = self.parameters['psu_address'].split('ASRL')[-1].split('::')[0]
-            devices.psu = ps.GPD3303S(waddr)
-        if not hasattr(devices, 'ls335') and self.parameters['use_temp']:
-            devices.ls335 = ps.Lakeshore335()
-            ttemp = devices.ls335.get_temp()
+            self.devices.psu = ps.GPD3303S(waddr)
+        if not hasattr(self.devices, 'ls335') and self.parameters['use_temp']:
+            self.devices.ls335 = ps.Lakeshore335()
+            ttemp = self.devices.ls335.get_temp()
 
         #NOTE: this is the checkbox that say "if i've clicked initialize on read processed/read unprocessed/or on start sweep"
         #then initialize the pyscan experiment
@@ -345,7 +288,60 @@ class ExperimentType:
         if not self.parameters['init']: #presumably in his original code, this gets set to false if the user doesn't click the initialize on read checkbox in his code
             pass
         else:
-            self.init_pyscan_experiment(devices, parameters, self.sweep, self.soc) # TODO: Fix the runinfo, expt bit (put into new dict?)
+            self.init_pyscan_experiment() 
+    
+    def read_processed(self):
+        """"
+        Takes a snapshot of the current state and processes it before displaying it
+        """
+        if self.type == "Spin Echo":
+            seg.read_processed(self.sig, self.config, self.soc, self.fig)
+        elif self.type == "Pulse Frequency Sweep":
+            psg.read_processed(self.sig, self.config, self.soc, self.fig)
+
+    def read_unprocessed(self):
+        """"
+        Takes a snapshot of the current state and doesn't process it before display it
+        """
+        if self.type == "Spin Echo":
+            seg.read_unprocessed(self.sig, self.config, self.soc, self.fig)
+        elif self.type == "Pulse Frequency Sweep":
+            psg.read_unprocessed(self.sig, self.config, self.soc, self.fig)
+
+    def run_sweep(self):#, output, fig):
+        """actually runs a sweep"""
+        self.sweep['expt'].start_time = time()
+        self.sweep['expt'].start_thread()
+    
+    def start_sweep(self):
+        """starts up the hardware to run a sweep and runs a sweep"""
+        runinfo = self.sweep['runinfo']
+        expt = ps.Sweep(runinfo, self.devices, self.sweep['name'])
+        self.sweep['expt'] = expt
+        if self.parameters['expt']=="Hahn Echo":
+            self.sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
+        elif self.parameters['expt']=="CPMG":
+            self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
+        elif self.parameters['sweep2'] and self.parameters['expt2']=="Hahn Echo":
+            self.sweep['expt'].echo_delay = 2*runinfo.scan1.scan_dict['delay_sweep']*runinfo.parameters['pulses']
+        elif self.parameters['sweep2'] and self.parameters['expt2']=="CPMG":
+            self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan1.scan_dict['cpmg_sweep']
+        else:
+            self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
+        self.run_sweep(self.sweep, self.parameters)
+
+    def stop_sweep(self):
+        """Stops a sweep that is currently running"""
+        self.sweep['expt'].runinfo.running = False
+        
+    def hardware_off(self):
+        """
+        turns off the hardware 
+        """
+        if 'expt' in self.sweep.keys():
+            self.sweep['expt'].runinfo.running = False
+        if self.parameters['use_psu']:
+            self.devices.psu.output = False
 
 
 class ExperimentUI(QWidget):
@@ -358,14 +354,12 @@ class ExperimentUI(QWidget):
         self.screen = self.initUI()
         self.setLayout(self.screen)
 
-        self.experiments = [ExperimentType("Spin Echo"), 
-                            ExperimentType("Pulse Frequency Sweep"),]
-        self.current_experiment = self.experiments[0]
+        self.experiments = {"Spin Echo" : ExperimentType("Spin Echo"), 
+                            "Pulse Frequency Sweep" : ExperimentType("Pulse Frequency Sweep"),}
+        self.current_experiment = self.experiments["Spin Echo"]
 
-        self.experiment_templates = EXPERIMENT_TEMPLATES
+        self.experiment_templates = EXPERIMENT_TEMPLATES #all the settings that should be shown for each experiment type
         self.temp_parameters = {} #list of all of the current parameter values for each setting in the settings panel 
-
-        self.running_indicator
 
     def init_UI(self):
         """Initializes each individual component of the UI - Top menu bar, 
@@ -376,7 +370,7 @@ class ExperimentUI(QWidget):
         #Create the components
         top_menu = self.init_top_menu_bar()
         self.settings_panel = self.init_settings_panel()
-        graphs_panel = self.init_graphs_panel()
+        graphs_panel = self.init_graphs_panel() 
         bottom_menu_bar = self.init_bottom_menu_bar()
         error_log = self.init_error_log()
 
@@ -396,8 +390,15 @@ class ExperimentUI(QWidget):
         # Adding horizontal splitter
         screen.addWidget(main_splitter)
         return screen
+    
+    def init_graphs_panel(self):
+        print("NEED TO IMPLEMENT")
+    
+    def init_bottom_menu_bar(self):
+        print("NEED TO IMPLEMENT")
 
-        # Top Menu Bar
+    def init_error_log(self):
+        print("NEED TO IMPLEMENT")
     
     def init_top_menu_bar(self):
         """This function initializes the top menu bar of the PyQt5 GUI with layout
@@ -429,7 +430,6 @@ class ExperimentUI(QWidget):
 
         return top_menu
 
-
     def init_experiment_specific_buttons(self, top_menu):
         """
         This section creates buttons, assigns the proper functions to them, and then
@@ -439,7 +439,7 @@ class ExperimentUI(QWidget):
         experiment_buttons_layout = QGridLayout(experiment_buttons_widget)
         
         set_parameters_btn = QPushButton("Set Parameters")
-        set_parameters_btn.clicked.connect(self.set_parameters_frontend())        
+        set_parameters_btn.clicked.connect(self.read_and_set_parameters())        
         read_unprocessed_btn = QPushButton("Read Unprocessed")
         read_unprocessed_btn.clicked.connect(self.read_unprocessed_frontend())
         read_processed_btn = QPushButton("Read Processed")
@@ -462,9 +462,9 @@ class ExperimentUI(QWidget):
         template_dropdown.currentTextChanged.connect(self.change_experiment_type)
 
         # Create the indicator for running sweep
-        sweep_running_indicator = QLabel("•")
-        sweep_running_indicator.setFixedSize(10, 10)  # Set the size of the indicator
-        sweep_running_indicator.setStyleSheet("background-color: red;")  # Set initial color to red
+        running_indicator = QLabel("•")
+        running_indicator.setFixedSize(10, 10)  # Set the size of the indicator
+        running_indicator.setStyleSheet("background-color: grey;")  # Set initial color to red
 
         #Run Experiment and Save Recordings
         run_and_save_recordings_widget = QWidget()
@@ -472,8 +472,7 @@ class ExperimentUI(QWidget):
 
         plot_menu = QCheckBox("Save All Plot Recordings")
 
-        run_and_save_recordings_layout.addWidget(run_experiment_button, 1, 0)
-        run_and_save_recordings_layout.addWidget(sweep_running_indicator)
+        run_and_save_recordings_layout.addWidget(running_indicator)
         self.run_and_save_recordings_layout.addWidget(plot_menu, 0, 0)
 
         top_menu.addWidget(self.run_and_save_recordings_widget)
@@ -512,8 +511,12 @@ class ExperimentUI(QWidget):
         # Load initial settings
         self.change_experiment_type("Pulse Frequency Sweep")
 
+    def change_experiment_type(self, experiment_type):
+        self.settings_panel.load_settings(self.experiment_templates.get(experiment_type, {"main": [], "groups": {}}))
+        self.current_experiment = self.experiments[experiment_type]
+        self.temp_parameters = {}
 
-    def set_parameters_frontend(self): 
+    def read_and_set_parameters(self): 
         #this used to be the code in gui_setup.py that looped through all
         #the controls and updated the parameters with the values in the controls
         tree = self.settings_panel.settings_tree #This is the triply-nested dictionary
@@ -536,39 +539,36 @@ class ExperimentUI(QWidget):
                 elif isinstance(widget, QLabel):
                     value = widget.text()
                 else:
-                    raise Exception("Widget in Setttings panel is not of a konwn type") 
+                    raise Exception("Widget in Setttings panel is not of a known type") 
                 
                 self.temp_parameters[key] = value
         self.current_experiment.set_parameters(self.temp_parameters)
 
-    def change_experiment_type(self, experiment_type):
-        self.settings_panel.load_settings(self.experiment_templates.get(experiment_type, {"main": [], "groups": {}}))
-
     def read_unprocessed_frontend(self):
-        self.run_indicator.value = 1
-        self.set_parameters_frontend()
+        self.running_indicator.setStyleSheet("background-color: red;")
+        self.read_and_set_parameters()
         self.current_experiment.read_unprocessed()
-        self.run_indicator.value = 0
+        self.running_indicator.setStyleSheet("background-color: grey;")
 
     def read_processed_frontend(self):
         """calls the read processed function. If initialize on read is checked, then the experiment is also initialized"""
-        self.running_indicator = 1
-        self.set_parameters_frontend()
+        self.running_indicator.setStyleSheet("background-color: red;")
+        self.read_and_set_parameters()
         self.current_experiment.read_processed()
-        self.running_indicator = 0
+        self.running_indicator.setStyleSheet("background-color: grey;")
 
     def toggle_start_stop_sweep_frontend(self):
         """ Toggle between Run and Stop Sweep states """
         if self.sweep_start_stop_btn.text() == "Start Sweep":
-            self.running_indicator = 1
-            self.set_parameters_frontend()
+            self.running_indicator.setStyleSheet("background-color: red;")
+            self.read_and_set_parameters()
             self.sweep_start_stop_btn.setText("Stop Sweep")
             self.current_experiment.start_sweep()
             #currently, the running indicator won't turn off when the sweep is done. Need to figure this out.
         else:
             self.current_experiment.stop_sweep()
             self.sweep_start_stop_btn.setText("Start Sweep")
-            self.running_indicator = 0
+            self.running_indicator.setStyleSheet("background-color: grey;")
     
     def hardware_off_frontend(self):
         """calls a backend function that turns off the harware for the experiment"""
@@ -585,10 +585,6 @@ class ExperimentUI(QWidget):
     def show_new_experiment_popup(self):
         popup = PopUpMenu("New Experiment", "Feature coming soon!")
         popup.show_popup()
-
-
-    
-
 
 
 def main():

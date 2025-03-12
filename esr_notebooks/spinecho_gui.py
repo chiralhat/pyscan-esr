@@ -64,9 +64,10 @@ def read_unprocessed(sig, config, soc, fig):
     ax.set_ylabel('Signal (a.u.)')
     #[ax.axvline(x=w*1e6, color='purple', ls='--') for w in win]
     ax.legend()
-    with output:
-        clear_output(wait=True)
-        display(ax.figure)
+    # OUTPUT: need to figure this part out
+    # with output:
+    #     clear_output(wait=True)
+    #     display(ax.figure)
     config['single'] = single
     config['soft_avgs'] = avgs
 
@@ -108,9 +109,10 @@ def read_processed(sig, config, soc, fig):
     ax.set_ylabel('Signal (a.u.)')
     #[ax.axvline(x=w*1e6, color='purple', ls='--') for w in win]
     ax.legend()
-    with output:
-        clear_output(wait=True)
-        display(ax.figure)
+    #OUTPUT: need to figure this part out
+    # with output:
+    #     clear_output(wait=True)
+    #     display(ax.figure)
     config['single'] = single
         
 
