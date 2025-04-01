@@ -364,64 +364,59 @@ class ExperimentUI(QWidget):
     def init_UI(self):
         """Initializes each individual component of the UI - Top menu bar, 
         Settings panel, bottom menu bar, Graphs panel, and Error log - and 
-        adds them to the main_layout variable which is a PyQt5 QVBoxLayout
-        object."""
-        
-        print("init_UI called")
-        #Create the components
+        adds them to the main_layout variable which is a PyQt5 QVBoxLayout object."""
+
+        # Create the individual components
         settings_scroll = self.init_settings_panel()
         graphs_panel = self.init_graphs_panel() 
         bottom_menu_bar = self.init_bottom_menu_bar()
         error_log = self.init_error_log()
         top_menu = self.init_top_menu_bar()
 
-        #Separates the settings panel from the graphs panel
-        main_splitter = QSplitter(Qt.Horizontal)
+        # Create the main layout
+        main_layout = QVBoxLayout(self)
 
-        #Create the main layout
-        screen = QVBoxLayout(self)
-        
-        #Add all components to screen
-        screen.addLayout(top_menu)
-        screen.addWidget(self.settings_panel.settings_scroll)
-        screen.addLayout(graphs_panel)
-        screen.addLayout(bottom_menu_bar)
-        screen.addLayout(error_log)
+        # Add all components to the main layout
+        main_layout.addLayout(top_menu)
+        main_layout.addWidget(settings_scroll)
+        main_layout.addWidget(graphs_panel)
+        main_layout.addLayout(bottom_menu_bar)
+        main_layout.addWidget(error_log)
 
-        # Adding horizontal splitter
-        screen.addWidget(main_splitter)
-        return screen
+        return main_layout
     
     def init_graphs_panel(self):
-        # Output Section (Graphs & Error Log)
-        output_container = QSplitter(Qt.Vertical)
-        output_container.setSizes([100, 100])
-
-        # Graphs Panel
+        """Creates the graphs panel containing Matplotlib graphs."""
+        # Create a container widget for the graphs
         graph_section_widget = QWidget()
         graph_layout = QVBoxLayout(graph_section_widget)
         graph_layout.setContentsMargins(100, 50, 100, 50)
 
-        # Add three Matplotlib Graphs
+        # Add three Matplotlib graphs to the layout
         self.graphs = [MatplotlibCanvas() for _ in range(3)]
         for graph in self.graphs:
             graph_layout.addWidget(graph)
 
-        output_container.addWidget(graph_section_widget)
-        
-        return output_container
+        return graph_section_widget
 
-        # Error Log Panel
+    
+    def init_bottom_menu_bar(self):
+        """Creates the bottom menu bar."""
+        print("NEED TO FINISH IMPLEMENTING")
+        bottom_layout = QHBoxLayout()
+        # Add buttons or other widgets as needed.
+        btn1 = QPushButton("Button 1")
+        btn2 = QPushButton("Button 2")
+        bottom_layout.addWidget(btn1)
+        bottom_layout.addWidget(btn2)
+        return bottom_layout
+
+    def init_error_log(self):
+        """Creates the error log panel."""
         error_log = QLabel("Error Log")
         error_log.setFrameShape(QFrame.Box)
         error_log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        output_container.addWidget(error_log)
-    
-    def init_bottom_menu_bar(self):
-        print("NEED TO IMPLEMENT")
-
-    def init_error_log(self):
-        print("NEED TO IMPLEMENT")
+        return error_log
     
     def init_top_menu_bar(self):
         """This function initializes the top menu bar of the PyQt5 GUI with layout
@@ -503,21 +498,17 @@ class ExperimentUI(QWidget):
         return top_menu
 
     def init_settings_panel(self):
-        print("init_settings_panel run")
-        print(self.current_experiment.type)
         # Settings Panel
         self.settings_panel = DynamicSettingsPanel()
         settings_scroll = QScrollArea()
         settings_scroll.setWidgetResizable(True)
         settings_scroll.setWidget(self.settings_panel)
-        
-        ############################
 
         # Load initial settings
         self.current_experiment = self.experiments["Pulse Frequency Sweep"]
         self.temp_parameters = {}
         print("FINISH IMPLEMENTING")
-        #change function assigned to each button
+        #NEED change function assigned to each button
         self.settings_panel.load_settings_panel(self.experiment_templates.get("Pulse Frequency Sweep", {"main": [], "groups": {}}))
         
         return settings_scroll
