@@ -349,41 +349,68 @@ class ExperimentUI(QWidget):
 
     def __init__(self):
         super().__init__()
-
-        self.experiments = {"Spin Echo" : ExperimentType("Spin Echo"), 
-                            "Pulse Frequency Sweep" : ExperimentType("Pulse Frequency Sweep"),}
+        # Setup experiments
+        self.experiments = {
+            "Spin Echo": ExperimentType("Spin Echo"), 
+            "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep")
+        }
+        # Default experiment
         self.current_experiment = self.experiments["Spin Echo"]
+        self.experiment_templates = EXPERIMENT_TEMPLATES
+        self.temp_parameters = {}
 
-        self.experiment_templates = EXPERIMENT_TEMPLATES #all the settings that should be shown for each experiment type
-        self.temp_parameters = {} #list of all of the current parameter values for each setting in the settings panel
-        
-        self.settings_panel = None
-        self.screen = self.init_UI()
-        self.setLayout(self.screen)
+        # Create main UI elements
+        self.settings_panel = DynamicSettingsPanel() 
+        self.graphs_panel = self.init_graphs_panel()
+        self.error_log = self.init_error_log()
+        self.bottom_menu_bar = self.init_bottom_menu_bar() 
+        self.top_menu_bar = self.init_top_menu_bar()
 
-    def init_UI(self):
-        """Initializes each individual component of the UI - Top menu bar, 
-        Settings panel, bottom menu bar, Graphs panel, and Error log - and 
-        adds them to the main_layout variable which is a PyQt5 QVBoxLayout object."""
+        # Build the main layout with splitters
+        self.init_layout()
 
-        # Create the individual components
-        settings_scroll = self.init_settings_panel()
-        graphs_panel = self.init_graphs_panel() 
-        bottom_menu_bar = self.init_bottom_menu_bar()
-        error_log = self.init_error_log()
-        top_menu = self.init_top_menu_bar()
+        # Load some default experiment into the settings panel
+        self.current_experiment = self.experiments["Pulse Frequency Sweep"]
+        self.temp_parameters = {}
+        print("FINISH IMPLEMENTING")
+        #change function assigned to each button
+        self.settings_panel.load_settings_panel(self.experiment_templates.get("Pulse Frequency Sweep", {"main": [], "groups": {}}))
 
-        # Create the main layout
+    def init_layout(self):
+        """ 
+        Build the overall layout:
+         - A top menu (horizontal layout of buttons)
+         - A main splitter horizontally: left = settings, right = a vertical splitter
+              top = graphs, bottom = error log
+         - A bottom menu (horizontal layout of buttons).
+        """
         main_layout = QVBoxLayout(self)
 
-        # Add all components to the main layout
-        main_layout.addLayout(top_menu)
-        main_layout.addWidget(settings_scroll)
-        main_layout.addWidget(graphs_panel)
-        main_layout.addLayout(bottom_menu_bar)
-        main_layout.addWidget(error_log)
+        # Add top menu
+        main_layout.addLayout(self.top_menu_bar)
 
-        return main_layout
+        # -- main splitter (horizontal)
+        self.main_splitter = QSplitter(Qt.Horizontal)
+        
+        # Left side: settings
+        self.main_splitter.addWidget(self.settings_panel)
+
+        # Right side: a vertical splitter for graphs vs. error log
+        self.right_splitter = QSplitter(Qt.Vertical)
+        self.right_splitter.addWidget(self.graphs_panel)
+        self.right_splitter.addWidget(self.error_log)
+
+        self.main_splitter.addWidget(self.right_splitter)
+        self.main_splitter.setStretchFactor(0, 1)  # optional: to control how space is distributed
+        self.main_splitter.setStretchFactor(1, 3)
+
+        main_layout.addWidget(self.main_splitter)
+
+        # Add bottom menu
+        main_layout.addLayout(self.bottom_menu_bar)
+
+        self.setLayout(main_layout)
+        
     
     def init_graphs_panel(self):
         """Creates the graphs panel containing Matplotlib graphs."""
