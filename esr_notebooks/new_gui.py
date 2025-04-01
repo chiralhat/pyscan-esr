@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QPushButton,
+from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QGridLayout, QPushButton,
                              QSplitter, QScrollArea, QLabel, QFrame, QComboBox, QSizePolicy, 
                              QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem, 
-                             QMessageBox, QLineEdit)
+                             QMessageBox, QLineEdit, QSizeGrip)
 from PyQt5.QtCore import Qt
 import sys
 import matplotlib.pyplot as plt
@@ -76,6 +76,9 @@ class DynamicSettingsPanel(QWidget):
         self.settings_tree.setHeaderHidden(False)
         self.settings_tree.setColumnCount(2)
         self.settings_tree.setHeaderLabels(["Setting", "Value"])
+         # Set custom column widths: Setting column is wider
+        self.settings_tree.setColumnWidth(0, 200)  # Set the 'Setting' column width to 200px
+        self.settings_tree.setColumnWidth(1, 100)  # Set the 'Value' column width to 100px
         
         self.settings_scroll = QScrollArea()
         self.settings_scroll.setWidgetResizable(True)
@@ -100,6 +103,10 @@ class DynamicSettingsPanel(QWidget):
         for group_name, group_settings in settings.get("groups", {}).items():
             group_item = QTreeWidgetItem([group_name])
             self.settings_tree.addTopLevelItem(group_item)
+
+            # Expand "Main Settings" group only (modify this logic as per your group name)
+            if group_name == "Main Settings":
+                group_item.setExpanded(True)
 
             for setting in group_settings:
                 item = QTreeWidgetItem([setting["name"]])
@@ -343,12 +350,12 @@ class ExperimentType:
         if self.parameters['use_psu']:
             self.devices.psu.output = False
 
-
-class ExperimentUI(QWidget):
+class ExperimentUI(QMainWindow):
     """ Main UI Class """
 
     def __init__(self):
         super().__init__()
+        
         # Setup experiments
         self.experiments = {
             "Spin Echo": ExperimentType("Spin Echo"), 
@@ -377,16 +384,22 @@ class ExperimentUI(QWidget):
         self.settings_panel.load_settings_panel(self.experiment_templates.get("Pulse Frequency Sweep", {"main": [], "groups": {}}))
 
     def init_layout(self):
-        """ 
+        """
         Build the overall layout:
          - A top menu (horizontal layout of buttons)
          - A main splitter horizontally: left = settings, right = a vertical splitter
-              top = graphs, bottom = error log
+           top = graphs, bottom = error log
          - A bottom menu (horizontal layout of buttons).
         """
-        main_layout = QVBoxLayout(self)
 
-        # Add top menu
+        # Make the window frameless to remove the title bar
+        self.setWindowFlags(Qt.FramelessWindowHint)  # This removes the title bar and system buttons
+
+        # Create the central widget and main layout for the window
+        central_widget = QWidget()
+        main_layout = QVBoxLayout(central_widget)
+
+        # Add top menu (adjust layout as needed)
         main_layout.addLayout(self.top_menu_bar)
 
         # -- main splitter (horizontal)
@@ -401,16 +414,29 @@ class ExperimentUI(QWidget):
         self.right_splitter.addWidget(self.error_log)
 
         self.main_splitter.addWidget(self.right_splitter)
-        self.main_splitter.setStretchFactor(0, 1)  # optional: to control how space is distributed
-        self.main_splitter.setStretchFactor(1, 3)
+
+        # Set stretch factors to control resizing behavior
+        self.main_splitter.setStretchFactor(0, 1)  # Settings Panel (left side)
+        self.main_splitter.setStretchFactor(1, 1)  # Right splitter (graph & error log)
 
         main_layout.addWidget(self.main_splitter)
+
+        # Customizing the size of the resize grip by adding a larger widget at the bottom-right corner
+        size_grip = QSizeGrip(self)
+        size_grip.setStyleSheet("background-color: red; width: 20px; height: 200px;")  # Customize the grip
+        self.main_splitter.addWidget(size_grip)
 
         # Add bottom menu
         main_layout.addLayout(self.bottom_menu_bar)
 
-        self.setLayout(main_layout)
-        
+        # Set the layout to the central widget
+        self.setCentralWidget(central_widget)
+
+        # Set up window title and default size
+        self.setWindowTitle("Experiment UI")
+        self.setGeometry(100, 100, 1000, 700)  # Default window size
+        self.show()  # Show the window
+         
     
     def init_graphs_panel(self):
         """Creates the graphs panel containing Matplotlib graphs."""
@@ -446,15 +472,11 @@ class ExperimentUI(QWidget):
         return error_log
     
     def init_top_menu_bar(self):
-        """This function initializes the top menu bar of the PyQt5 GUI with layout
-        and all buttons.
-        @return top_menu -- a PyQt5 QHBoxLayout container holding the buttons"""
         top_menu = QHBoxLayout()
 
-        # This section creates buttons that involve the current file: Save Experiment, New Experiment, etc. and adds them to the menu_bar
+        # THESE FUNCTIONS DON'T DO ANYTHING RIGHT NOW, NEED TO IMPLEMENT
         file_buttons_widget = QWidget()
         file_buttons_layout = QGridLayout(file_buttons_widget)
-
         save_exp_btn = QPushButton("Save Experiment")
         new_exp_btn = QPushButton("New Experiment")
         save_exp_as_btn = QPushButton("Save Experiment As")
@@ -463,17 +485,45 @@ class ExperimentUI(QWidget):
         new_exp_btn.clicked.connect(self.show_new_experiment_popup)
         save_exp_as_btn.clicked.connect(self.show_save_experiment_as_popup)
 
-
         file_buttons_layout.addWidget(save_exp_btn, 0, 0)
         file_buttons_layout.addWidget(new_exp_btn, 0, 1)
         file_buttons_layout.addWidget(save_exp_as_btn, 1, 0)
         file_buttons_layout.addWidget(open_exp_btn, 1, 1)
+        #########
 
         top_menu.addWidget(file_buttons_widget)
 
+        # Add experiment-specific buttons
         top_menu = self.init_experiment_specific_buttons(top_menu)
 
+        # Window Control Buttons:
+        window_controls_widget = QWidget()
+        window_controls_layout = QHBoxLayout(window_controls_widget)
+        window_controls_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Create window control buttons
+        minimize_btn = QPushButton("_")
+        minimize_btn.clicked.connect(self.showMinimized)
+        fullscreen_btn = QPushButton("Toggle Full Screen")
+        fullscreen_btn.clicked.connect(self.toggle_fullscreen)
+        off_btn = QPushButton("Hardware Off and Close Software")
+        off_btn.clicked.connect(self.hardware_off_frontend)
+
+        window_controls_layout.addWidget(minimize_btn)
+        window_controls_layout.addWidget(fullscreen_btn)
+        window_controls_layout.addWidget(off_btn)
+
+        # Add the window controls to the top menu layout
+        top_menu.addWidget(window_controls_widget)
+
         return top_menu
+
+    def toggle_fullscreen(self):
+        # Toggle between full screen and normal window states
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
 
     def init_experiment_specific_buttons(self, top_menu):
         """
@@ -483,7 +533,7 @@ class ExperimentUI(QWidget):
         experiment_buttons_widget = QWidget()
         experiment_buttons_layout = QGridLayout(experiment_buttons_widget)
         
-        set_parameters_btn = QPushButton("Set Parameters")
+        set_parameters_btn = QPushButton("Push Parameters")
         set_parameters_btn.clicked.connect(self.read_and_set_parameters)        
         read_unprocessed_btn = QPushButton("Read Unprocessed")
         read_unprocessed_btn.clicked.connect(self.read_unprocessed_frontend)
@@ -491,13 +541,11 @@ class ExperimentUI(QWidget):
         read_processed_btn.clicked.connect(self.read_processed_frontend)
         sweep_start_stop_btn = QPushButton("Start Sweep")
         sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend)
-        off_btn = QPushButton("Hardware Off")
-        off_btn.clicked.connect(lambda: self.current_experiment.off_btn_function())
 
-        experiment_buttons_layout.addWidget(read_unprocessed_btn, 0, 0)
-        experiment_buttons_layout.addWidget(read_processed_btn, 0, 1)
-        experiment_buttons_layout.addWidget(sweep_start_stop_btn, 1, 0)
-        experiment_buttons_layout.addWidget(off_btn, 1, 1)
+        experiment_buttons_layout.addWidget(set_parameters_btn, 0, 0)
+        experiment_buttons_layout.addWidget(read_unprocessed_btn, 0, 1)
+        experiment_buttons_layout.addWidget(read_processed_btn, 1, 1)
+        experiment_buttons_layout.addWidget(sweep_start_stop_btn, 2, 1)
 
         top_menu.addWidget(experiment_buttons_widget)
     
@@ -509,7 +557,7 @@ class ExperimentUI(QWidget):
         # Create the indicator for running sweep
         running_indicator = QLabel("•")
         running_indicator.setFixedSize(10, 10)  # Set the size of the indicator
-        running_indicator.setStyleSheet("background-color: grey;")  # Set initial color to red
+        running_indicator.setStyleSheet("background-color: white;")  # Set initial color to red
 
         #Run Experiment and Save Recordings
         self.run_and_save_recordings_widget = QWidget()
@@ -604,7 +652,10 @@ class ExperimentUI(QWidget):
     
     def hardware_off_frontend(self):
         """calls a backend function that turns off the harware for the experiment"""
-        self.current_experiment.hardware_off()
+        try:
+            self.current_experiment.hardware_off()
+        finally:
+            self.close()
 
     def show_open_experiment_popup(self):
         popup = PopUpMenu("Open Experiment", "Feature coming soon!")
