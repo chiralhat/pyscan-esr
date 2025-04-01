@@ -350,16 +350,16 @@ class ExperimentUI(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.settings_panel = None
-        self.screen = self.initUI()
-        self.setLayout(self.screen)
-
         self.experiments = {"Spin Echo" : ExperimentType("Spin Echo"), 
                             "Pulse Frequency Sweep" : ExperimentType("Pulse Frequency Sweep"),}
         self.current_experiment = self.experiments["Spin Echo"]
 
         self.experiment_templates = EXPERIMENT_TEMPLATES #all the settings that should be shown for each experiment type
-        self.temp_parameters = {} #list of all of the current parameter values for each setting in the settings panel 
+        self.temp_parameters = {} #list of all of the current parameter values for each setting in the settings panel
+        
+        self.settings_panel = None
+        self.screen = self.init_UI()
+        self.setLayout(self.screen)
 
     def init_UI(self):
         """Initializes each individual component of the UI - Top menu bar, 
@@ -367,12 +367,13 @@ class ExperimentUI(QWidget):
         adds them to the main_layout variable which is a PyQt5 QVBoxLayout
         object."""
         
+        print("init_UI called")
         #Create the components
-        top_menu = self.init_top_menu_bar()
-        self.settings_panel = self.init_settings_panel()
+        settings_scroll = self.init_settings_panel()
         graphs_panel = self.init_graphs_panel() 
         bottom_menu_bar = self.init_bottom_menu_bar()
         error_log = self.init_error_log()
+        top_menu = self.init_top_menu_bar()
 
         #Separates the settings panel from the graphs panel
         main_splitter = QSplitter(Qt.Horizontal)
@@ -382,7 +383,7 @@ class ExperimentUI(QWidget):
         
         #Add all components to screen
         screen.addLayout(top_menu)
-        screen.addWidget(self.settings_panel)
+        screen.addWidget(self.settings_panel.settings_scroll)
         screen.addLayout(graphs_panel)
         screen.addLayout(bottom_menu_bar)
         screen.addLayout(error_log)
@@ -392,7 +393,29 @@ class ExperimentUI(QWidget):
         return screen
     
     def init_graphs_panel(self):
-        print("NEED TO IMPLEMENT")
+        # Output Section (Graphs & Error Log)
+        output_container = QSplitter(Qt.Vertical)
+        output_container.setSizes([100, 100])
+
+        # Graphs Panel
+        graph_section_widget = QWidget()
+        graph_layout = QVBoxLayout(graph_section_widget)
+        graph_layout.setContentsMargins(100, 50, 100, 50)
+
+        # Add three Matplotlib Graphs
+        self.graphs = [MatplotlibCanvas() for _ in range(3)]
+        for graph in self.graphs:
+            graph_layout.addWidget(graph)
+
+        output_container.addWidget(graph_section_widget)
+        
+        return output_container
+
+        # Error Log Panel
+        error_log = QLabel("Error Log")
+        error_log.setFrameShape(QFrame.Box)
+        error_log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        output_container.addWidget(error_log)
     
     def init_bottom_menu_bar(self):
         print("NEED TO IMPLEMENT")
@@ -439,20 +462,20 @@ class ExperimentUI(QWidget):
         experiment_buttons_layout = QGridLayout(experiment_buttons_widget)
         
         set_parameters_btn = QPushButton("Set Parameters")
-        set_parameters_btn.clicked.connect(self.read_and_set_parameters())        
+        set_parameters_btn.clicked.connect(self.read_and_set_parameters)        
         read_unprocessed_btn = QPushButton("Read Unprocessed")
-        read_unprocessed_btn.clicked.connect(self.read_unprocessed_frontend())
+        read_unprocessed_btn.clicked.connect(self.read_unprocessed_frontend)
         read_processed_btn = QPushButton("Read Processed")
-        read_processed_btn.clicked.connect(self.read_processed_frontend())
+        read_processed_btn.clicked.connect(self.read_processed_frontend)
         sweep_start_stop_btn = QPushButton("Start Sweep")
-        sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend())
+        sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend)
         off_btn = QPushButton("Hardware Off")
-        off_btn.clicked.connect(self.current_experiment.off_btn_function)
+        off_btn.clicked.connect(lambda: self.current_experiment.off_btn_function())
 
         experiment_buttons_layout.addWidget(read_unprocessed_btn, 0, 0)
         experiment_buttons_layout.addWidget(read_processed_btn, 0, 1)
         experiment_buttons_layout.addWidget(sweep_start_stop_btn, 1, 0)
-        experiment_buttons_layout.addWidget(self.off_btn, 1, 1)
+        experiment_buttons_layout.addWidget(off_btn, 1, 1)
 
         top_menu.addWidget(experiment_buttons_widget)
     
@@ -467,49 +490,37 @@ class ExperimentUI(QWidget):
         running_indicator.setStyleSheet("background-color: grey;")  # Set initial color to red
 
         #Run Experiment and Save Recordings
-        run_and_save_recordings_widget = QWidget()
+        self.run_and_save_recordings_widget = QWidget()
         run_and_save_recordings_layout = QGridLayout(self.run_and_save_recordings_widget)
 
         plot_menu = QCheckBox("Save All Plot Recordings")
 
         run_and_save_recordings_layout.addWidget(running_indicator)
-        self.run_and_save_recordings_layout.addWidget(plot_menu, 0, 0)
+        run_and_save_recordings_layout.addWidget(plot_menu, 0, 0)
 
         top_menu.addWidget(self.run_and_save_recordings_widget)
 
         return top_menu
 
     def init_settings_panel(self):
+        print("init_settings_panel run")
+        print(self.current_experiment.type)
         # Settings Panel
-        self.settings_panel = DynamicSettingsPanel(self.current_experiment.type)
+        self.settings_panel = DynamicSettingsPanel()
         settings_scroll = QScrollArea()
         settings_scroll.setWidgetResizable(True)
         settings_scroll.setWidget(self.settings_panel)
-
-        # Output Section (Graphs & Error Log)
-        output_container = QSplitter(Qt.Vertical)
-        output_container.setSizes([100, 100])
-
-        # Graphs Panel
-        graph_section_widget = QWidget()
-        graph_layout = QVBoxLayout(graph_section_widget)
-        graph_layout.setContentsMargins(100, 50, 100, 50)
-
-        # Add three Matplotlib Graphs
-        self.graphs = [MatplotlibCanvas() for _ in range(3)]
-        for graph in self.graphs:
-            graph_layout.addWidget(graph)
-
-        output_container.addWidget(graph_section_widget)
-
-        # Error Log Panel
-        error_log = QLabel("Error Log")
-        error_log.setFrameShape(QFrame.Box)
-        error_log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        output_container.addWidget(error_log)
+        
+        ############################
 
         # Load initial settings
-        self.change_experiment_type("Pulse Frequency Sweep")
+        self.current_experiment = self.experiments["Pulse Frequency Sweep"]
+        self.temp_parameters = {}
+        print("FINISH IMPLEMENTING")
+        #change function assigned to each button
+        self.settings_panel.load_settings_panel(self.experiment_templates.get("Pulse Frequency Sweep", {"main": [], "groups": {}}))
+        
+        return settings_scroll
 
     def change_experiment_type(self, experiment_type):
         self.current_experiment.stop_sweep()
@@ -518,7 +529,6 @@ class ExperimentUI(QWidget):
         print("FINISH IMPLEMENTING")
         #change function assigned to each button
         self.settings_panel.load_settings_panel(self.experiment_templates.get(experiment_type, {"main": [], "groups": {}}))
-
 
     def read_and_set_parameters(self): 
         #this used to be the code in gui_setup.py that looped through all
