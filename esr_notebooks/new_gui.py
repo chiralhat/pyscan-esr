@@ -1,8 +1,9 @@
 from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QGridLayout, QPushButton,
                              QSplitter, QScrollArea, QLabel, QFrame, QComboBox, QSizePolicy, 
                              QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem, 
-                             QMessageBox, QLineEdit, QSizeGrip)
-from PyQt5.QtCore import Qt
+                             QMessageBox, QLineEdit, QStyledItemDelegate)
+from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtGui import QPainter, QTextOption
 import sys
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -66,7 +67,6 @@ class MatplotlibCanvas(FigureCanvas):
         self.fig.subplots_adjust(left=0.1, right=0.9, top=0.8, bottom=0.3)  # Adjust margins
         self.draw()
 
-
 class DynamicSettingsPanel(QWidget):
     """ Settings panel with dynamically loaded settings """
     def __init__(self):
@@ -76,9 +76,17 @@ class DynamicSettingsPanel(QWidget):
         self.settings_tree.setHeaderHidden(False)
         self.settings_tree.setColumnCount(2)
         self.settings_tree.setHeaderLabels(["Setting", "Value"])
-         # Set custom column widths: Setting column is wider
+        # Set custom column widths: Setting column is wider
         self.settings_tree.setColumnWidth(0, 200)  # Set the 'Setting' column width to 200px
         self.settings_tree.setColumnWidth(1, 100)  # Set the 'Value' column width to 100px
+
+        # Make sure the QLabel widget text wraps
+        self.settings_tree.setStyleSheet("""
+            QTreeWidget::item {
+                white-space: pre-wrap;  /* Ensures that the text wraps instead of clipping */
+            }
+        """)
+
         
         self.settings_scroll = QScrollArea()
         self.settings_scroll.setWidgetResizable(True)
@@ -115,6 +123,11 @@ class DynamicSettingsPanel(QWidget):
                 if widget:
                     self.settings_tree.setItemWidget(item, 1, widget)
 
+                # Make the text of QLabel widgets word wrap
+                if isinstance(widget, QLabel):
+                    widget.setWordWrap(True)  # Enable word wrapping
+
+
     def create_setting_widget(self, setting):
         """ Create appropriate widget based on setting type """
         if setting["type"] == "spin":
@@ -136,6 +149,8 @@ class DynamicSettingsPanel(QWidget):
             widget.setChecked(setting["default"])
         else:
             widget = QLabel("N/A")
+            widget.setWordWrap(True)  # Enable word wrapping on QLabel
+
         return widget
 
     # def show_save_template_popup(self):
@@ -404,12 +419,40 @@ class ExperimentUI(QMainWindow):
 
         # -- main splitter (horizontal)
         self.main_splitter = QSplitter(Qt.Horizontal)
-        
+        self.main_splitter.setHandleWidth(5)  # Increase grab area
+        self.main_splitter.setStyleSheet("""
+            QSplitter::handle {
+                background: transparent;
+            }
+            QSplitter::handle:horizontal {
+                padding-left: 4px; padding-right: 4px;
+                background-color: darkgray;
+            }
+            QSplitter::handle:vertical {
+                padding-top: 4px; padding-bottom: 4px;
+                background-color: darkgray;
+            }
+        """)
+
         # Left side: settings
         self.main_splitter.addWidget(self.settings_panel)
 
         # Right side: a vertical splitter for graphs vs. error log
         self.right_splitter = QSplitter(Qt.Vertical)
+        self.right_splitter.setHandleWidth(5)  # Increase grab area for vertical splitter
+        self.right_splitter.setStyleSheet("""
+            QSplitter::handle {
+                background: transparent;
+            }
+            QSplitter::handle:horizontal {
+                padding-left: 4px; padding-right: 4px;
+                background-color: darkgray;
+            }
+            QSplitter::handle:vertical {
+                padding-top: 4px; padding-bottom: 4px;
+                background-color: darkgray;
+            }
+        """)
         self.right_splitter.addWidget(self.graphs_panel)
         self.right_splitter.addWidget(self.error_log)
 
@@ -420,11 +463,6 @@ class ExperimentUI(QMainWindow):
         self.main_splitter.setStretchFactor(1, 1)  # Right splitter (graph & error log)
 
         main_layout.addWidget(self.main_splitter)
-
-        # Customizing the size of the resize grip by adding a larger widget at the bottom-right corner
-        size_grip = QSizeGrip(self)
-        size_grip.setStyleSheet("background-color: red; width: 20px; height: 200px;")  # Customize the grip
-        self.main_splitter.addWidget(size_grip)
 
         # Add bottom menu
         main_layout.addLayout(self.bottom_menu_bar)
@@ -443,7 +481,7 @@ class ExperimentUI(QMainWindow):
         # Create a container widget for the graphs
         graph_section_widget = QWidget()
         graph_layout = QVBoxLayout(graph_section_widget)
-        graph_layout.setContentsMargins(100, 50, 100, 50)
+        graph_layout.setContentsMargins(75, 50, 75, 50)
 
         # Add three Matplotlib graphs to the layout
         self.graphs = [MatplotlibCanvas() for _ in range(3)]
@@ -473,8 +511,7 @@ class ExperimentUI(QMainWindow):
     
     def init_top_menu_bar(self):
         top_menu = QHBoxLayout()
-
-        # THESE FUNCTIONS DON'T DO ANYTHING RIGHT NOW, NEED TO IMPLEMENT
+        # File buttons widget
         file_buttons_widget = QWidget()
         file_buttons_layout = QGridLayout(file_buttons_widget)
         save_exp_btn = QPushButton("Save Experiment")
@@ -484,38 +521,46 @@ class ExperimentUI(QMainWindow):
         open_exp_btn.clicked.connect(self.show_open_experiment_popup)
         new_exp_btn.clicked.connect(self.show_new_experiment_popup)
         save_exp_as_btn.clicked.connect(self.show_save_experiment_as_popup)
-
         file_buttons_layout.addWidget(save_exp_btn, 0, 0)
         file_buttons_layout.addWidget(new_exp_btn, 0, 1)
         file_buttons_layout.addWidget(save_exp_as_btn, 1, 0)
         file_buttons_layout.addWidget(open_exp_btn, 1, 1)
-        #########
-
         top_menu.addWidget(file_buttons_widget)
-
-        # Add experiment-specific buttons
+        
+        # NEW: Create a vertical container for the label and dropdown.
+        exp_widget = QWidget()
+        exp_layout = QVBoxLayout(exp_widget)
+        label = QLabel("Change Experiment Type")
+        exp_layout.addWidget(label)
+        exp_dropdown = QComboBox()
+        exp_dropdown.addItems(list(self.experiments.keys()))
+        exp_dropdown.currentTextChanged.connect(self.change_experiment_type)
+        exp_layout.addWidget(exp_dropdown)
+        top_menu.addWidget(exp_widget)
+        
+        # NEW: Create and add the indicator with a black border.
+        self.running_indicator = QLabel("•")
+        self.running_indicator.setFixedSize(10, 10)
+        self.running_indicator.setStyleSheet("background-color: white; border: 1px solid black;")
+        top_menu.addWidget(self.running_indicator)
+        
+        # Experiment-specific buttons remain separate.
         top_menu = self.init_experiment_specific_buttons(top_menu)
-
-        # Window Control Buttons:
+        
+        # Window control buttons
         window_controls_widget = QWidget()
         window_controls_layout = QHBoxLayout(window_controls_widget)
         window_controls_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Create window control buttons
-        minimize_btn = QPushButton("_")
+        minimize_btn = QPushButton("Minimize")
         minimize_btn.clicked.connect(self.showMinimized)
         fullscreen_btn = QPushButton("Toggle Full Screen")
         fullscreen_btn.clicked.connect(self.toggle_fullscreen)
         off_btn = QPushButton("Hardware Off and Close Software")
         off_btn.clicked.connect(self.hardware_off_frontend)
-
         window_controls_layout.addWidget(minimize_btn)
         window_controls_layout.addWidget(fullscreen_btn)
         window_controls_layout.addWidget(off_btn)
-
-        # Add the window controls to the top menu layout
         top_menu.addWidget(window_controls_widget)
-
         return top_menu
 
     def toggle_fullscreen(self):
