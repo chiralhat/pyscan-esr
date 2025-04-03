@@ -526,11 +526,18 @@ class ExperimentUI(QMainWindow):
         open_exp_btn.clicked.connect(self.show_open_experiment_popup)
         new_exp_btn.clicked.connect(self.show_new_experiment_popup)
         save_exp_as_btn.clicked.connect(self.show_save_experiment_as_popup)
+        # NEW: Add tooltips to the buttons.
+        save_exp_btn.setToolTip("This is a <b>button</b>")
+        new_exp_btn.setToolTip("This is a <b>button</b>")
+        save_exp_as_btn.setToolTip("This is a <b>button</b>")
+        open_exp_btn.setToolTip("This is a <b>button</b>")
+        
         file_buttons_layout.addWidget(save_exp_btn, 0, 0)
         file_buttons_layout.addWidget(new_exp_btn, 0, 1)
         file_buttons_layout.addWidget(save_exp_as_btn, 1, 0)
         file_buttons_layout.addWidget(open_exp_btn, 1, 1)
         top_menu.addWidget(file_buttons_widget)
+        
         
         # NEW: Create a vertical container for the label and dropdown.
         exp_widget = QWidget()
@@ -562,6 +569,7 @@ class ExperimentUI(QMainWindow):
         fullscreen_btn.clicked.connect(self.toggle_fullscreen)
         off_btn = QPushButton("Hardware Off and Close Software")
         off_btn.clicked.connect(self.hardware_off_frontend)
+        
         window_controls_layout.addWidget(minimize_btn)
         window_controls_layout.addWidget(fullscreen_btn)
         window_controls_layout.addWidget(off_btn)
@@ -591,6 +599,12 @@ class ExperimentUI(QMainWindow):
         read_processed_btn.clicked.connect(self.read_processed_frontend)
         sweep_start_stop_btn = QPushButton("Start Sweep")
         sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend)
+        
+        # NEW: Add tooltips to the buttons.
+        set_parameters_btn.setToolTip("This is a <b>button</b>")
+        read_unprocessed_btn.setToolTip("This is a <b>button</b>")
+        read_processed_btn.setToolTip("This is a <b>button</b>")
+        sweep_start_stop_btn.setToolTip("This is a <b>button</b>")
 
         experiment_buttons_layout.addWidget(set_parameters_btn, 0, 0)
         experiment_buttons_layout.addWidget(read_unprocessed_btn, 0, 1)
