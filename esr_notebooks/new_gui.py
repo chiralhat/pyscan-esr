@@ -169,79 +169,89 @@ class DynamicSettingsPanel(QWidget):
     #     popup.show_popup()
 
 EXPERIMENT_TEMPLATES = {
-            "Pulse Frequency Sweep": {
-                "main": [],
-                "groups": {
-                    "Main Settings": [
-                        {"name": "Frequency", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.4},
-                        {"name": "Ave", "type": "spin", "min": 1, "max": 1000, "default": 100},
-                        {"name": "Dir and Name", "type": "combo", "options": ["Option 1", "Option 2"], "default": "Option 1"},
-                        {"name": "Experiment", "type": "combo", "options": ["Exp A", "Exp B"], "default": "Exp A"},
-                        {"name": "Sweep start, end, step", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.6}
-                    ],
-                    "Readout Settings": [
-                        {"name": "Time Offset", "type": "double_spin", "min": 0, "max": 100.0, "default": 10.0},
-                        {"name": "Readout Length", "type": "spin", "min": 1, "max": 1000, "default": 10},
-                        {"name": "Loopback", "type": "combo", "options": ["Enabled", "Disabled"], "default": "Enabled"}
-                    ],
-                    "Uncommon Settings": [
-                        {"name": "Repetition time", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
-                        {"name": "Ch1 90 Pulse", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
-                        {"name": "Magnetic Field, Scale, Current limit", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
-                        {"name": "Reps", "type": "spin", "min": 1, "max": 1000, "default": 10},
-                        {"name": "Wait Time", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
-                        {"name": "Integral only", "type": "check", "default": False},
-                        {"name": "Initialize on read", "type": "check", "default": True},
-                        {"name": "Turn off after sweep", "type": "check", "default": False}
-                    ],
-                    "Utility Settings": [
-                        {"name": "PSU Addr", "type": "spin", "min": 1, "max": 100, "default": 5},
-                        {"name": "Use PSU", "type": "check", "default": True},
-                        {"name": "Use Lakeshore", "type": "check", "default": False}
-                    ]
-                }
-            },
-            "Spin Echo": {
-                "main": [],
-                "groups": {
-                    "Main Settings": [
-                        {"name": "Ch1 Freq, Gain", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.4},
-                        {"name": "Repetition time", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
-                        {"name": "Ave", "type": "spin", "min": 1, "max": 1000, "default": 100},
-                        {"name": "Dir and Name", "type": "combo", "options": ["Option 1", "Option 2"], "default": "Option 1"},
-                        {"name": "Reps", "type": "spin", "min": 1, "max": 1000, "default": 10},
-                        {"name": "Sweep start, end, step", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.6}
-                    ],
-                    "Pulse Settings": [
-                        {"name": "Ch1 Delay, 90 Pulse", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
-                        {"name": "Nut. Delay, Pulse Width", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0}
-                    ],
-                    "Second Sweep Settings": [
-                        {"name": "Second sweep?", "type": "check", "default": False},
-                        {"name": "Experiment 2", "type": "combo", "options": ["Exp C", "Exp D"], "default": "Exp C"},
-                        {"name": "Sweep 2 start, end, step", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.6}
-                    ],
-                    "Readout Settings": [
-                        {"name": "Time Offset", "type": "double_spin", "min": 0, "max": 100.0, "default": 10.0},
-                        {"name": "Readout Length", "type": "spin", "min": 1, "max": 1000, "default": 10},
-                        {"name": "Loopback", "type": "combo", "options": ["Enabled", "Disabled"], "default": "Enabled"}
-                    ],
-                    "Uncommon Settings": [
-                        {"name": "Ch1 180 Pulse Mult", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
-                        {"name": "Magnetic Field, Scale, Current limit", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
-                        {"name": "Wait Time", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
-                        {"name": "Integral only", "type": "check", "default": False},
-                        {"name": "Initialize on read", "type": "check", "default": True},
-                        {"name": "Turn off after sweep", "type": "check", "default": False}
-                    ],
-                    "Utility Settings": [
-                        {"name": "PSU Addr", "type": "spin", "min": 1, "max": 100, "default": 5},
-                        {"name": "Use PSU", "type": "check", "default": True},
-                        {"name": "Use Lakeshore", "type": "check", "default": False}
-                    ]
-                }
-            }
+    "Pulse Frequency Sweep": {
+        "main": [],
+        "groups": {
+            "Main Settings": [
+                # Use the same keys as in the old code (e.g. in the rfsoc group)
+                {"name": "freq", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.4},
+                {"name": "ave_reps", "type": "spin", "min": 1, "max": 1000, "default": 100},
+                # Instead of a combined "Dir and Name", split the directory and file name as in the old code
+                {"name": "save_dir", "type": "combo", "options": ["Dir1", "Dir2"], "default": "Dir1"},
+                {"name": "file_name", "type": "combo", "options": ["Name1", "Name2"], "default": "Name1"},
+                {"name": "expt", "type": "combo", "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
+                # Break the combined sweep control into three keys:
+                {"name": "sweep_start", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.6},
+                {"name": "sweep_end",   "type": "double_spin", "min": 0.1, "max": 10.0, "default": 3.0},
+                {"name": "sweep_step",  "type": "double_spin", "min": 0.1, "max": 10.0, "default": 0.1}
+            ],
+            "Readout Settings": [
+                {"name": "h_offset", "type": "double_spin", "min": 0, "max": 100.0, "default": 10.0},
+                {"name": "readout_length", "type": "spin", "min": 1, "max": 1000, "default": 10},
+                {"name": "loopback", "type": "combo", "options": ["Enabled", "Disabled"], "default": "Enabled"}
+            ],
+            "Uncommon Settings": [
+                {"name": "mult1", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
+                {"name": "gauss_amps", "type": "double_spin", "min": 0.001, "max": 10000, "default": 10.0},
+                {"name": "wait", "type": "double_spin", "min": 0.1, "max": 20.0, "default": 10.0},
+                {"name": "integrate", "type": "check", "default": False},
+                {"name": "init", "type": "check", "default": True},
+                {"name": "turn_off", "type": "check", "default": False}
+            ],
+            "Utility Settings": [
+                {"name": "psu_address", "type": "spin", "min": 1, "max": 100, "default": 5},
+                {"name": "use_psu", "type": "check", "default": True},
+                {"name": "use_temp", "type": "check", "default": False}
+            ]
         }
+    },
+    "Spin Echo": {
+        "main": [],
+        "groups": {
+            "Main Settings": [
+                {"name": "freq", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.4},
+                {"name": "period", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
+                {"name": "ave_reps", "type": "spin", "min": 1, "max": 1000, "default": 100},
+                {"name": "file_name", "type": "combo", "options": ["Name1", "Name2"], "default": "Name1"},
+                {"name": "pulses", "type": "spin", "min": 1, "max": 256, "default": 10},
+                {"name": "sweep_start", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.6},
+                {"name": "sweep_end",   "type": "double_spin", "min": 0.1, "max": 10.0, "default": 3.0},
+                {"name": "sweep_step",  "type": "double_spin", "min": 0.1, "max": 10.0, "default": 0.1}
+            ],
+            "Pulse Settings": [
+                {"name": "delay", "type": "double_spin", "min": 0, "max": 652100, "default": 10.0},
+                {"name": "nutation_delay", "type": "double_spin", "min": 0, "max": 655360, "default": 600000},
+                {"name": "nutation_length", "type": "double_spin", "min": 0, "max": 655360, "default": 10.0}
+            ],
+            "Second Sweep Settings": [
+                {"name": "sweep2", "type": "check", "default": False},
+                {"name": "expt2", "type": "combo", "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
+                {"name": "sweep2_start", "type": "double_spin", "min": 0, "max": 10.0, "default": 2.6},
+                {"name": "sweep2_end",   "type": "double_spin", "min": 0, "max": 10.0, "default": 3.0},
+                {"name": "sweep2_step",  "type": "double_spin", "min": 0, "max": 10.0, "default": 0.1}
+            ],
+            "Readout Settings": [
+                {"name": "h_offset", "type": "double_spin", "min": -1e5, "max": 1e5, "default": 10.0},
+                {"name": "readout_length", "type": "spin", "min": 0, "max": 5, "default": 10},
+                {"name": "loopback", "type": "combo", "options": ["Enabled", "Disabled"], "default": "Enabled"}
+            ],
+            "Uncommon Settings": [
+                {"name": "mult1", "type": "double_spin", "min": 0, "max": 652100, "default": 10.0},
+                {"name": "gauss_amps", "type": "double_spin", "min": 0.001, "max": 10000, "default": 10.0},
+                {"name": "wait", "type": "double_spin", "min": 0, "max": 20, "default": 10.0},
+                {"name": "integrate", "type": "check", "default": False},
+                {"name": "init", "type": "check", "default": True},
+                {"name": "turn_off", "type": "check", "default": False}
+            ],
+            "Utility Settings": [
+                {"name": "psu_address", "type": "spin", "min": 1, "max": 100, "default": 5},
+                {"name": "use_psu", "type": "check", "default": True},
+                {"name": "use_temp", "type": "check", "default": False}
+            ]
+        }
+    }
+}
+
 
 
 class ExperimentType:
@@ -591,22 +601,27 @@ class ExperimentUI(QMainWindow):
         experiment_buttons_widget = QWidget()
         experiment_buttons_layout = QGridLayout(experiment_buttons_widget)
         
-        set_parameters_btn = QPushButton("Push Parameters")
-        set_parameters_btn.clicked.connect(self.read_and_set_parameters)        
+        set_parameters_and_initialize_btn = QPushButton("Initialize")
+        set_parameters_and_initialize_btn.clicked.connect(self.read_and_set_parameters)        
         read_unprocessed_btn = QPushButton("Read Unprocessed")
         read_unprocessed_btn.clicked.connect(self.read_unprocessed_frontend)
         read_processed_btn = QPushButton("Read Processed")
         read_processed_btn.clicked.connect(self.read_processed_frontend)
         sweep_start_stop_btn = QPushButton("Start Sweep")
         sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend)
+
+        # NEW: Disable the action buttons (they are enabled after set_parameters_and_initialize_btn is pressed)
+        read_unprocessed_btn.setEnabled(False)
+        read_processed_btn.setEnabled(False)
+        sweep_start_stop_btn.setEnabled(False)
         
         # NEW: Add tooltips to the buttons.
-        set_parameters_btn.setToolTip("This is a <b>button</b>")
+        set_parameters_and_initialize_btn.setToolTip("This is a <b>button</b>")
         read_unprocessed_btn.setToolTip("This is a <b>button</b>")
         read_processed_btn.setToolTip("This is a <b>button</b>")
         sweep_start_stop_btn.setToolTip("This is a <b>button</b>")
 
-        experiment_buttons_layout.addWidget(set_parameters_btn, 0, 0)
+        experiment_buttons_layout.addWidget(set_parameters_and_initialize_btn, 0, 0)
         experiment_buttons_layout.addWidget(read_unprocessed_btn, 0, 1)
         experiment_buttons_layout.addWidget(read_processed_btn, 1, 1)
         experiment_buttons_layout.addWidget(sweep_start_stop_btn, 2, 1)
@@ -687,6 +702,11 @@ class ExperimentUI(QMainWindow):
                 
                 self.temp_parameters[key] = value
         self.current_experiment.set_parameters(self.temp_parameters)
+        # NEW: Disable the action buttons (they are enabled after set_parameters_and_initialize_btn is pressed)
+        self.read_unprocessed_btn.setEnabled(True)
+        self.read_processed_btn.setEnabled(True)
+        self.sweep_start_stop_btn.setEnabled(True)
+        
 
     def read_unprocessed_frontend(self):
         self.running_indicator.setStyleSheet("background-color: red;")
