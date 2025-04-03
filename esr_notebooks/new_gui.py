@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QGridLayout, QPushButton,
                              QSplitter, QScrollArea, QLabel, QFrame, QComboBox, QSizePolicy, 
                              QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem, 
-                             QMessageBox, QLineEdit, QStyledItemDelegate)
+                             QMessageBox, QLineEdit, QStyledItemDelegate, QPushButton, QStyledItemDelegate, QStyleOptionViewItem)
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QPainter, QTextOption
 import sys
@@ -76,24 +76,17 @@ class DynamicSettingsPanel(QWidget):
         self.settings_tree.setHeaderHidden(False)
         self.settings_tree.setColumnCount(2)
         self.settings_tree.setHeaderLabels(["Setting", "Value"])
+
         # Set custom column widths: Setting column is wider
         self.settings_tree.setColumnWidth(0, 200)  # Set the 'Setting' column width to 200px
-        self.settings_tree.setColumnWidth(1, 100)  # Set the 'Value' column width to 100px
+        self.settings_tree.setColumnWidth(1, 100)  # Set the 'Value' column width to 300px (adjust as necessary)
 
-        # Make sure the QLabel widget text wraps
-        self.settings_tree.setStyleSheet("""
-            QTreeWidget::item {
-                white-space: pre-wrap;  /* Ensures that the text wraps instead of clipping */
-            }
-        """)
-
-        
         self.settings_scroll = QScrollArea()
         self.settings_scroll.setWidgetResizable(True)
         self.settings_scroll.setWidget(self.settings_tree)
-        
+
         self.main_layout.addWidget(self.settings_scroll)
-        
+
         # Static Bottom Menu Bar
         self.bottom_menu = QHBoxLayout()
         self.save_template_btn = QPushButton("Save Template")
@@ -101,7 +94,7 @@ class DynamicSettingsPanel(QWidget):
 
         self.bottom_menu.addStretch()
         self.bottom_menu.addWidget(self.save_template_btn)
-        
+
         self.main_layout.addLayout(self.bottom_menu)
 
     def load_settings_panel(self, settings):
@@ -117,16 +110,20 @@ class DynamicSettingsPanel(QWidget):
                 group_item.setExpanded(True)
 
             for setting in group_settings:
-                item = QTreeWidgetItem([setting["name"]])
+                item = QTreeWidgetItem()
                 group_item.addChild(item)
                 widget = self.create_setting_widget(setting)
-                if widget:
+                if widget:                        
                     self.settings_tree.setItemWidget(item, 1, widget)
 
-                # Make the text of QLabel widgets word wrap
-                if isinstance(widget, QLabel):
-                    widget.setWordWrap(True)  # Enable word wrapping
+                # Create a QLabel for setting name with word wrap
+                setting_name_widget = QLabel(setting["name"])  # Create QLabel for setting name
+                setting_name_widget.setWordWrap(True)  # Enable word wrap for setting name
+                setting_name_widget.setTextInteractionFlags(Qt.TextSelectableByMouse)  # Make text selectable
+                setting_name_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
+                # Set the QLabel to the first column of the item
+                self.settings_tree.setItemWidget(item, 0, setting_name_widget)
 
     def create_setting_widget(self, setting):
         """ Create appropriate widget based on setting type """
@@ -148,10 +145,18 @@ class DynamicSettingsPanel(QWidget):
             widget = QCheckBox()
             widget.setChecked(setting["default"])
         else:
-            widget = QLabel("N/A")
+            widget = QLabel(setting.get("default", "N/A"))
             widget.setWordWrap(True)  # Enable word wrapping on QLabel
 
         return widget
+
+    def adjust_item_height(self, item, widget):
+        """ Adjust the height of the tree item based on the widget's content (for wrapping) """
+        text = widget.text()
+        font_metrics = widget.fontMetrics()
+        text_rect = font_metrics.boundingRect(text)
+        wrapped_height = text_rect.height() + 10  # Add some padding for visual clarity
+        item.setSizeHint(1, QSize(self.settings_tree.columnWidth(1), wrapped_height))
 
     # def show_save_template_popup(self):
     #     popup = PopUpMenu("Save Template", "Feature coming soon!")
