@@ -1,9 +1,10 @@
 from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QGridLayout, QPushButton,
                              QSplitter, QScrollArea, QLabel, QFrame, QComboBox, QSizePolicy, 
                              QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem, 
-                             QMessageBox, QLineEdit, QStyledItemDelegate, QPushButton, QStyledItemDelegate, QStyleOptionViewItem)
-from PyQt5.QtCore import Qt, QRect
+                             QMessageBox, QTextEdit, QLineEdit, QStyledItemDelegate, QPushButton, QStyledItemDelegate, QStyleOptionViewItem)
+from PyQt5.QtCore import Qt, QRect, QTextStream
 from PyQt5.QtGui import QPainter, QTextOption
+
 import sys
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -41,6 +42,26 @@ if not hasattr(ps, 'rm'):
 res_list = ps.rm.list_resources()
 # ...]
 
+# class LogStream:
+#     def __init__(self, text_edit):
+#         self.text_edit = text_edit
+
+#     def write(self, text):
+#         try:
+#             """Write text to the QTextEdit widget."""
+#             cursor = self.text_edit.textCursor()
+#             cursor.movePosition(cursor.End)  # Move the cursor to the end
+#             cursor.insertText(text)  # Insert the new text
+#             self.text_edit.setTextCursor(cursor)  # Ensure the cursor stays at the end
+#             self.text_edit.ensureCursorVisible()  # Make sure the text is always visible
+#         except Exception as e:
+#             # Catch any exceptions and print them to stdout/stderr
+#             sys.__stdout__.write(f"Error in LogStream: {e}\n")
+
+
+#     def flush(self):
+#         pass  # No need to do anything for flush in this case
+
 
 class PopUpMenu(QMessageBox):
     """ Basic pop-up menu """
@@ -67,8 +88,10 @@ class MatplotlibCanvas(FigureCanvas):
         self.fig.subplots_adjust(left=0.1, right=0.9, top=0.8, bottom=0.3)  # Adjust margins
         self.draw()
 
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem, QScrollArea, QLabel, QHBoxLayout, QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QCheckBox, QSizePolicy, QPushButton
+
 class DynamicSettingsPanel(QWidget):
-    """ Settings panel with dynamically loaded settings """
+    """Settings panel with dynamically loaded settings."""
     def __init__(self):
         super().__init__()
         self.main_layout = QVBoxLayout(self)
@@ -76,182 +99,213 @@ class DynamicSettingsPanel(QWidget):
         self.settings_tree.setHeaderHidden(False)
         self.settings_tree.setColumnCount(2)
         self.settings_tree.setHeaderLabels(["Setting", "Value"])
-
-        # Set custom column widths: Setting column is wider
-        self.settings_tree.setColumnWidth(0, 200)  # Set the 'Setting' column width to 200px
-        self.settings_tree.setColumnWidth(1, 100)  # Set the 'Value' column width to 300px (adjust as necessary)
-
+        self.settings_tree.setColumnWidth(0, 200)
+        self.settings_tree.setColumnWidth(1, 100)
         self.settings_scroll = QScrollArea()
         self.settings_scroll.setWidgetResizable(True)
         self.settings_scroll.setWidget(self.settings_tree)
-
         self.main_layout.addWidget(self.settings_scroll)
-
-        # Static Bottom Menu Bar
+        # Bottom menu bar (if needed)
         self.bottom_menu = QHBoxLayout()
         self.save_template_btn = QPushButton("Save Template")
-        # self.save_template_btn.clicked.connect(self.show_save_template_popup())
-
         self.bottom_menu.addStretch()
         self.bottom_menu.addWidget(self.save_template_btn)
-
         self.main_layout.addLayout(self.bottom_menu)
 
     def load_settings_panel(self, settings):
-        """ Populate the settings panel dynamically """
+        """Populate the settings panel dynamically from the template."""
         self.settings_tree.clear()
-
         for group_name, group_settings in settings.get("groups", {}).items():
             group_item = QTreeWidgetItem([group_name])
             self.settings_tree.addTopLevelItem(group_item)
-
-            # Expand "Main Settings" group only (modify this logic as per your group name)
-            if group_name == "Main Settings":
-                group_item.setExpanded(True)
-
+            group_item.setExpanded(group_name == "Main Settings")
             for setting in group_settings:
                 item = QTreeWidgetItem()
                 group_item.addChild(item)
                 widget = self.create_setting_widget(setting)
-                if widget:                        
-                    self.settings_tree.setItemWidget(item, 1, widget)
-
-                # Create a QLabel for setting name with word wrap
-                setting_name_widget = QLabel(setting["name"])  # Create QLabel for setting name
-                setting_name_widget.setWordWrap(True)  # Enable word wrap for setting name
-                setting_name_widget.setTextInteractionFlags(Qt.TextSelectableByMouse)  # Make text selectable
-                setting_name_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-                # Set the QLabel to the first column of the item
-                self.settings_tree.setItemWidget(item, 0, setting_name_widget)
+                widget._underlying_key = setting.get("key")
+                self.settings_tree.setItemWidget(item, 1, widget)
+                label_widget = QLabel(setting.get("display", setting.get("name", "N/A")))
+                label_widget.setWordWrap(True)
+                label_widget.setTextInteractionFlags(Qt.TextSelectableByMouse)
+                label_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                self.settings_tree.setItemWidget(item, 0, label_widget)
 
     def create_setting_widget(self, setting):
-        """ Create appropriate widget based on setting type """
-        if setting["type"] == "spin":
+        """Create a widget based on the setting type."""
+        stype = setting.get("type")
+        if stype == "spin":
             widget = QSpinBox()
-            widget.setMinimum(setting["min"])
-            widget.setMaximum(setting["max"])
-            widget.setValue(setting["default"])
-        elif setting["type"] == "double_spin":
+            widget.setMinimum(setting.get("min", 0))
+            widget.setMaximum(setting.get("max", 1000000))
+            widget.setValue(setting.get("default", 0))
+        elif stype == "double_spin":
             widget = QDoubleSpinBox()
-            widget.setMinimum(setting["min"])
-            widget.setMaximum(setting["max"])
-            widget.setValue(setting["default"])
-        elif setting["type"] == "combo":
+            widget.setMinimum(float(setting.get("min", 0.0)))
+            widget.setMaximum(float(setting.get("max", 1e9)))
+            widget.setValue(float(setting.get("default", 0.0)))
+        elif stype == "line_edit":
+            widget = QLineEdit()
+            widget.setText(setting.get("default", ""))
+        elif stype == "combo":
             widget = QComboBox()
-            widget.addItems(setting["options"])
-            widget.setCurrentText(setting["default"])
-        elif setting["type"] == "check":
+            widget.addItems(setting.get("options", []))
+            widget.setCurrentText(setting.get("default", ""))
+        elif stype == "check":
             widget = QCheckBox()
-            widget.setChecked(setting["default"])
+            widget.setChecked(setting.get("default", False))
+        elif stype == "composite":
+            widget = QWidget()
+            layout = QHBoxLayout(widget)
+            defaults = setting.get("default", [])
+            for val in defaults:
+                if isinstance(val, (int, float)):
+                    spin = QDoubleSpinBox()
+                    spin.setMinimum(setting.get("min", 0.0))
+                    spin.setMaximum(setting.get("max", 1e9))
+                    spin.setValue(val)
+                    layout.addWidget(spin)
+                else:
+                    line = QLineEdit()
+                    line.setText(str(val) if val is not None else "")
+                    layout.addWidget(line)
+            def composite_values():
+                values = []
+                for idx in range(layout.count()):
+                    sub_widget = layout.itemAt(idx).widget()
+                    if isinstance(sub_widget, (QSpinBox, QDoubleSpinBox)):
+                        values.append(sub_widget.value())
+                    elif isinstance(sub_widget, QLineEdit):
+                        values.append(sub_widget.text())
+                return values
+            widget.composite_values = composite_values
         else:
-            widget = QLabel(setting.get("default", "N/A"))
-            widget.setWordWrap(True)  # Enable word wrapping on QLabel
-
+            widget = QLabel("N/A")
+            widget.setWordWrap(True)
         return widget
 
-    def adjust_item_height(self, item, widget):
-        """ Adjust the height of the tree item based on the widget's content (for wrapping) """
-        text = widget.text()
-        font_metrics = widget.fontMetrics()
-        text_rect = font_metrics.boundingRect(text)
-        wrapped_height = text_rect.height() + 10  # Add some padding for visual clarity
-        item.setSizeHint(1, QSize(self.settings_tree.columnWidth(1), wrapped_height))
-
-    # def show_save_template_popup(self):
-    #     popup = PopUpMenu("Save Template", "Feature coming soon!")
-    #     layout = QVBoxLayout()
-    #     name_input = QLineEdit()
-    #     layout.addWidget(name_input)
-    #     widget = QWidget()
-    #     widget.setLayout(layout)
-    #     popup.layout().addWidget(widget)
-    #     popup.show_popup()
 
 EXPERIMENT_TEMPLATES = {
     "Pulse Frequency Sweep": {
-        "main": [],
         "groups": {
             "Main Settings": [
-                # Use the same keys as in the old code (e.g. in the rfsoc group)
-                {"name": "freq", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.4},
-                {"name": "ave_reps", "type": "spin", "min": 1, "max": 1000, "default": 100},
-                # Instead of a combined "Dir and Name", split the directory and file name as in the old code
-                {"name": "save_dir", "type": "combo", "options": ["Dir1", "Dir2"], "default": "Dir1"},
-                {"name": "file_name", "type": "combo", "options": ["Name1", "Name2"], "default": "Name1"},
-                {"name": "expt", "type": "combo", "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
-                # Break the combined sweep control into three keys:
-                {"name": "sweep_start", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.6},
-                {"name": "sweep_end",   "type": "double_spin", "min": 0.1, "max": 10.0, "default": 3.0},
-                {"name": "sweep_step",  "type": "double_spin", "min": 0.1, "max": 10.0, "default": 0.1}
+                {"display": "Frequency", "key": "freq", "type": "double_spin",
+                 "min": 0.1, "max": 10.0, "default": 2.4},
+                {"display": "Avg", "key": "soft_avgs", "type": "double_spin",
+                 "min": 1, "max": 1e7, "default": 1},
+                {"display": "Dir and Name", "key": ["save_dir", "file_name"],
+                 "type": "composite", "default": ["", ""]},
+                {"display": "Experiment", "key": "expt", "type": "combo",
+                 "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
+                {"display": "Sweep start, end, step",
+                 "key": ["sweep_start", "sweep_end", "sweep_step"],
+                 "type": "composite", "default": [2.6, 3.0, 0.1]}
             ],
             "Readout Settings": [
-                {"name": "h_offset", "type": "double_spin", "min": 0, "max": 100.0, "default": 10.0},
-                {"name": "readout_length", "type": "spin", "min": 1, "max": 1000, "default": 10},
-                {"name": "loopback", "type": "combo", "options": ["Enabled", "Disabled"], "default": "Enabled"}
+                {"display": "Time Offset", "key": "h_offset", "type": "double_spin",
+                 "min": 0, "max": 100.0, "default": 10.0},
+                {"display": "Readout Length", "key": "readout_length", "type": "spin",
+                 "min": 1, "max": 1000, "default": 10},
+                {"display": "Loopback", "key": "loopback", "type": "combo",
+                 "options": ["Enabled", "Disabled"], "default": "Enabled"}
             ],
             "Uncommon Settings": [
-                {"name": "mult1", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
-                {"name": "gauss_amps", "type": "double_spin", "min": 0.001, "max": 10000, "default": 10.0},
-                {"name": "wait", "type": "double_spin", "min": 0.1, "max": 20.0, "default": 10.0},
-                {"name": "integrate", "type": "check", "default": False},
-                {"name": "init", "type": "check", "default": True},
-                {"name": "turn_off", "type": "check", "default": False}
+                {"display": "Repetition time", "key": "period", "type": "double_spin",
+                 "min": 0.1, "max": 20e9, "default": 500.0},
+                {"display": "Ch1 90 Pulse", "key": "pulse1_1", "type": "double_spin",
+                 "min": 0, "max": 652100, "default": 10.0},
+                {"display": "Magnetic Field, Scale, Current limit",
+                 "key": ["field", "gauss_amps", "current_limit"],
+                 "type": "composite", "default": [None, None, None]},
+                {"display": "Reps", "key": "ave_reps", "type": "spin",
+                 "min": 1, "max": 1000, "default": 1},
+                {"display": "Wait Time", "key": "wait", "type": "double_spin",
+                 "min": 0.1, "max": 20.0, "default": 10.0},
+                {"display": "Integral only", "key": "integrate", "type": "check",
+                 "default": False},
+                {"display": "Initialize on read", "key": "init", "type": "check",
+                 "default": True},
+                {"display": "Turn off after sweep", "key": "turn_off", "type": "check",
+                 "default": False}
             ],
             "Utility Settings": [
-                {"name": "psu_address", "type": "spin", "min": 1, "max": 100, "default": 5},
-                {"name": "use_psu", "type": "check", "default": True},
-                {"name": "use_temp", "type": "check", "default": False}
+                {"display": "PSU Addr", "key": "psu_address", "type": "line_edit",
+                 "default": ""},
+                {"display": "Use PSU", "key": "use_psu", "type": "check",
+                 "default": True},
+                {"display": "Use Lakeshore", "key": "use_temp", "type": "check",
+                 "default": False}
             ]
         }
     },
     "Spin Echo": {
-        "main": [],
         "groups": {
             "Main Settings": [
-                {"name": "freq", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.4},
-                {"name": "period", "type": "double_spin", "min": 0.1, "max": 100.0, "default": 10.0},
-                {"name": "ave_reps", "type": "spin", "min": 1, "max": 1000, "default": 100},
-                {"name": "file_name", "type": "combo", "options": ["Name1", "Name2"], "default": "Name1"},
-                {"name": "pulses", "type": "spin", "min": 1, "max": 256, "default": 10},
-                {"name": "sweep_start", "type": "double_spin", "min": 0.1, "max": 10.0, "default": 2.6},
-                {"name": "sweep_end",   "type": "double_spin", "min": 0.1, "max": 10.0, "default": 3.0},
-                {"name": "sweep_step",  "type": "double_spin", "min": 0.1, "max": 10.0, "default": 0.1}
+                {"display": "Ch1 Freq, Gain", "key": ["freq", "gain"], "type": "composite",
+                 "default": [2.4, 1]},
+                {"display": "Repetition time", "key": "period", "type": "double_spin",
+                 "min": 0.1, "max": 100.0, "default": 10.0},
+                {"display": "Ave", "key": "soft_avgs", "type": "spin",
+                 "min": 1, "max": 1e7, "default": 1},
+                {"display": "Dir and Name", "key": ["save_dir", "file_name"], "type": "composite",
+                 "default": ["", ""]},
+                {"display": "Reps", "key": "pulses", "type": "spin",
+                 "min": 1, "max": 256, "default": 10},
+                {"display": "Experiment", "key": "expt", "type": "combo",
+                 "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
+                {"display": "Sweep start, end, step",
+                 "key": ["sweep_start", "sweep_end", "sweep_step"], "type": "composite",
+                 "default": [2.6, 3.0, 0.1]}
             ],
             "Pulse Settings": [
-                {"name": "delay", "type": "double_spin", "min": 0, "max": 652100, "default": 10.0},
-                {"name": "nutation_delay", "type": "double_spin", "min": 0, "max": 655360, "default": 600000},
-                {"name": "nutation_length", "type": "double_spin", "min": 0, "max": 655360, "default": 10.0}
+                {"display": "Ch1 Delay, 90 Pulse", "key": ["delay", "pulse1_1"], "type": "composite",
+                 "default": [10.0, 10.0]},
+                {"display": "Nut. Delay, Pulse Width", "key": ["nutation_delay", "nutation_length"],
+                 "type": "composite", "default": [600000, 10.0]}
             ],
             "Second Sweep Settings": [
-                {"name": "sweep2", "type": "check", "default": False},
-                {"name": "expt2", "type": "combo", "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
-                {"name": "sweep2_start", "type": "double_spin", "min": 0, "max": 10.0, "default": 2.6},
-                {"name": "sweep2_end",   "type": "double_spin", "min": 0, "max": 10.0, "default": 3.0},
-                {"name": "sweep2_step",  "type": "double_spin", "min": 0, "max": 10.0, "default": 0.1}
+                {"display": "Second sweep?", "key": "sweep2", "type": "check",
+                 "default": False},
+                {"display": "Experiment 2", "key": "expt2", "type": "combo",
+                 "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
+                {"display": "Sweep 2 start, end, step",
+                 "key": ["sweep2_start", "sweep2_end", "sweep2_step"], "type": "composite",
+                 "default": [2.6, 3.0, 0.1]}
             ],
             "Readout Settings": [
-                {"name": "h_offset", "type": "double_spin", "min": -1e5, "max": 1e5, "default": 10.0},
-                {"name": "readout_length", "type": "spin", "min": 0, "max": 5, "default": 10},
-                {"name": "loopback", "type": "combo", "options": ["Enabled", "Disabled"], "default": "Enabled"}
+                {"display": "Time Offset", "key": "h_offset", "type": "double_spin",
+                 "min": -1e5, "max": 1e5, "default": 10.0},
+                {"display": "Readout Length", "key": "readout_length", "type": "spin",
+                 "min": 0, "max": 5, "default": 10},
+                {"display": "Loopback", "key": "loopback", "type": "combo",
+                 "options": ["Enabled", "Disabled"], "default": "Enabled"}
             ],
             "Uncommon Settings": [
-                {"name": "mult1", "type": "double_spin", "min": 0, "max": 652100, "default": 10.0},
-                {"name": "gauss_amps", "type": "double_spin", "min": 0.001, "max": 10000, "default": 10.0},
-                {"name": "wait", "type": "double_spin", "min": 0, "max": 20, "default": 10.0},
-                {"name": "integrate", "type": "check", "default": False},
-                {"name": "init", "type": "check", "default": True},
-                {"name": "turn_off", "type": "check", "default": False}
+                {"display": "Ch1 180 Pulse Mult", "key": "mult1", "type": "double_spin",
+                 "min": 0, "max": 652100, "default": 10.0},
+                {"display": "Magnetic Field, Scale, Current limit",
+                 "key": ["field", "gauss_amps", "current_limit"], "type": "composite",
+                 "default": [None, None, None]},
+                {"display": "Wait Time", "key": "wait", "type": "double_spin",
+                 "min": 0, "max": 20, "default": 10.0},
+                {"display": "Integral only", "key": "integrate", "type": "check",
+                 "default": False},
+                {"display": "Initialize on read", "key": "init", "type": "check",
+                 "default": True},
+                {"display": "Turn off after sweep", "key": "turn_off", "type": "check",
+                 "default": False}
             ],
             "Utility Settings": [
-                {"name": "psu_address", "type": "spin", "min": 1, "max": 100, "default": 5},
-                {"name": "use_psu", "type": "check", "default": True},
-                {"name": "use_temp", "type": "check", "default": False}
+                {"display": "PSU Addr", "key": "psu_address", "type": "spin",
+                 "min": 1, "max": 100, "default": 5},
+                {"display": "Use PSU", "key": "use_psu", "type": "check",
+                 "default": True},
+                {"display": "Use Lakeshore", "key": "use_temp", "type": "check",
+                 "default": False}
             ]
         }
     }
 }
-
 
 
 class ExperimentType:
@@ -365,7 +419,7 @@ class ExperimentType:
             self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan1.scan_dict['cpmg_sweep']
         else:
             self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
-        self.run_sweep(self.sweep, self.parameters)
+        self.run_sweep()
 
     def stop_sweep(self):
         """Stops a sweep that is currently running"""
@@ -385,7 +439,7 @@ class ExperimentUI(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        
+
         # Setup experiments
         self.experiments = {
             "Spin Echo": ExperimentType("Spin Echo"), 
@@ -410,6 +464,15 @@ class ExperimentUI(QMainWindow):
         self.current_experiment = self.experiments["Pulse Frequency Sweep"]
         self.temp_parameters = {}
         print("FINISH IMPLEMENTING")
+
+
+        # # Redirect stdout and stderr to the log
+        # self.log_text = QTextEdit(self)
+        # self.log_text.setReadOnly(True)  # Make the text edit read-only
+        # sys.stdout = LogStream(self.log_text)  # Redirect standard output
+        # sys.stderr = LogStream(self.log_text)  # Redirect standard error
+
+
         #change function assigned to each button
         self.settings_panel.load_settings_panel(self.experiment_templates.get("Pulse Frequency Sweep", {"main": [], "groups": {}}))
 
@@ -421,6 +484,11 @@ class ExperimentUI(QMainWindow):
            top = graphs, bottom = error log
          - A bottom menu (horizontal layout of buttons).
         """
+
+        # Set up the error log
+        # Create a QTextEdit widget to show the logs
+        self.log_text = QTextEdit(self)
+        self.log_text.setReadOnly(True)  # Make the text edit read-only
 
         # Make the window frameless to remove the title bar
         self.setWindowFlags(Qt.FramelessWindowHint)  # This removes the title bar and system buttons
@@ -470,7 +538,6 @@ class ExperimentUI(QMainWindow):
         """)
         self.right_splitter.addWidget(self.graphs_panel)
         self.right_splitter.addWidget(self.error_log)
-
         self.main_splitter.addWidget(self.right_splitter)
 
         # Set stretch factors to control resizing behavior
@@ -517,6 +584,12 @@ class ExperimentUI(QMainWindow):
         bottom_layout.addWidget(btn2)
         return bottom_layout
 
+    # def init_error_log(self):
+    #     """Creates the error log panel."""
+    #     # Instead of a QLabel, use the QTextEdit to show error logs
+    #     log_text_edit = QTextEdit(self)
+    #     log_text_edit.setReadOnly(True)  # Make the text edit read-only
+    #     return log_text_edit
     def init_error_log(self):
         """Creates the error log panel."""
         error_log = QLabel("Error Log")
@@ -601,55 +674,51 @@ class ExperimentUI(QMainWindow):
         experiment_buttons_widget = QWidget()
         experiment_buttons_layout = QGridLayout(experiment_buttons_widget)
         
-        set_parameters_and_initialize_btn = QPushButton("Initialize")
-        set_parameters_and_initialize_btn.clicked.connect(self.read_and_set_parameters)        
-        read_unprocessed_btn = QPushButton("Read Unprocessed")
-        read_unprocessed_btn.clicked.connect(self.read_unprocessed_frontend)
-        read_processed_btn = QPushButton("Read Processed")
-        read_processed_btn.clicked.connect(self.read_processed_frontend)
-        sweep_start_stop_btn = QPushButton("Start Sweep")
-        sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend)
-
-        # NEW: Disable the action buttons (they are enabled after set_parameters_and_initialize_btn is pressed)
-        read_unprocessed_btn.setEnabled(False)
-        read_processed_btn.setEnabled(False)
-        sweep_start_stop_btn.setEnabled(False)
+        self.set_parameters_and_initialize_btn = QPushButton("Initialize")
+        self.set_parameters_and_initialize_btn.clicked.connect(self.read_and_set_parameters)
         
-        # NEW: Add tooltips to the buttons.
-        set_parameters_and_initialize_btn.setToolTip("This is a <b>button</b>")
-        read_unprocessed_btn.setToolTip("This is a <b>button</b>")
-        read_processed_btn.setToolTip("This is a <b>button</b>")
-        sweep_start_stop_btn.setToolTip("This is a <b>button</b>")
+        # Create buttons and assign them to instance variables
+        self.read_unprocessed_btn = QPushButton("Read Unprocessed")
+        self.read_unprocessed_btn.clicked.connect(self.read_unprocessed_frontend)
+        
+        self.read_processed_btn = QPushButton("Read Processed")
+        self.read_processed_btn.clicked.connect(self.read_processed_frontend)
+        
+        self.sweep_start_stop_btn = QPushButton("Start Sweep")
+        self.sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend)
 
-        experiment_buttons_layout.addWidget(set_parameters_and_initialize_btn, 0, 0)
-        experiment_buttons_layout.addWidget(read_unprocessed_btn, 0, 1)
-        experiment_buttons_layout.addWidget(read_processed_btn, 1, 1)
-        experiment_buttons_layout.addWidget(sweep_start_stop_btn, 2, 1)
+        # Disable the action buttons initially; they will be enabled after initialization
+        self.read_unprocessed_btn.setEnabled(False)
+        self.read_processed_btn.setEnabled(False)
+        self.sweep_start_stop_btn.setEnabled(False)
+        
+        experiment_buttons_layout.addWidget(self.set_parameters_and_initialize_btn, 0, 0)
+        experiment_buttons_layout.addWidget(self.read_unprocessed_btn, 0, 1)
+        experiment_buttons_layout.addWidget(self.read_processed_btn, 1, 1)
+        experiment_buttons_layout.addWidget(self.sweep_start_stop_btn, 2, 1)
 
         top_menu.addWidget(experiment_buttons_widget)
-    
-        # Template Selection
+        
+        # Template Selection remains unchanged
         template_dropdown = QComboBox()
         template_dropdown.addItems(["Pulse Frequency Sweep", "Spin Echo"])
         template_dropdown.currentTextChanged.connect(self.change_experiment_type)
-
+        
         # Create the indicator for running sweep
         running_indicator = QLabel("•")
-        running_indicator.setFixedSize(10, 10)  # Set the size of the indicator
-        running_indicator.setStyleSheet("background-color: white;")  # Set initial color to red
-
-        #Run Experiment and Save Recordings
+        running_indicator.setFixedSize(10, 10)
+        running_indicator.setStyleSheet("background-color: white;")
+        
+        # Run Experiment and Save Recordings widget
         self.run_and_save_recordings_widget = QWidget()
         run_and_save_recordings_layout = QGridLayout(self.run_and_save_recordings_widget)
-
         plot_menu = QCheckBox("Save All Plot Recordings")
-
         run_and_save_recordings_layout.addWidget(running_indicator)
         run_and_save_recordings_layout.addWidget(plot_menu, 0, 0)
-
         top_menu.addWidget(self.run_and_save_recordings_widget)
 
         return top_menu
+
 
     def init_settings_panel(self):
         # Settings Panel
@@ -671,41 +740,63 @@ class ExperimentUI(QMainWindow):
         self.current_experiment.stop_sweep()
         self.current_experiment = self.experiments[experiment_type]
         self.temp_parameters = {}
-        print("FINISH IMPLEMENTING")
-        #change function assigned to each button
-        self.settings_panel.load_settings_panel(self.experiment_templates.get(experiment_type, {"main": [], "groups": {}}))
+        self.init_parameters_from_template()
+        self.settings_panel.load_settings_panel(
+            self.experiment_templates.get(experiment_type, {"groups": {}})
+        )
 
-    def read_and_set_parameters(self): 
-        #this used to be the code in gui_setup.py that looped through all
-        #the controls and updated the parameters with the values in the controls
-        tree = self.settings_panel.settings_tree #This is the triply-nested dictionary
-        root = tree.invisibleRootItem() #This retrieves the leaves of the tree (the subdictionaries with each indivifual setting)
+
+    def init_parameters_from_template(self):
+        """Seed self.temp_parameters with every key from the current template."""
+        template = self.experiment_templates.get(self.current_experiment.type, {"groups": {}})
+        for group in template["groups"].values():
+            for setting in group:
+                underlying = setting.get("key")
+                default = setting.get("default", "")
+                if isinstance(underlying, list):
+                    for key, d in zip(underlying, default if isinstance(default, list) else []):
+                        if key not in self.temp_parameters:
+                            self.temp_parameters[key] = d
+                else:
+                    if underlying not in self.temp_parameters:
+                        self.temp_parameters[underlying] = default
+
+    def read_and_set_parameters(self):
+        tree = self.settings_panel.settings_tree
+        root = tree.invisibleRootItem()
+        new_params = self.current_experiment.parameters.copy()
         for i in range(root.childCount()):
             group_item = root.child(i)
-            # Loop over each setting in the group
             for j in range(group_item.childCount()):
                 item = group_item.child(j)
-                key = item.text(0)  # The setting name
                 widget = tree.itemWidget(item, 1)
-                
-                # Get the widget's value based on its type
+                underlying = getattr(widget, "_underlying_key", None)
                 if isinstance(widget, (QSpinBox, QDoubleSpinBox)):
                     value = widget.value()
+                elif isinstance(widget, QLineEdit):
+                    value = widget.text()
                 elif isinstance(widget, QComboBox):
                     value = widget.currentText()
                 elif isinstance(widget, QCheckBox):
                     value = widget.isChecked()
-                elif isinstance(widget, QLabel):
-                    value = widget.text()
+                elif isinstance(widget, QWidget) and hasattr(widget, "composite_values"):
+                    value = widget.composite_values()
                 else:
-                    raise Exception("Widget in Setttings panel is not of a known type") 
-                
-                self.temp_parameters[key] = value
-        self.current_experiment.set_parameters(self.temp_parameters)
-        # NEW: Disable the action buttons (they are enabled after set_parameters_and_initialize_btn is pressed)
+                    value = None
+                if underlying is not None:
+                    if isinstance(underlying, list) and isinstance(value, list):
+                        for key, v in zip(underlying, value):
+                            new_params[key] = v
+                    else:
+                        new_params[underlying] = value
+        self.current_experiment.set_parameters(new_params)
+        
+        # Enable the action buttons now that parameters have been read.
         self.read_unprocessed_btn.setEnabled(True)
         self.read_processed_btn.setEnabled(True)
         self.sweep_start_stop_btn.setEnabled(True)
+
+
         
 
     def read_unprocessed_frontend(self):
@@ -736,6 +827,7 @@ class ExperimentUI(QMainWindow):
     
     def hardware_off_frontend(self):
         """calls a backend function that turns off the harware for the experiment"""
+        print("Shutting off")
         try:
             self.current_experiment.hardware_off()
         finally:
