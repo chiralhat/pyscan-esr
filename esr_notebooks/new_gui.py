@@ -107,12 +107,6 @@ class DynamicSettingsPanel(QWidget):
         self.settings_scroll.setWidgetResizable(True)
         self.settings_scroll.setWidget(self.settings_tree)
         self.main_layout.addWidget(self.settings_scroll)
-        # Bottom menu bar (if needed)
-        self.bottom_menu = QHBoxLayout()
-        self.save_template_btn = QPushButton("Save Template")
-        self.bottom_menu.addStretch()
-        self.bottom_menu.addWidget(self.save_template_btn)
-        self.main_layout.addLayout(self.bottom_menu)
 
     def load_settings_panel(self, settings):
         """Populate the settings panel dynamically from the template."""
@@ -292,7 +286,7 @@ EXPERIMENT_TEMPLATES = {
                  "min": 0, "max": 20, "default": 10.0},
                 {"display": "Integral only", "key": "integrate", "type": "check",
                  "default": False},
-                {"display": "Initialize on read", "key": "init", "type": "check",
+                {"display": "Initialize on read", "key": "init", "type": "check", #COULD REMOVE
                  "default": True},
                 {"display": "Turn off after sweep", "key": "turn_off", "type": "check",
                  "default": False}
@@ -408,6 +402,7 @@ class ExperimentType:
     
     def start_sweep(self):
         """starts up the hardware to run a sweep and runs a sweep"""
+        self.sweep_running = True
         runinfo = self.sweep['runinfo']
         expt = ps.Sweep(runinfo, self.devices, self.sweep['name'])
         self.sweep['expt'] = expt
@@ -425,7 +420,8 @@ class ExperimentType:
 
     def stop_sweep(self):
         """Stops a sweep that is currently running"""
-        self.sweep['expt'].runinfo.running = False
+        if 'expt' in self.sweep.keys():
+            self.sweep['expt'].runinfo.running = False
         
     def hardware_off(self):
         """
@@ -456,7 +452,6 @@ class ExperimentUI(QMainWindow):
         self.settings_panel = DynamicSettingsPanel() 
         self.graphs_panel = self.init_graphs_panel()
         self.error_log = self.init_error_log()
-        self.bottom_menu_bar = self.init_bottom_menu_bar() 
         self.top_menu_bar = self.init_top_menu_bar()
 
         # Build the main layout with splitters
@@ -472,7 +467,6 @@ class ExperimentUI(QMainWindow):
         sys.stdout = dual_stream  # Redirect stdout to the dual stream
         sys.stderr = dual_stream  # Redirect stderr to the dual stream
 
-
         #change function assigned to each button
         self.settings_panel.load_settings_panel(self.experiment_templates.get("Pulse Frequency Sweep", {"main": [], "groups": {}}))
 
@@ -482,7 +476,6 @@ class ExperimentUI(QMainWindow):
          - A top menu (horizontal layout of buttons)
          - A main splitter horizontally: left = settings, right = a vertical splitter
            top = graphs, bottom = error log
-         - A bottom menu (horizontal layout of buttons).
         """
 
         # Set up the error log
@@ -546,9 +539,6 @@ class ExperimentUI(QMainWindow):
 
         main_layout.addWidget(self.main_splitter)
 
-        # Add bottom menu
-        main_layout.addLayout(self.bottom_menu_bar)
-
         # Set the layout to the central widget
         self.setCentralWidget(central_widget)
 
@@ -572,24 +562,7 @@ class ExperimentUI(QMainWindow):
 
         return graph_section_widget
 
-    
-    def init_bottom_menu_bar(self):
-        """Creates the bottom menu bar."""
-        print("NEED TO FINISH IMPLEMENTING")
-        bottom_layout = QHBoxLayout()
-        # Add buttons or other widgets as needed.
-        btn1 = QPushButton("Button 1")
-        btn2 = QPushButton("Button 2")
-        bottom_layout.addWidget(btn1)
-        bottom_layout.addWidget(btn2)
-        return bottom_layout
 
-    # def init_error_log(self):
-    #     """Creates the error log panel."""
-    #     # Instead of a QLabel, use the QTextEdit to show error logs
-    #     log_text_edit = QTextEdit(self)
-    #     log_text_edit.setReadOnly(True)  # Make the text edit read-only
-    #     return log_text_edit
     def init_error_log(self):
         """Creates the error log panel."""
         error_log = QLabel("Error Log")
@@ -597,30 +570,9 @@ class ExperimentUI(QMainWindow):
         error_log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         return error_log
     
+
     def init_top_menu_bar(self):
         top_menu = QHBoxLayout()
-        # File buttons widget
-        file_buttons_widget = QWidget()
-        file_buttons_layout = QGridLayout(file_buttons_widget)
-        save_exp_btn = QPushButton("Save Experiment")
-        new_exp_btn = QPushButton("New Experiment")
-        save_exp_as_btn = QPushButton("Save Experiment As")
-        open_exp_btn = QPushButton("Open Experiment")
-        open_exp_btn.clicked.connect(self.show_open_experiment_popup)
-        new_exp_btn.clicked.connect(self.show_new_experiment_popup)
-        save_exp_as_btn.clicked.connect(self.show_save_experiment_as_popup)
-        # NEW: Add tooltips to the buttons.
-        save_exp_btn.setToolTip("This is a <b>button</b>")
-        new_exp_btn.setToolTip("This is a <b>button</b>")
-        save_exp_as_btn.setToolTip("This is a <b>button</b>")
-        open_exp_btn.setToolTip("This is a <b>button</b>")
-        
-        file_buttons_layout.addWidget(save_exp_btn, 0, 0)
-        file_buttons_layout.addWidget(new_exp_btn, 0, 1)
-        file_buttons_layout.addWidget(save_exp_as_btn, 1, 0)
-        file_buttons_layout.addWidget(open_exp_btn, 1, 1)
-        top_menu.addWidget(file_buttons_widget)
-        
         
         # NEW: Create a vertical container for the label and dropdown.
         exp_widget = QWidget()
