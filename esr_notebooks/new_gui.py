@@ -42,25 +42,27 @@ if not hasattr(ps, 'rm'):
 res_list = ps.rm.list_resources()
 # ...]
 
-# class LogStream:
-#     def __init__(self, text_edit):
-#         self.text_edit = text_edit
 
-#     def write(self, text):
-#         try:
-#             """Write text to the QTextEdit widget."""
-#             cursor = self.text_edit.textCursor()
-#             cursor.movePosition(cursor.End)  # Move the cursor to the end
-#             cursor.insertText(text)  # Insert the new text
-#             self.text_edit.setTextCursor(cursor)  # Ensure the cursor stays at the end
-#             self.text_edit.ensureCursorVisible()  # Make sure the text is always visible
-#         except Exception as e:
-#             # Catch any exceptions and print them to stdout/stderr
-#             sys.__stdout__.write(f"Error in LogStream: {e}\n")
+class DualStream:
+    def __init__(self, text_edit):
+        self.text_edit = text_edit
+        self.terminal = sys.__stdout__  # Store the original stdout (for terminal output)
 
+    def write(self, text):
+        # Write to QTextEdit (UI)
+        cursor = self.text_edit.textCursor()
+        cursor.movePosition(cursor.End)  # Move the cursor to the end
+        cursor.insertText(text)  # Insert the new text
+        self.text_edit.setTextCursor(cursor)  # Ensure the cursor stays at the end
+        self.text_edit.ensureCursorVisible()  # Make sure the text is always visible
 
-#     def flush(self):
-#         pass  # No need to do anything for flush in this case
+        # Write to terminal (standard output)
+        self.terminal.write(text)  # Print to terminal
+        self.terminal.flush()  # Ensure it flushes to terminal immediately
+
+    def flush(self):
+        # No need to do anything for flush in this case
+        self.terminal.flush()
 
 
 class PopUpMenu(QMessageBox):
@@ -464,13 +466,11 @@ class ExperimentUI(QMainWindow):
         self.current_experiment = self.experiments["Pulse Frequency Sweep"]
         self.temp_parameters = {}
         print("FINISH IMPLEMENTING")
-
-
-        # # Redirect stdout and stderr to the log
-        # self.log_text = QTextEdit(self)
-        # self.log_text.setReadOnly(True)  # Make the text edit read-only
-        # sys.stdout = LogStream(self.log_text)  # Redirect standard output
-        # sys.stderr = LogStream(self.log_text)  # Redirect standard error
+        
+        # Set up the custom stream for stdout and stderr
+        dual_stream = DualStream(self.log_text)  # Create the custom stream object
+        sys.stdout = dual_stream  # Redirect stdout to the dual stream
+        sys.stderr = dual_stream  # Redirect stderr to the dual stream
 
 
         #change function assigned to each button
@@ -537,7 +537,7 @@ class ExperimentUI(QMainWindow):
             }
         """)
         self.right_splitter.addWidget(self.graphs_panel)
-        self.right_splitter.addWidget(self.error_log)
+        self.right_splitter.addWidget(self.log_text)
         self.main_splitter.addWidget(self.right_splitter)
 
         # Set stretch factors to control resizing behavior
