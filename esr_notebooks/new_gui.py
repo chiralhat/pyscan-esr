@@ -25,7 +25,7 @@ import spinecho_gui as seg
 import pyscan as ps
 import os
 
-# [ this is stuff that was at the top of gui_setup.py:
+# this is stuff that was at the top of gui_setup.py:
 lstyle = {'description_width': 'initial'}
 cpmgs = range(1, 256)
 aves = [1, 4, 16, 64, 128, 256]
@@ -109,22 +109,6 @@ class GraphWidget(QWidget):
 
         # Refresh the canvas to show the updated plot
         self.canvas.draw()
-        
-# class MatplotlibCanvas(FigureCanvas):
-#     """ Matplotlib canvas to display graphs inside PyQt5 UI """
-#     def __init__(self):
-#         self.fig, self.ax = plt.subplots()
-#         super().__init__(self.fig)
-#         self.plot_placeholder()
-
-#     def plot_placeholder(self):
-#         """Generate a simple placeholder plot with larger margins."""
-#         self.ax.clear()
-#         self.ax.plot([0, 1, 2, 3], [0, 1, 4, 9], marker='o', linestyle='-')
-#         self.fig.subplots_adjust(left=0.1, right=0.9, top=0.8, bottom=0.3)  # Adjust margins
-#         self.draw()
-
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem, QScrollArea, QLabel, QHBoxLayout, QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QCheckBox, QSizePolicy, QPushButton
 
 class DynamicSettingsPanel(QWidget):
     """Settings panel with dynamically loaded settings."""
@@ -374,48 +358,6 @@ class ExperimentType:
             # TO DO: update psg file
             psg.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
 
-#     def set_parameters(self, parameters):
-#         """
-#         Takes in parameters read from the settings panel in the UI, 
-#         copies them into the paremeters dictionary, and then modifies them sligthly
-#         so they are ready for the experiment
-#         """
-#         self.parameters = parameters
-
-#         if 'ave_reps' in self.parameters.keys():
-#             reps = self.parameters['ave_reps']
-#         else:
-#             reps = 1
-#         if 'period' in self.parameters.keys():
-#             period = self.parameters['period']
-#         else:
-#             period = 500
-#         tmult = period/1e6*4*reps
-#         self.parameters['subtime'] = self.parameters['soft_avgs']*tmult
-#         datestr = date.today().strftime('%y%m%d')
-#         fname = datestr+str(self.parameters['file_name'])+'_'
-#         self.parameters['outfile'] = str(Path(self.parameters['save_dir']) / fname)
-        
-#         #NOTE: this is logic that he had: this makes it so that the defaults are 
-#         #updated with whatever the parameters that the user just entered:
-#         with open(self.default_file, 'wb') as f:
-#             pickle.dump(self.parameters, f)
-            
-#         inst = ps.ItemAttribute()
-#         if not hasattr(self.devices, 'psu') and self.parameters['use_psu']:
-#             waddr = self.parameters['psu_address'].split('ASRL')[-1].split('::')[0]
-#             self.devices.psu = ps.GPD3303S(waddr)
-#         if not hasattr(self.devices, 'ls335') and self.parameters['use_temp']:
-#             self.devices.ls335 = ps.Lakeshore335()
-#             ttemp = self.devices.ls335.get_temp()
-
-#         #NOTE: this is the checkbox that say "if i've clicked initialize on read processed/read unprocessed/or on start sweep"
-#         #then initialize the pyscan experiment
-#         #I think we probably can get rid of this
-#         if not self.parameters['init']: #presumably in his original code, this gets set to false if the user doesn't click the initialize on read checkbox in his code
-#             pass
-#         else:
-#             self.init_pyscan_experiment() 
     def set_parameters(self, parameters):
         """
         Takes in parameters read from the settings panel in the UI, 
@@ -587,8 +529,8 @@ class ExperimentUI(QMainWindow):
         central_widget = QWidget()
         main_layout = QVBoxLayout(central_widget)
 
-        # Add top menu (adjust layout as needed)
-        main_layout.addLayout(self.top_menu_bar)
+        # Add top menu 
+        main_layout.addWidget(self.top_menu_bar)
 
         # -- main splitter (horizontal)
         self.main_splitter = QSplitter(Qt.Horizontal)
@@ -667,44 +609,54 @@ class ExperimentUI(QMainWindow):
     
 
     def init_top_menu_bar(self):
+        # Create a horizontal layout for the top menu with reduced margins and spacing
         top_menu = QHBoxLayout()
-        
-        # NEW: Create a vertical container for the label and dropdown.
+        top_menu.setContentsMargins(5, 5, 5, 5)
+        top_menu.setSpacing(10)
+
+        # Wrap the layout in a container widget and set a fixed (smaller) height
+        top_menu_container = QWidget()
+        top_menu_container.setLayout(top_menu)
+        #top_menu_container.setFixedHeight(40)  # Smaller top menu height
+
+        # --- Experiment Type Selection ---
         exp_widget = QWidget()
         exp_layout = QVBoxLayout(exp_widget)
+        exp_layout.setContentsMargins(0, 0, 0, 0)
+        exp_layout.setSpacing(2)
         label = QLabel("Change Experiment Type")
+        label.setStyleSheet("font-size: 10pt;")
         exp_layout.addWidget(label)
         exp_dropdown = QComboBox()
         exp_dropdown.addItems(list(self.experiments.keys()))
+        exp_dropdown.setStyleSheet("font-size: 10pt;")
         exp_dropdown.currentTextChanged.connect(self.change_experiment_type)
         exp_layout.addWidget(exp_dropdown)
         top_menu.addWidget(exp_widget)
-        
-        # NEW: Create and add the indicator with a black border.
-        self.running_indicator = QLabel("•")
-        self.running_indicator.setFixedSize(10, 10)
-        self.running_indicator.setStyleSheet("background-color: white; border: 1px solid black;")
-        top_menu.addWidget(self.running_indicator)
-        
-        # Experiment-specific buttons remain separate.
+
+        # --- Experiment-Specific Buttons with Indicators ---
         top_menu = self.init_experiment_specific_buttons(top_menu)
-        
-        # Window control buttons
+
+        # --- Window Control Buttons ---
         window_controls_widget = QWidget()
         window_controls_layout = QHBoxLayout(window_controls_widget)
         window_controls_layout.setContentsMargins(0, 0, 0, 0)
+        window_controls_layout.setSpacing(5)
         minimize_btn = QPushButton("Minimize")
+        minimize_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         minimize_btn.clicked.connect(self.showMinimized)
         fullscreen_btn = QPushButton("Toggle Full Screen")
+        fullscreen_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         fullscreen_btn.clicked.connect(self.toggle_fullscreen)
         off_btn = QPushButton("Hardware Off and Close Software")
+        off_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         off_btn.clicked.connect(self.hardware_off_frontend)
-        
         window_controls_layout.addWidget(minimize_btn)
         window_controls_layout.addWidget(fullscreen_btn)
         window_controls_layout.addWidget(off_btn)
         top_menu.addWidget(window_controls_widget)
-        return top_menu
+
+        return top_menu_container
 
     def toggle_fullscreen(self):
         # Toggle between full screen and normal window states
@@ -714,56 +666,82 @@ class ExperimentUI(QMainWindow):
             self.showFullScreen()
 
     def init_experiment_specific_buttons(self, top_menu):
-        """
-        This section creates buttons, assigns the proper functions to them, and then
-        adds them to the top menu bar.
-        """
         experiment_buttons_widget = QWidget()
         experiment_buttons_layout = QGridLayout(experiment_buttons_widget)
-        
-        self.set_parameters_and_initialize_btn = QPushButton("Initialize")
-        self.set_parameters_and_initialize_btn.clicked.connect(self.read_and_set_parameters)
-        
-        # Create buttons and assign them to instance variables
-        self.read_unprocessed_btn = QPushButton("Read Unprocessed")
-        self.read_unprocessed_btn.clicked.connect(self.read_unprocessed_frontend)
-        
-        self.read_processed_btn = QPushButton("Read Processed")
-        self.read_processed_btn.clicked.connect(self.read_processed_frontend)
-        
-        self.sweep_start_stop_btn = QPushButton("Start Sweep")
-        self.sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend)
+        experiment_buttons_layout.setContentsMargins(0, 0, 0, 0)
+        experiment_buttons_layout.setSpacing(5)
 
-        # Disable the action buttons initially; they will be enabled after initialization
+        # --- Initialize Button ---
+        init_widget = QWidget()
+        init_layout = QHBoxLayout(init_widget)
+        init_layout.setContentsMargins(0, 0, 0, 0)
+        self.set_parameters_and_initialize_btn = QPushButton("Initialize")
+        self.set_parameters_and_initialize_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
+        self.set_parameters_and_initialize_btn.clicked.connect(self.read_and_set_parameters)
+        self.indicator_initialize = QLabel("•")
+        self.indicator_initialize.setFixedSize(10, 10)
+        self.indicator_initialize.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
+        init_layout.addWidget(self.set_parameters_and_initialize_btn)
+        init_layout.addWidget(self.indicator_initialize)
+        experiment_buttons_layout.addWidget(init_widget, 0, 0)
+
+        # --- Read Unprocessed Button ---
+        read_unprocessed_widget = QWidget()
+        read_unprocessed_layout = QHBoxLayout(read_unprocessed_widget)
+        read_unprocessed_layout.setContentsMargins(0, 0, 0, 0)
+        self.read_unprocessed_btn = QPushButton("Read Unprocessed")
+        self.read_unprocessed_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
+        self.read_unprocessed_btn.clicked.connect(self.read_unprocessed_frontend)
+        self.indicator_read_unprocessed = QLabel("•")
+        self.indicator_read_unprocessed.setFixedSize(10, 10)
+        self.indicator_read_unprocessed.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
+        read_unprocessed_layout.addWidget(self.read_unprocessed_btn)
+        read_unprocessed_layout.addWidget(self.indicator_read_unprocessed)
+        experiment_buttons_layout.addWidget(read_unprocessed_widget, 0, 1)
+
+        # --- Read Processed Button ---
+        read_processed_widget = QWidget()
+        read_processed_layout = QHBoxLayout(read_processed_widget)
+        read_processed_layout.setContentsMargins(0, 0, 0, 0)
+        self.read_processed_btn = QPushButton("Read Processed")
+        self.read_processed_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
+        self.read_processed_btn.clicked.connect(self.read_processed_frontend)
+        self.indicator_read_processed = QLabel("•")
+        self.indicator_read_processed.setFixedSize(10, 10)
+        self.indicator_read_processed.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
+        read_processed_layout.addWidget(self.read_processed_btn)
+        read_processed_layout.addWidget(self.indicator_read_processed)
+        experiment_buttons_layout.addWidget(read_processed_widget, 1, 1)
+
+        # --- Start/Stop Sweep Button ---
+        sweep_widget = QWidget()
+        sweep_layout = QHBoxLayout(sweep_widget)
+        sweep_layout.setContentsMargins(0, 0, 0, 0)
+        self.sweep_start_stop_btn = QPushButton("Start Sweep")
+        self.sweep_start_stop_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
+        self.sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend)
+        self.indicator_sweep = QLabel("•")
+        self.indicator_sweep.setFixedSize(10, 10)
+        self.indicator_sweep.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
+        sweep_layout.addWidget(self.sweep_start_stop_btn)
+        sweep_layout.addWidget(self.indicator_sweep)
+        experiment_buttons_layout.addWidget(sweep_widget, 2, 1)
+
+        # Disable the three buttons until "Initialize" is pressed
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
         self.sweep_start_stop_btn.setEnabled(False)
-        
-        experiment_buttons_layout.addWidget(self.set_parameters_and_initialize_btn, 0, 0)
-        experiment_buttons_layout.addWidget(self.read_unprocessed_btn, 0, 1)
-        experiment_buttons_layout.addWidget(self.read_processed_btn, 1, 1)
-        experiment_buttons_layout.addWidget(self.sweep_start_stop_btn, 2, 1)
 
+        experiment_buttons_widget.setLayout(experiment_buttons_layout)
         top_menu.addWidget(experiment_buttons_widget)
-        
-        # Template Selection remains unchanged
-        template_dropdown = QComboBox()
-        template_dropdown.addItems(["Pulse Frequency Sweep", "Spin Echo"])
-        template_dropdown.currentTextChanged.connect(self.change_experiment_type)
-        
-        # Create the indicator for running sweep
-        running_indicator = QLabel("•")
-        running_indicator.setFixedSize(10, 10)
-        running_indicator.setStyleSheet("background-color: white;")
-        
-        # Run Experiment and Save Recordings widget
-        self.run_and_save_recordings_widget = QWidget()
-        run_and_save_recordings_layout = QGridLayout(self.run_and_save_recordings_widget)
-        plot_menu = QCheckBox("Save All Plot Recordings")
-        run_and_save_recordings_layout.addWidget(running_indicator)
-        run_and_save_recordings_layout.addWidget(plot_menu, 0, 0)
-        top_menu.addWidget(self.run_and_save_recordings_widget)
-
         return top_menu
 
 
@@ -792,6 +770,10 @@ class ExperimentUI(QMainWindow):
             self.experiment_templates.get(experiment_type, {"groups": {}})
         )
 
+        # Re-disable action buttons until user clicks "Initialize"
+        self.read_unprocessed_btn.setEnabled(False)
+        self.read_processed_btn.setEnabled(False)
+        self.sweep_start_stop_btn.setEnabled(False)
 
     def init_parameters_from_template(self):
         """Seed self.temp_parameters with every key from the current template."""
@@ -808,46 +790,14 @@ class ExperimentUI(QMainWindow):
                     if underlying not in self.temp_parameters:
                         self.temp_parameters[underlying] = default
 
-#     def read_and_set_parameters(self):
-#         tree = self.settings_panel.settings_tree
-#         root = tree.invisibleRootItem()
-#         new_params = self.current_experiment.parameters.copy()
-#         for i in range(root.childCount()):
-#             group_item = root.child(i)
-#             for j in range(group_item.childCount()):
-#                 item = group_item.child(j)
-#                 widget = tree.itemWidget(item, 1)
-#                 underlying = getattr(widget, "_underlying_key", None)
-#                 if isinstance(widget, (QSpinBox, QDoubleSpinBox)):
-#                     value = widget.value()
-#                 elif isinstance(widget, QLineEdit):
-#                     value = widget.text()
-#                 elif isinstance(widget, QComboBox):
-#                     value = widget.currentText()
-#                 elif isinstance(widget, QCheckBox):
-#                     value = widget.isChecked()
-#                 elif isinstance(widget, QWidget) and hasattr(widget, "composite_values"):
-#                     value = widget.composite_values()
-#                 else:
-#                     value = None
-#                 if underlying is not None:
-#                     if isinstance(underlying, list) and isinstance(value, list):
-#                         for key, v in zip(underlying, value):
-#                             new_params[key] = v
-#                     else:
-#                         new_params[underlying] = value
-#         self.current_experiment.set_parameters(new_params)
-        
-#         # Enable the action buttons now that parameters have been read.
-#         self.read_unprocessed_btn.setEnabled(True)
-#         self.read_processed_btn.setEnabled(True)
-#         self.sweep_start_stop_btn.setEnabled(True)
     def read_and_set_parameters(self):
+        # Update the Initialize indicator
+        self.indicator_initialize.setStyleSheet(
+            "background-color: red; border: 1px solid black; border-radius: 5px;"
+        )
         tree = self.settings_panel.settings_tree
         root = tree.invisibleRootItem()
         new_params = self.current_experiment.parameters.copy()
-
-        # Pull all values from the settings panel
         for i in range(root.childCount()):
             group_item = root.child(i)
             for j in range(group_item.childCount()):
@@ -872,52 +822,58 @@ class ExperimentUI(QMainWindow):
                             new_params[key] = v
                     else:
                         new_params[underlying] = value
-
-        # Step 1: Save into the experiment
         self.current_experiment.set_parameters(new_params)
-
-        # Step 2: Manually call init_experiment logic again in case it was skipped
         self.current_experiment.init_pyscan_experiment()
-
-        # Step 3: Enable action buttons
+        # Enable action buttons after initialization
+        self.read_unprocessed_btn.setEnabled(True)
+        self.read_processed_btn.setEnabled(True)
+        self.sweep_start_stop_btn.setEnabled(True)
+        print("✅ Initialized experiment with parameters:")
+        for k, v in new_params.items():
+            print(f"   {k}: {v}")
+        self.indicator_initialize.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
         self.read_unprocessed_btn.setEnabled(True)
         self.read_processed_btn.setEnabled(True)
         self.sweep_start_stop_btn.setEnabled(True)
 
-        print("✅ Initialized experiment with parameters:")
-        for k, v in new_params.items():
-            print(f"   {k}: {v}")
-
-
-
-        
-
     def read_unprocessed_frontend(self):
-        self.running_indicator.setStyleSheet("background-color: red;")
+        self.indicator_read_unprocessed.setStyleSheet(
+            "background-color: red; border: 1px solid black; border-radius: 5px;"
+        )
         self.read_and_set_parameters()
         self.current_experiment.read_unprocessed()
-        self.running_indicator.setStyleSheet("background-color: grey;")
+        self.indicator_read_unprocessed.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
 
     def read_processed_frontend(self):
-        """calls the read processed function. If initialize on read is checked, then the experiment is also initialized"""
-        self.running_indicator.setStyleSheet("background-color: red;")
+        self.indicator_read_processed.setStyleSheet(
+            "background-color: red; border: 1px solid black; border-radius: 5px;"
+        )
         self.read_and_set_parameters()
         self.current_experiment.read_processed()
-        self.running_indicator.setStyleSheet("background-color: grey;")
+        self.indicator_read_processed.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
 
     def toggle_start_stop_sweep_frontend(self):
-        """ Toggle between Run and Stop Sweep states """
         if self.sweep_start_stop_btn.text() == "Start Sweep":
-            self.running_indicator.setStyleSheet("background-color: red;")
+            self.indicator_sweep.setStyleSheet(
+                "background-color: red; border: 1px solid black; border-radius: 5px;"
+            )
             self.read_and_set_parameters()
             self.sweep_start_stop_btn.setText("Stop Sweep")
             self.current_experiment.start_sweep()
-            #currently, the running indicator won't turn off when the sweep is done. Need to figure this out.
+            # (Optional) You may add code here to turn the indicator back off when the sweep completes.
         else:
             self.current_experiment.stop_sweep()
             self.sweep_start_stop_btn.setText("Start Sweep")
-            self.running_indicator.setStyleSheet("background-color: grey;")
-    
+            self.indicator_sweep.setStyleSheet(
+                "background-color: grey; border: 1px solid black; border-radius: 5px;"
+            )
+
     def hardware_off_frontend(self):
         """calls a backend function that turns off the harware for the experiment"""
         print("Shutting off")
@@ -926,17 +882,6 @@ class ExperimentUI(QMainWindow):
         finally:
             self.close()
 
-    def show_open_experiment_popup(self):
-        popup = PopUpMenu("Open Experiment", "Feature coming soon!")
-        popup.show_popup()
-    
-    def show_save_experiment_as_popup(self):
-        popup = PopUpMenu("Save Experiment As", "Feature coming soon!")
-        popup.show_popup()
-    
-    def show_new_experiment_popup(self):
-        popup = PopUpMenu("New Experiment", "Feature coming soon!")
-        popup.show_popup()
 
 
 def main():
