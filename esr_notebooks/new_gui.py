@@ -44,11 +44,22 @@ res_list = ps.rm.list_resources()
 
 
 class DualStream:
+    """ A custom stream handler that writes output to both the terminal and a QTextEdit widget.
+    This class is used to capture and display stdout/stderr in a PyQt GUI application,
+    while also preserving terminal output. """
+
     def __init__(self, text_edit):
         self.text_edit = text_edit
         self.terminal = sys.__stdout__  # Store the original stdout (for terminal output)
 
     def write(self, text):
+        """ Writes the provided text to both the QTextEdit widget and the terminal.
+        This method is used to mirror standard output (or error) to a GUI text display
+        while still maintaining the original terminal output. It ensures that text is
+        appended at the end of the QTextEdit and that the view auto-scrolls to show the latest entry.
+
+        @param text -- The text string to be written to both outputs.
+        """
         # Write to QTextEdit (UI)
         cursor = self.text_edit.textCursor()
         cursor.movePosition(cursor.End)  # Move the cursor to the end
@@ -78,21 +89,32 @@ class PopUpMenu(QMessageBox):
 
         
 class GraphWidget(QWidget):
+    """ A QWidget subclass that embeds a Matplotlib figure for real-time plotting.
+        This widget provides a graphical interface for visualizing experimental data,
+        such as I/Q signals and amplitude over time. It contains a Matplotlib figure
+        canvas and a vertical layout to integrate smoothly with PyQt5-based GUIs."""
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAutoFillBackground(True)
-        self.figure, self.ax = plt.subplots()
-        self.canvas = FigureCanvas(self.figure)
+        self.figure, self.ax = plt.subplots() #self.figure -- The Matplotlib figure object
+                                              # self.ax -- The axes for plotting data.
+        self.canvas = FigureCanvas(self.figure) #The Matplotlib canvas embedded in the widget.
 
         # Layout for the graphing widget
-        self.layout = QVBoxLayout()
+        self.layout = QVBoxLayout() #Layout manager for placing the canvas in the widget.
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
 
 
     def update_canvas(self, time, i, q, x):
-        """
-        Update the canvas with the given data.
+        """Clears the current plot and renders new data traces for CH1, CH2, and amplitude. 
+        Note that time, i, q, and x should all be the same length!
+
+        @param time -- numpy.ndarray object (array-like) containing time values
+        @param i -- numpy.ndarray object (array-like) containing in-phase signal data values
+        @param q -- numpy.ndarray object (array-like) containing quadrature signal data values
+        @param x -- numpy.ndarray object (array-like) containing amplitude values
         """
         # Clear the previous plot
         self.ax.clear()
@@ -111,25 +133,46 @@ class GraphWidget(QWidget):
         self.canvas.draw()
 
 class DynamicSettingsPanel(QWidget):
-    """Settings panel with dynamically loaded settings."""
+    """A QWidget-based panel that dynamically generates a settings tree from a configuration template.
+        This class is responsible for rendering a scrollable, two-column tree view of
+        experiment settings. It supports various input types such as spin boxes,
+        combo boxes, checkboxes, line edits, and composite widgets, allowing for
+        flexible experiment configuration. t"""
     def __init__(self):
         super().__init__()
-        self.main_layout = QVBoxLayout(self)
-        self.settings_tree = QTreeWidget()
+        self.main_layout = QVBoxLayout(self) #The main layout of the panel.
+
+        self.settings_tree = QTreeWidget() #The tree structure displaying setting names and editable widgets.
         self.settings_tree.setHeaderHidden(False)
         self.settings_tree.setColumnCount(2)
         self.settings_tree.setHeaderLabels(["Setting", "Value"])
         self.settings_tree.setColumnWidth(0, 200)
         self.settings_tree.setColumnWidth(1, 100)
-        self.settings_scroll = QScrollArea()
+
+        self.settings_scroll = QScrollArea() #Scrollable area containing the settings tree.
         self.settings_scroll.setWidgetResizable(True)
         self.settings_scroll.setWidget(self.settings_tree)
         self.main_layout.addWidget(self.settings_scroll)
 
     def load_settings_panel(self, settings):
-        """Populate the settings panel dynamically from the template."""
-        self.settings_tree.clear()
-        for group_name, group_settings in settings.get("groups", {}).items():
+        """Populates the settings panel using a structured dictionary of grouped settings.
+            This method clears the current tree and rebuilds it based on the provided
+            template, organizing settings into collapsible groups. Each setting is rendered
+            with an appropriate input widget (e.g., spin box, combo box, checkbox).
+
+            @param settings -- A triply nested dictionary containing setting groups and items, typically
+                                in the format:
+                                {
+                                    "groups": {
+                                        "Group Name": [
+                                            {"display": ..., "key": ..., "type": ..., ...},
+                                            ...
+                                        ]
+                                    }
+                                }"""
+        self.settings_tree.clear() #reset settings tree
+
+        for group_name, group_settings in settings.get("groups", {}).items(): #iterate through the settings
             group_item = QTreeWidgetItem([group_name])
             self.settings_tree.addTopLevelItem(group_item)
             group_item.setExpanded(group_name == "Main Settings")
@@ -355,8 +398,8 @@ class ExperimentType:
             self.spinecho_gui = seg.SpinechoExperiment(self.graph)
             self.spinecho_gui.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
         elif self.type == "Pulse Frequency Sweep":
-            # TO DO: update psg file
-            psg.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
+            self.pulsesweep_gui = psg.PulseSweepExperiment(self.graph)
+            self.pulsesweep_gui.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
 
     def set_parameters(self, parameters):
         """
@@ -431,7 +474,7 @@ class ExperimentType:
         if self.type == "Spin Echo":
             self.spinecho_gui.read_unprocessed(self.sig, self.parameters, self.soc)
         elif self.type == "Pulse Frequency Sweep":
-            psg.read_unprocessed(self.sig, self.parameters, self.soc)
+            self.pulsesweep_gui.read_unprocessed(self.sig, self.parameters, self.soc)
 
     # TO DO: change these functions to mimic changes in read_unprocessed
     def run_sweep(self):#, output, fig):
@@ -490,7 +533,7 @@ class ExperimentUI(QMainWindow):
         # Create main UI elements
         self.settings_panel = DynamicSettingsPanel() 
         self.graphs_panel = self.init_graphs_panel()
-        self.error_log = self.init_error_log()
+        self.error_log = self.init_error_log_widget()
         self.top_menu_bar = self.init_top_menu_bar()
 
         # Build the main layout with splitters
@@ -530,7 +573,7 @@ class ExperimentUI(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
 
         # Add top menu 
-        main_layout.addWidget(self.top_menu_bar)
+        main_layout.addWidget(self.top_menu_bar, 1)
 
         # -- main splitter (horizontal)
         self.main_splitter = QSplitter(Qt.Horizontal)
@@ -568,15 +611,22 @@ class ExperimentUI(QMainWindow):
                 background-color: darkgray;
             }
         """)
+        
+        # The graph panel
         self.right_splitter.addWidget(self.graphs_panel)
-        self.right_splitter.addWidget(self.log_text)
+
+        # The combined error widget
+        self.error_widget = self.init_error_log_widget()
+        self.right_splitter.addWidget(self.error_widget)
+
+        # Add the right splitter to the main splitter
         self.main_splitter.addWidget(self.right_splitter)
 
         # Set stretch factors to control resizing behavior
         self.main_splitter.setStretchFactor(0, 1)  # Settings Panel (left side)
         self.main_splitter.setStretchFactor(1, 1)  # Right splitter (graph & error log)
 
-        main_layout.addWidget(self.main_splitter)
+        main_layout.addWidget(self.main_splitter, 6)
 
         # Set the layout to the central widget
         self.setCentralWidget(central_widget)
@@ -600,63 +650,92 @@ class ExperimentUI(QMainWindow):
         return graph_section_widget
 
 
-    def init_error_log(self):
-        """Creates the error log panel."""
-        error_log = QLabel("Error Log")
-        error_log.setFrameShape(QFrame.Box)
-        error_log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        return error_log
-    
+    def init_error_log_widget(self):
+        """Creates a small widget with an 'Error Log' label and the log text area below it."""
+        error_widget = QWidget()
+        vlayout = QVBoxLayout(error_widget)
+        vlayout.setContentsMargins(0, 0, 0, 0)
+        vlayout.setSpacing(5)
+
+        label = QLabel("Error Log")
+        label.setStyleSheet("font-weight: bold;")
+        vlayout.addWidget(label)
+
+        self.log_text = QTextEdit()  # Create the text edit for logs
+        self.log_text.setReadOnly(True)
+        vlayout.addWidget(self.log_text)
+
+        return error_widget
 
     def init_top_menu_bar(self):
-        # Create a horizontal layout for the top menu with reduced margins and spacing
+        # Create a horizontal layout for the top menu with some margins
         top_menu = QHBoxLayout()
         top_menu.setContentsMargins(5, 5, 5, 5)
-        top_menu.setSpacing(10)
+        top_menu.setSpacing(5)
+        top_menu.setAlignment(Qt.AlignTop)  # Align everything at the top
 
-        # Wrap the layout in a container widget and set a fixed (smaller) height
+        # Wrap the layout in a container widget
         top_menu_container = QWidget()
         top_menu_container.setLayout(top_menu)
-        #top_menu_container.setFixedHeight(40)  # Smaller top menu height
+        # You can set a fixed height if you want a tight bar, e.g.:
+        # top_menu_container.setFixedHeight(60)
 
         # --- Experiment Type Selection ---
         exp_widget = QWidget()
         exp_layout = QVBoxLayout(exp_widget)
+        # Less space between label and dropdown
+        exp_layout.setSpacing(0)
         exp_layout.setContentsMargins(0, 0, 0, 0)
-        exp_layout.setSpacing(2)
+
         label = QLabel("Change Experiment Type")
         label.setStyleSheet("font-size: 10pt;")
         exp_layout.addWidget(label)
+
         exp_dropdown = QComboBox()
         exp_dropdown.addItems(list(self.experiments.keys()))
         exp_dropdown.setStyleSheet("font-size: 10pt;")
         exp_dropdown.currentTextChanged.connect(self.change_experiment_type)
         exp_layout.addWidget(exp_dropdown)
+
         top_menu.addWidget(exp_widget)
 
+        # Add extra horizontal spacing between "Change Experiment Type" and the next section
+        top_menu.addSpacing(30)
+
         # --- Experiment-Specific Buttons with Indicators ---
+        # We pass top_menu to the function that creates the experiment buttons
+        # which adds them to the same layout
         top_menu = self.init_experiment_specific_buttons(top_menu)
+
+        # Add extra horizontal spacing between the experiment buttons and the window controls
+        top_menu.addSpacing(30)
 
         # --- Window Control Buttons ---
         window_controls_widget = QWidget()
         window_controls_layout = QHBoxLayout(window_controls_widget)
         window_controls_layout.setContentsMargins(0, 0, 0, 0)
-        window_controls_layout.setSpacing(5)
+        window_controls_layout.setSpacing(10)
+
         minimize_btn = QPushButton("Minimize")
         minimize_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         minimize_btn.clicked.connect(self.showMinimized)
+
         fullscreen_btn = QPushButton("Toggle Full Screen")
         fullscreen_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         fullscreen_btn.clicked.connect(self.toggle_fullscreen)
+
         off_btn = QPushButton("Hardware Off and Close Software")
         off_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         off_btn.clicked.connect(self.hardware_off_frontend)
+
         window_controls_layout.addWidget(minimize_btn)
         window_controls_layout.addWidget(fullscreen_btn)
         window_controls_layout.addWidget(off_btn)
+
         top_menu.addWidget(window_controls_widget)
 
         return top_menu_container
+
 
     def toggle_fullscreen(self):
         # Toggle between full screen and normal window states
