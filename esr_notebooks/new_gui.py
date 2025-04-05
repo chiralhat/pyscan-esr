@@ -452,15 +452,15 @@ class ExperimentType:
         else:
             self.init_pyscan_experiment()
 
-    
+    #### NEW: Changed self.config to self.parameters
     def read_processed(self):
         """"
         Takes a snapshot of the current state and processes it before displaying it
         """
         if self.type == "Spin Echo":
-            seg.read_processed(self.sig, self.config, self.soc, self.fig)
+            seg.read_processed(self.sig, self.parameters, self.soc, self.fig)
         elif self.type == "Pulse Frequency Sweep":
-            psg.read_processed(self.sig, self.config, self.soc, self.fig)
+            psg.read_processed(self.sig, self.parameters, self.soc, self.fig)
             
     #### NEW: Changed self.config to self.parameters
         # Initialized a current experiment object spinecho_gui in init_pyscan_experiment, 
@@ -542,7 +542,6 @@ class ExperimentUI(QMainWindow):
         # Load some default experiment into the settings panel
         self.current_experiment = self.experiments["Spin Echo"]
         self.temp_parameters = {}
-        print("FINISH IMPLEMENTING")
         
         # Set up the custom stream for stdout and stderr
         dual_stream = DualStream(self.log_text)  # Create the custom stream object
@@ -559,11 +558,6 @@ class ExperimentUI(QMainWindow):
          - A main splitter horizontally: left = settings, right = a vertical splitter
            top = graphs, bottom = error log
         """
-
-        # Set up the error log
-        # Create a QTextEdit widget to show the logs
-        self.log_text = QTextEdit(self)
-        self.log_text.setReadOnly(True)  # Make the text edit read-only
 
         # Make the window frameless to remove the title bar
         self.setWindowFlags(Qt.FramelessWindowHint)  # This removes the title bar and system buttons
@@ -636,7 +630,6 @@ class ExperimentUI(QMainWindow):
         self.setGeometry(100, 100, 1000, 700)  # Default window size
         self.show()  # Show the window
          
-    
     def init_graphs_panel(self):
         """Creates the graphs panel containing Matplotlib graphs."""
         # Create a container widget for the graphs
@@ -648,7 +641,6 @@ class ExperimentUI(QMainWindow):
         graph_layout.addWidget(self.current_experiment.graph)
 
         return graph_section_widget
-
 
     def init_error_log_widget(self):
         """Creates a small widget with an 'Error Log' label and the log text area below it."""
@@ -677,8 +669,6 @@ class ExperimentUI(QMainWindow):
         # Wrap the layout in a container widget
         top_menu_container = QWidget()
         top_menu_container.setLayout(top_menu)
-        # You can set a fixed height if you want a tight bar, e.g.:
-        # top_menu_container.setFixedHeight(60)
 
         # --- Experiment Type Selection ---
         exp_widget = QWidget()
@@ -735,7 +725,6 @@ class ExperimentUI(QMainWindow):
         top_menu.addWidget(window_controls_widget)
 
         return top_menu_container
-
 
     def toggle_fullscreen(self):
         # Toggle between full screen and normal window states
@@ -823,7 +812,6 @@ class ExperimentUI(QMainWindow):
         top_menu.addWidget(experiment_buttons_widget)
         return top_menu
 
-
     def init_settings_panel(self):
         # Settings Panel
         self.settings_panel = DynamicSettingsPanel()
@@ -834,8 +822,6 @@ class ExperimentUI(QMainWindow):
         # Load initial settings
         self.current_experiment = self.experiments["Pulse Frequency Sweep"]
         self.temp_parameters = {}
-        print("FINISH IMPLEMENTING")
-        #NEED change function assigned to each button
         self.settings_panel.load_settings_panel(self.experiment_templates.get("Pulse Frequency Sweep", {"main": [], "groups": {}}))
         
         return settings_scroll
