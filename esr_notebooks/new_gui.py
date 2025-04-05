@@ -172,11 +172,12 @@ class DynamicSettingsPanel(QWidget):
                                 }"""
         self.settings_tree.clear() #reset settings tree
 
-        for group_name, group_settings in settings.get("groups", {}).items(): #iterate through the settings
+        for group_name, group_settings in settings.get("groups", {}).items(): #iterate through the setting groups and load each one
             group_item = QTreeWidgetItem([group_name])
             self.settings_tree.addTopLevelItem(group_item)
             group_item.setExpanded(group_name == "Main Settings")
-            for setting in group_settings:
+
+            for setting in group_settings: #iterate through the individual settings for each setting group and load each setting
                 item = QTreeWidgetItem()
                 group_item.addChild(item)
                 widget = self.create_setting_widget(setting)
@@ -189,7 +190,19 @@ class DynamicSettingsPanel(QWidget):
                 self.settings_tree.setItemWidget(item, 0, label_widget)
 
     def create_setting_widget(self, setting):
-        """Create a widget based on the setting type."""
+        """Creates and returns an input widget based on the setting's type definition.
+           This method interprets the 'type' field of a setting dictionary and constructs the
+           appropriate Qt input widget (e.g., QSpinBox, QDoubleSpinBox, QLineEdit, etc.).
+           It also handles composite widgets composed of multiple input fields.
+
+           @param setting -- A dictionary describing a single setting. Expected keys include:
+                                - 'type': Type of widget to create (e.g., 'spin', 'double_spin', 'line_edit', 'combo', 'check', 'composite')
+                                - 'default': Default value(s) for the widget
+                                - 'min', 'max': Numeric bounds (for spin types)
+                                - 'options': List of string options (for combo boxes)
+                                - 'key': Underlying key(s) to associate with this widget
+
+            @return A QWidget-based input element appropriate for the setting. For composite widgets, a QWidget containing a layout of sub-widgets is returned."""
         stype = setting.get("type")
         if stype == "spin":
             widget = QSpinBox()
@@ -241,7 +254,7 @@ class DynamicSettingsPanel(QWidget):
             widget.setWordWrap(True)
         return widget
 
-
+#Global setting trees for the Pulse Frequency Sweep and Spin Echo experiment settings
 EXPERIMENT_TEMPLATES = {
     "Pulse Frequency Sweep": {
         "groups": {
@@ -256,16 +269,14 @@ EXPERIMENT_TEMPLATES = {
                  "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
                 {"display": "Sweep start, end, step",
                  "key": ["sweep_start", "sweep_end", "sweep_step"],
-                 "type": "composite", "default": [2.6, 3.0, 0.1]}
-            ],
+                 "type": "composite", "default": [2.6, 3.0, 0.1]}],
             "Readout Settings": [
                 {"display": "Time Offset", "key": "h_offset", "type": "double_spin",
                  "min": 0, "max": 100.0, "default": 10.0},
                 {"display": "Readout Length", "key": "readout_length", "type": "spin",
                  "min": 1, "max": 1000, "default": 10},
                 {"display": "Loopback", "key": "loopback", "type": "combo",
-                 "options": ["Enabled", "Disabled"], "default": "Enabled"}
-            ],
+                 "options": ["Enabled", "Disabled"], "default": "Enabled"}],
             "Uncommon Settings": [
                 {"display": "Repetition time", "key": "period", "type": "double_spin",
                  "min": 0.1, "max": 20e9, "default": 500.0},
@@ -283,16 +294,14 @@ EXPERIMENT_TEMPLATES = {
                 {"display": "Initialize on read", "key": "init", "type": "check",
                  "default": True},
                 {"display": "Turn off after sweep", "key": "turn_off", "type": "check",
-                 "default": False}
-            ],
+                 "default": False}],
             "Utility Settings": [
                 {"display": "PSU Addr", "key": "psu_address", "type": "line_edit",
                  "default": ""},
                 {"display": "Use PSU", "key": "use_psu", "type": "check",
                  "default": True},
                 {"display": "Use Lakeshore", "key": "use_temp", "type": "check",
-                 "default": False}
-            ]
+                 "default": False}]
         }
     },
     "Spin Echo": {
@@ -312,14 +321,12 @@ EXPERIMENT_TEMPLATES = {
                  "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
                 {"display": "Sweep start, end, step",
                  "key": ["sweep_start", "sweep_end", "sweep_step"], "type": "composite",
-                 "default": [2.6, 3.0, 0.1]}
-            ],
+                 "default": [2.6, 3.0, 0.1]}],
             "Pulse Settings": [
                 {"display": "Ch1 Delay, 90 Pulse", "key": ["delay", "pulse1_1"], "type": "composite",
                  "default": [10, 10]},
                 {"display": "Nut. Delay, Pulse Width", "key": ["nutation_delay", "nutation_length"],
-                 "type": "composite", "default": [600000, 10.0]}
-            ],
+                 "type": "composite", "default": [600000, 10.0]}],
             "Second Sweep Settings": [
                 {"display": "Second sweep?", "key": "sweep2", "type": "check",
                  "default": False},
@@ -327,16 +334,14 @@ EXPERIMENT_TEMPLATES = {
                  "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
                 {"display": "Sweep 2 start, end, step",
                  "key": ["sweep2_start", "sweep2_end", "sweep2_step"], "type": "composite",
-                 "default": [2.6, 3.0, 0.1]}
-            ],
+                 "default": [2.6, 3.0, 0.1]}],
             "Readout Settings": [
                 {"display": "Time Offset", "key": "h_offset", "type": "double_spin",
                  "min": -1e5, "max": 1e5, "default": 10.0},
                 {"display": "Readout Length", "key": "readout_length", "type": "spin",
                  "min": 0, "max": 5, "default": 10},
                 {"display": "Loopback", "key": "loopback", "type": "combo",
-                 "options": ["Enabled", "Disabled"], "default": "Enabled"}
-            ],
+                 "options": ["Enabled", "Disabled"], "default": "Enabled"}],
             "Uncommon Settings": [
                 {"display": "Ch1 180 Pulse Mult", "key": "mult1", "type": "double_spin",
                  "min": 0, "max": 652100, "default": 10.0},
@@ -350,49 +355,52 @@ EXPERIMENT_TEMPLATES = {
                 {"display": "Initialize on read", "key": "init", "type": "check", #COULD REMOVE
                  "default": True},
                 {"display": "Turn off after sweep", "key": "turn_off", "type": "check",
-                 "default": False}
-            ],
+                 "default": False}],
             "Utility Settings": [
                 {"display": "PSU Addr", "key": "psu_address", "type": "line_edit",
                  "default": ""},
                 {"display": "Use PSU", "key": "use_psu", "type": "check",
                  "default": True},
                 {"display": "Use Lakeshore", "key": "use_temp", "type": "check",
-                 "default": False}
-            ]
+                 "default": False}]
         }
     }
 }
 
 
 class ExperimentType:
+    """Handles backend logic, configuration, and hardware interaction for a specific experiment type.
+    This class manages the lifecycle of an experiment (e.g., Spin Echo, Pulse Frequency Sweep),
+    including setting parameters, initializing hardware, running sweeps, and reading results."""
     def __init__(self, type):
-        self.type = type #string indicating experiment type
+        self.type = type #The name of the experiment type (e.g., 'Spin Echo').
         
         #harware releated:
-        self.soc = QickSoc()
-        self.soccfg = self.soc
-        self.devices = ps.ItemAttribute()
-        self.sig = ps.ItemAttribute()
+        self.soc = QickSoc() #Hardware interface for the RFSoC system.
+        self.soccfg = self.soc #Alias for soc, used for compatibility.
+        self.devices = ps.ItemAttribute() #Container for hardware components (e.g., PSU, temperature controller).
+        self.sig = ps.ItemAttribute() #Container for storing acquired signal data.
         
-        self.parameters = {} #input
-        self.sweep = {} #output 
+        self.parameters = {} #Settings used to configure the experiment (input).
+        self.sweep = {} #Stores sweep-related objects and state (output).
 
         #for saving the parameters you entered into the settings panel
         if self.type == "Spin Echo":
-            self.default_file = "se_defaults.pkl"
+            self.default_file = "se_defaults.pkl" #Default filename used for storing results from se experiments
         elif self.type == "Pulse Frequency Sweep":
-            self.default_file = "ps_defaults.pkl"
+            self.default_file = "ps_defaults.pkl" #Default filename used for storing results from ps experiments
             
         # NEW current experiment graph
-        self.graph = GraphWidget()
+        self.graph = GraphWidget() #Widget used for plotting experiment results in the graph panel of the UI.
 
+        #Experiment objects that will be initialized later in self.init_pyscan_experiment
+        self.spinecho_gui = None
+        self.pulsesweep_gui = None
 
     def init_pyscan_experiment(self):
-        """
-        This initializes a pyscan experiment with functions from the correct 
-        experiment type scripts and GUI files.
-        """
+        """This initializes a pyscan experiment with functions from the correct 
+        experiment type scripts and GUI files."""
+
         if self.type == "Spin Echo":
             # NEW: created spinecho_gui objects from updated spinecho gui file
             self.spinecho_gui = seg.SpinechoExperiment(self.graph)
@@ -402,11 +410,12 @@ class ExperimentType:
             self.pulsesweep_gui.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
 
     def set_parameters(self, parameters):
-        """
-        Takes in parameters read from the settings panel in the UI, 
+        """Takes in parameters read from the settings panel in the UI, 
         copies them into the parameters dictionary, and then modifies them slightly
         so they are ready for the experiment
-        """
+        
+        @param parameters -- dictionary of settings used to configure the experiment taken from EXPERIMENT_TEMPLATES"""
+
         self.parameters = parameters
 
         if 'ave_reps' in self.parameters.keys():
