@@ -319,8 +319,13 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
                 
             inst = ps.ItemAttribute()
             if not hasattr(devices, 'psu') and parameters['use_psu']:
-                waddr = parameters['psu_address'].split('ASRL')[-1].split('::')[0]
-                devices.psu = ps.GPD3303S(waddr)
+                if parameters.get('psu_address'):
+                    waddr = parameters['psu_address'].split('ASRL')[-1].split('::')[0]
+                    devices.psu = ps.GPD3303S(waddr)
+                    waddr = parameters['psu_address'].split('ASRL')[-1].split('::')[0]
+                    devices.psu = ps.GPD3303S(waddr)
+                else:
+                    print("PSU address is not set.")
             if not hasattr(devices, 'ls335') and parameters['use_temp']:
                 devices.ls335 = ps.Lakeshore335()
                 ttemp = devices.ls335.get_temp()

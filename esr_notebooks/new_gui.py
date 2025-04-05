@@ -241,7 +241,7 @@ EXPERIMENT_TEMPLATES = {
                  "default": [2.4, 1]},
                 {"display": "Repetition time", "key": "period", "type": "double_spin",
                  "min": 0.1, "max": 100.0, "default": 10.0},
-                {"display": "Ave", "key": "soft_avgs", "type": "spin",
+                {"display": "Ave", "key": "soft_avgs", "type": "double_spin",
                  "min": 1, "max": 1e7, "default": 1},
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], "type": "composite",
                  "default": ["", ""]},
@@ -292,8 +292,8 @@ EXPERIMENT_TEMPLATES = {
                  "default": False}
             ],
             "Utility Settings": [
-                {"display": "PSU Addr", "key": "psu_address", "type": "spin",
-                 "min": 1, "max": 100, "default": 5},
+                {"display": "PSU Addr", "key": "psu_address", "type": "line_edit",
+                 "default": ""},
                 {"display": "Use PSU", "key": "use_psu", "type": "check",
                  "default": True},
                 {"display": "Use Lakeshore", "key": "use_temp", "type": "check",
@@ -334,10 +334,52 @@ class ExperimentType:
         elif self.type == "Pulse Frequency Sweep":
             psg.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
 
+#     def set_parameters(self, parameters):
+#         """
+#         Takes in parameters read from the settings panel in the UI, 
+#         copies them into the paremeters dictionary, and then modifies them sligthly
+#         so they are ready for the experiment
+#         """
+#         self.parameters = parameters
+
+#         if 'ave_reps' in self.parameters.keys():
+#             reps = self.parameters['ave_reps']
+#         else:
+#             reps = 1
+#         if 'period' in self.parameters.keys():
+#             period = self.parameters['period']
+#         else:
+#             period = 500
+#         tmult = period/1e6*4*reps
+#         self.parameters['subtime'] = self.parameters['soft_avgs']*tmult
+#         datestr = date.today().strftime('%y%m%d')
+#         fname = datestr+str(self.parameters['file_name'])+'_'
+#         self.parameters['outfile'] = str(Path(self.parameters['save_dir']) / fname)
+        
+#         #NOTE: this is logic that he had: this makes it so that the defaults are 
+#         #updated with whatever the parameters that the user just entered:
+#         with open(self.default_file, 'wb') as f:
+#             pickle.dump(self.parameters, f)
+            
+#         inst = ps.ItemAttribute()
+#         if not hasattr(self.devices, 'psu') and self.parameters['use_psu']:
+#             waddr = self.parameters['psu_address'].split('ASRL')[-1].split('::')[0]
+#             self.devices.psu = ps.GPD3303S(waddr)
+#         if not hasattr(self.devices, 'ls335') and self.parameters['use_temp']:
+#             self.devices.ls335 = ps.Lakeshore335()
+#             ttemp = self.devices.ls335.get_temp()
+
+#         #NOTE: this is the checkbox that say "if i've clicked initialize on read processed/read unprocessed/or on start sweep"
+#         #then initialize the pyscan experiment
+#         #I think we probably can get rid of this
+#         if not self.parameters['init']: #presumably in his original code, this gets set to false if the user doesn't click the initialize on read checkbox in his code
+#             pass
+#         else:
+#             self.init_pyscan_experiment() 
     def set_parameters(self, parameters):
         """
         Takes in parameters read from the settings panel in the UI, 
-        copies them into the paremeters dictionary, and then modifies them sligthly
+        copies them into the parameters dictionary, and then modifies them slightly
         so they are ready for the experiment
         """
         self.parameters = parameters
@@ -350,32 +392,41 @@ class ExperimentType:
             period = self.parameters['period']
         else:
             period = 500
-        tmult = period/1e6*4*reps
-        self.parameters['subtime'] = self.parameters['soft_avgs']*tmult
+        tmult = period / 1e6 * 4 * reps
+        self.parameters['subtime'] = self.parameters['soft_avgs'] * tmult
         datestr = date.today().strftime('%y%m%d')
-        fname = datestr+str(self.parameters['file_name'])+'_'
+        fname = datestr + str(self.parameters['file_name']) + '_'
         self.parameters['outfile'] = str(Path(self.parameters['save_dir']) / fname)
-        
-        #NOTE: this is logic that he had: this makes it so that the defaults are 
-        #updated with whatever the parameters that the user just entered:
+
+        # Save parameters to default file
         with open(self.default_file, 'wb') as f:
             pickle.dump(self.parameters, f)
-            
+
         inst = ps.ItemAttribute()
+
+        # Initialize PSU if necessary
         if not hasattr(self.devices, 'psu') and self.parameters['use_psu']:
-            waddr = self.parameters['psu_address'].split('ASRL')[-1].split('::')[0]
-            self.devices.psu = ps.GPD3303S(waddr)
+            psu_address = self.parameters.get('psu_address', '').strip()
+            if psu_address:
+                waddr = psu_address.split('ASRL')[-1].split('::')[0]
+                try:
+                    self.devices.psu = ps.GPD3303S(waddr)
+                except Exception as e:
+                    print(f"Error initializing PSU: {e}")
+            else:
+                print("Error: PSU address is not provided or invalid.")
+
+        # Initialize temperature device if necessary
         if not hasattr(self.devices, 'ls335') and self.parameters['use_temp']:
             self.devices.ls335 = ps.Lakeshore335()
             ttemp = self.devices.ls335.get_temp()
 
-        #NOTE: this is the checkbox that say "if i've clicked initialize on read processed/read unprocessed/or on start sweep"
-        #then initialize the pyscan experiment
-        #I think we probably can get rid of this
-        if not self.parameters['init']: #presumably in his original code, this gets set to false if the user doesn't click the initialize on read checkbox in his code
-            pass
+        # Initialize pyscan experiment if necessary
+        if not self.parameters.get('init', False):
+            pass  # No action required if 'init' is False
         else:
-            self.init_pyscan_experiment() 
+            self.init_pyscan_experiment()
+
     
     def read_processed(self):
         """"
@@ -458,7 +509,7 @@ class ExperimentUI(QMainWindow):
         self.init_layout()
 
         # Load some default experiment into the settings panel
-        self.current_experiment = self.experiments["Pulse Frequency Sweep"]
+        self.current_experiment = self.experiments["Spin Echo"]
         self.temp_parameters = {}
         print("FINISH IMPLEMENTING")
         
@@ -468,7 +519,7 @@ class ExperimentUI(QMainWindow):
         sys.stderr = dual_stream  # Redirect stderr to the dual stream
 
         #change function assigned to each button
-        self.settings_panel.load_settings_panel(self.experiment_templates.get("Pulse Frequency Sweep", {"main": [], "groups": {}}))
+        self.settings_panel.load_settings_panel(self.experiment_templates.get("Spin Echo", {"main": [], "groups": {}}))
 
     def init_layout(self):
         """
@@ -713,10 +764,46 @@ class ExperimentUI(QMainWindow):
                     if underlying not in self.temp_parameters:
                         self.temp_parameters[underlying] = default
 
+#     def read_and_set_parameters(self):
+#         tree = self.settings_panel.settings_tree
+#         root = tree.invisibleRootItem()
+#         new_params = self.current_experiment.parameters.copy()
+#         for i in range(root.childCount()):
+#             group_item = root.child(i)
+#             for j in range(group_item.childCount()):
+#                 item = group_item.child(j)
+#                 widget = tree.itemWidget(item, 1)
+#                 underlying = getattr(widget, "_underlying_key", None)
+#                 if isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+#                     value = widget.value()
+#                 elif isinstance(widget, QLineEdit):
+#                     value = widget.text()
+#                 elif isinstance(widget, QComboBox):
+#                     value = widget.currentText()
+#                 elif isinstance(widget, QCheckBox):
+#                     value = widget.isChecked()
+#                 elif isinstance(widget, QWidget) and hasattr(widget, "composite_values"):
+#                     value = widget.composite_values()
+#                 else:
+#                     value = None
+#                 if underlying is not None:
+#                     if isinstance(underlying, list) and isinstance(value, list):
+#                         for key, v in zip(underlying, value):
+#                             new_params[key] = v
+#                     else:
+#                         new_params[underlying] = value
+#         self.current_experiment.set_parameters(new_params)
+        
+#         # Enable the action buttons now that parameters have been read.
+#         self.read_unprocessed_btn.setEnabled(True)
+#         self.read_processed_btn.setEnabled(True)
+#         self.sweep_start_stop_btn.setEnabled(True)
     def read_and_set_parameters(self):
         tree = self.settings_panel.settings_tree
         root = tree.invisibleRootItem()
         new_params = self.current_experiment.parameters.copy()
+
+        # Pull all values from the settings panel
         for i in range(root.childCount()):
             group_item = root.child(i)
             for j in range(group_item.childCount()):
@@ -741,12 +828,22 @@ class ExperimentUI(QMainWindow):
                             new_params[key] = v
                     else:
                         new_params[underlying] = value
+
+        # Step 1: Save into the experiment
         self.current_experiment.set_parameters(new_params)
-        
-        # Enable the action buttons now that parameters have been read.
+
+        # Step 2: Manually call init_experiment logic again in case it was skipped
+        self.current_experiment.init_pyscan_experiment()
+
+        # Step 3: Enable action buttons
         self.read_unprocessed_btn.setEnabled(True)
         self.read_processed_btn.setEnabled(True)
         self.sweep_start_stop_btn.setEnabled(True)
+
+        print("✅ Initialized experiment with parameters:")
+        for k, v in new_params.items():
+            print(f"   {k}: {v}")
+
 
 
         
