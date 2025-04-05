@@ -76,19 +76,52 @@ class PopUpMenu(QMessageBox):
     def show_popup(self):
         self.exec_()
 
-class MatplotlibCanvas(FigureCanvas):
-    """ Matplotlib canvas to display graphs inside PyQt5 UI """
-    def __init__(self):
-        self.fig, self.ax = plt.subplots()
-        super().__init__(self.fig)
-        self.plot_placeholder()
+        
+class GraphWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAutoFillBackground(True)
+        self.figure, self.ax = plt.subplots()
+        self.canvas = FigureCanvas(self.figure)
 
-    def plot_placeholder(self):
-        """Generate a simple placeholder plot with larger margins."""
+        # Layout for the graphing widget
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.canvas)
+        self.setLayout(self.layout)
+
+    def update_canvas(self, time, i, q, x):
+        """
+        Update the canvas with the given data.
+        """
+        # Clear the previous plot
         self.ax.clear()
-        self.ax.plot([0, 1, 2, 3], [0, 1, 4, 9], marker='o', linestyle='-')
-        self.fig.subplots_adjust(left=0.1, right=0.9, top=0.8, bottom=0.3)  # Adjust margins
-        self.draw()
+
+        # Plot the data
+        self.ax.plot(time, i, label='CH1', color='yellow')
+        self.ax.plot(time, q, label='CH2', color='blue')
+        self.ax.plot(time, x, label='AMP', color='green')
+
+        # Set labels and title
+        self.ax.set_xlabel('Time (μs)')
+        self.ax.set_ylabel('Signal (a.u.)')
+        self.ax.legend()
+
+        # Refresh the canvas to show the updated plot
+        self.canvas.draw()
+        
+# class MatplotlibCanvas(FigureCanvas):
+#     """ Matplotlib canvas to display graphs inside PyQt5 UI """
+#     def __init__(self):
+#         self.fig, self.ax = plt.subplots()
+#         super().__init__(self.fig)
+#         self.plot_placeholder()
+
+#     def plot_placeholder(self):
+#         """Generate a simple placeholder plot with larger margins."""
+#         self.ax.clear()
+#         self.ax.plot([0, 1, 2, 3], [0, 1, 4, 9], marker='o', linestyle='-')
+#         self.fig.subplots_adjust(left=0.1, right=0.9, top=0.8, bottom=0.3)  # Adjust margins
+#         self.draw()
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem, QScrollArea, QLabel, QHBoxLayout, QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QCheckBox, QSizePolicy, QPushButton
 
@@ -238,9 +271,9 @@ EXPERIMENT_TEMPLATES = {
         "groups": {
             "Main Settings": [
                 {"display": "Ch1 Freq, Gain", "key": ["freq", "gain"], "type": "composite",
-                 "default": [2.4, 1]},
-                {"display": "Repetition time", "key": "period", "type": "double_spin",
-                 "min": 0.1, "max": 100.0, "default": 10.0},
+                 "default": [3902, 32500]},
+                {"display": "Repetition time", "key": "period", "type": "spin",
+                 "min": 1, "max": 100, "default": 20},
                 {"display": "Ave", "key": "soft_avgs", "type": "double_spin",
                  "min": 1, "max": 1e7, "default": 1},
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], "type": "composite",
@@ -307,7 +340,7 @@ EXPERIMENT_TEMPLATES = {
 class ExperimentType:
     def __init__(self, type):
         self.type = type #string indicating experiment type
-
+        
         #harware releated:
         self.soc = QickSoc()
         self.soccfg = self.soc
@@ -322,6 +355,9 @@ class ExperimentType:
             self.default_file = "se_defaults.pkl"
         elif self.type == "Pulse Frequency Sweep":
             self.default_file = "ps_defaults.pkl"
+            
+        # Graph
+        self.graph = GraphWidget()
 
 
     def init_pyscan_experiment(self):
@@ -330,7 +366,8 @@ class ExperimentType:
         experiment type scripts and GUI files.
         """
         if self.type == "Spin Echo":
-            seg.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
+            self.spinecho_gui = seg.SpinechoExperiment(self.graph)
+            self.spinecho_gui.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
         elif self.type == "Pulse Frequency Sweep":
             psg.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
 
@@ -436,15 +473,16 @@ class ExperimentType:
             seg.read_processed(self.sig, self.config, self.soc, self.fig)
         elif self.type == "Pulse Frequency Sweep":
             psg.read_processed(self.sig, self.config, self.soc, self.fig)
-
+    #### NEW Changed self.config to self.parameters
     def read_unprocessed(self):
         """"
         Takes a snapshot of the current state and doesn't process it before display it
         """
         if self.type == "Spin Echo":
-            seg.read_unprocessed(self.sig, self.config, self.soc, self.fig)
+            self.spinecho_gui.read_unprocessed(self.sig, self.parameters, self.soc)
+            #seg.read_unprocessed(self.sig, self.parameters, self.soc)
         elif self.type == "Pulse Frequency Sweep":
-            psg.read_unprocessed(self.sig, self.config, self.soc, self.fig)
+            psg.read_unprocessed(self.sig, self.parameters, self.soc)
 
     def run_sweep(self):#, output, fig):
         """actually runs a sweep"""
@@ -605,11 +643,12 @@ class ExperimentUI(QMainWindow):
         graph_section_widget = QWidget()
         graph_layout = QVBoxLayout(graph_section_widget)
         graph_layout.setContentsMargins(75, 50, 75, 50)
-
-        # Add three Matplotlib graphs to the layout
-        self.graphs = [MatplotlibCanvas() for _ in range(3)]
-        for graph in self.graphs:
-            graph_layout.addWidget(graph)
+        
+        graph_layout.addWidget(self.current_experiment.graph)
+#         # Add three Matplotlib graphs to the layout
+#         self.graphs = [MatplotlibCanvas() for _ in range(3)]
+#         for graph in self.graphs:
+#             graph_layout.addWidget(graph)
 
         return graph_section_widget
 
