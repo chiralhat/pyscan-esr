@@ -89,6 +89,7 @@ class GraphWidget(QWidget):
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
 
+
     def update_canvas(self, time, i, q, x):
         """
         Update the canvas with the given data.
@@ -271,9 +272,9 @@ EXPERIMENT_TEMPLATES = {
         "groups": {
             "Main Settings": [
                 {"display": "Ch1 Freq, Gain", "key": ["freq", "gain"], "type": "composite",
-                 "default": [3902, 32500]},
-                {"display": "Repetition time", "key": "period", "type": "spin",
-                 "min": 1, "max": 100, "default": 20},
+                 "default": [2.4, 1]},
+                {"display": "Repetition time", "key": "period", "type": "double_spin",
+                 "min": 0.1, "max": 100.0, "default": 10.0},
                 {"display": "Ave", "key": "soft_avgs", "type": "double_spin",
                  "min": 1, "max": 1e7, "default": 1},
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], "type": "composite",
@@ -288,7 +289,7 @@ EXPERIMENT_TEMPLATES = {
             ],
             "Pulse Settings": [
                 {"display": "Ch1 Delay, 90 Pulse", "key": ["delay", "pulse1_1"], "type": "composite",
-                 "default": [10.0, 10.0]},
+                 "default": [10, 10]},
                 {"display": "Nut. Delay, Pulse Width", "key": ["nutation_delay", "nutation_length"],
                  "type": "composite", "default": [600000, 10.0]}
             ],
@@ -356,7 +357,7 @@ class ExperimentType:
         elif self.type == "Pulse Frequency Sweep":
             self.default_file = "ps_defaults.pkl"
             
-        # Graph
+        # NEW current experiment graph
         self.graph = GraphWidget()
 
 
@@ -366,9 +367,11 @@ class ExperimentType:
         experiment type scripts and GUI files.
         """
         if self.type == "Spin Echo":
+            # NEW: created spinecho_gui objects from updated spinecho gui file
             self.spinecho_gui = seg.SpinechoExperiment(self.graph)
             self.spinecho_gui.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
         elif self.type == "Pulse Frequency Sweep":
+            # TO DO: update psg file
             psg.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
 
 #     def set_parameters(self, parameters):
@@ -473,17 +476,22 @@ class ExperimentType:
             seg.read_processed(self.sig, self.config, self.soc, self.fig)
         elif self.type == "Pulse Frequency Sweep":
             psg.read_processed(self.sig, self.config, self.soc, self.fig)
-    #### NEW Changed self.config to self.parameters
+            
+    #### NEW: Changed self.config to self.parameters
+        # Initialized a current experiment object spinecho_gui in init_pyscan_experiment, 
+        # put a graph object in __init__, and changed seg.read_unprocessed(...) to 
+        # self.spinecho_gui.read_unprocessed(self.sig, self.parameters, self.soc)
+        # TO DO: repeat all steps for any function involving pulse frequency sweep
     def read_unprocessed(self):
         """"
         Takes a snapshot of the current state and doesn't process it before display it
         """
         if self.type == "Spin Echo":
             self.spinecho_gui.read_unprocessed(self.sig, self.parameters, self.soc)
-            #seg.read_unprocessed(self.sig, self.parameters, self.soc)
         elif self.type == "Pulse Frequency Sweep":
             psg.read_unprocessed(self.sig, self.parameters, self.soc)
 
+    # TO DO: change these functions to mimic changes in read_unprocessed
     def run_sweep(self):#, output, fig):
         """actually runs a sweep"""
         self.sweep['expt'].start_time = time()
@@ -644,11 +652,8 @@ class ExperimentUI(QMainWindow):
         graph_layout = QVBoxLayout(graph_section_widget)
         graph_layout.setContentsMargins(75, 50, 75, 50)
         
+        # NEW: adds the current experiment graph to the layout
         graph_layout.addWidget(self.current_experiment.graph)
-#         # Add three Matplotlib graphs to the layout
-#         self.graphs = [MatplotlibCanvas() for _ in range(3)]
-#         for graph in self.graphs:
-#             graph_layout.addWidget(graph)
 
         return graph_section_widget
 
