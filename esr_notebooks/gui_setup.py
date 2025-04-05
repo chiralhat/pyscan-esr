@@ -74,7 +74,7 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
                             'psu_address': ipw.Dropdown(options=res_list,
                                                           description='PSU Addr'),
                             'use_psu': ipw.Checkbox(layout=wwid, description='Use PSU? (No magnet if not)'),
-                           'use_temp': ipw.Checkbox(layout=wwid, description='Use Lakeshore?')},
+                            'use_temp': ipw.Checkbox(layout=wwid, description='Use Lakeshore?')},
                 'rfsoc': {'freq': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
                                                        description='Ch1 Freq (MHz)'),
                           'freq2': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,

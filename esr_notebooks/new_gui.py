@@ -258,59 +258,59 @@ class DynamicSettingsPanel(QWidget):
 EXPERIMENT_TEMPLATES = {
     "Pulse Frequency Sweep": {
         "groups": {
-            "Main Settings": [
-                {"display": "Frequency", "key": "freq", "type": "double_spin",
-                 "min": 0.1, "max": 10.0, "default": 2.4},
-                {"display": "Avg", "key": "soft_avgs", "type": "double_spin",
-                 "min": 1, "max": 1e7, "default": 1},
-                {"display": "Dir and Name", "key": ["save_dir", "file_name"],
+            "Main Settings": [                                             #ALL OF THESE COMMENTS REFER TO THE control_dict IN gui_setup.py
+                {"display": "Frequency", "key": "freq", "type": "double_spin", #Freq is a bounded float between 50 and 14999 (contained in rfsoc controls)
+                 "min": 50.0, "max": 14999.0, "default": 50.0}, #CHANGED THESE VALUES FROM 0.1, 10.0, AND 2.4
+                {"display": "Avg", "key": "soft_avgs", "type": "double_spin", #Soft_avgs is a bounded int between 1 and 10000000 (contained in rfsoc controls)
+                 "min": 1.0, "max": 1000000.0, "default": 1.0}, #EXPLICITLY MADE THESE FLOATS
+                {"display": "Dir and Name", "key": ["save_dir", "file_name"], #Both save_dir and file_name are strings (contained in save controls)
                  "type": "composite", "default": ["", ""]},
-                {"display": "Experiment", "key": "expt", "type": "combo",
+                {"display": "Experiment", "key": "expt", "type": "combo", #expt is of ipw.Dropdown type (contained in measure)
                  "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
                 {"display": "Sweep start, end, step",
-                 "key": ["sweep_start", "sweep_end", "sweep_step"],
+                 "key": ["sweep_start", "sweep_end", "sweep_step"], #sweep_start, sweep_end, and sweep_step are all unbounded floats (contained in measure)
                  "type": "composite", "default": [2.6, 3.0, 0.1]}],
             "Readout Settings": [
-                {"display": "Time Offset", "key": "h_offset", "type": "double_spin",
-                 "min": 0, "max": 100.0, "default": 10.0},
-                {"display": "Readout Length", "key": "readout_length", "type": "spin",
-                 "min": 1, "max": 1000, "default": 10},
-                {"display": "Loopback", "key": "loopback", "type": "combo",
+                {"display": "Time Offset", "key": "h_offset", "type": "double_spin", #h_offset is a bounded float between -10000 and 10000 (contained in rfsoc)
+                 "min": -10000.0, "max": 10000.0, "default": 10.0}, #CHANGED THESE VALUES FROM 0, 1000, AND 10.0
+                {"display": "Readout Length", "key": "readout_length", "type": "spin", #readout_length is a bounded float from 0 to 5 (contained in rfsoc)
+                 "min": 1.0, "max": 5.0, "default": 5.0}, #CHANGED THESE VALUES FROM 1, 1000, AND 10 ------------------- THIS ONE WAS SAVED AS AN INTEGER IN THE PICKLE FILE AND COULD HAVE BEEN A CAUSE OF THE ERROR
+                {"display": "Loopback", "key": "loopback", "type": "combo", #loopback is an ipw.Checkbox (contained in rfsoc)
                  "options": ["Enabled", "Disabled"], "default": "Enabled"}],
             "Uncommon Settings": [
-                {"display": "Repetition time", "key": "period", "type": "double_spin",
-                 "min": 0.1, "max": 20e9, "default": 500.0},
-                {"display": "Ch1 90 Pulse", "key": "pulse1_1", "type": "double_spin",
-                 "min": 0, "max": 652100, "default": 10.0},
+                {"display": "Repetition time", "key": "period", "type": "double_spin", #period is a bounded float from 0.1 to 2000000000 (contained in rfsoc)
+                 "min": 0.1, "max": 2000000000.0, "default": 500.0}, #EXPLICITLY MADE THESE FLOATS
+                {"display": "Ch1 90 Pulse", "key": "pulse1_1", "type": "double_spin", #pulse1_1 is a bounded float from 0 to 652100 (contained in rfsoc)
+                 "min": 0.0, "max": 652100.0, "default": 10.0}, #EXPLICITLY MADE THESE FLOATS
                 {"display": "Magnetic Field, Scale, Current limit",
-                 "key": ["field", "gauss_amps", "current_limit"],
-                 "type": "composite", "default": [None, None, None]},
-                {"display": "Reps", "key": "ave_reps", "type": "spin",
+                 "key": ["field", "gauss_amps", "current_limit"], #field, gauss_amps, and current_limit are all bounded floats (contained in psu) -- bounds: (0 - 2500), (0.001, 10000), (0, 10))
+                 "type": "composite", "default": [1.0, 1.0, 1.0]}, #DEFAULTS CHANGED FROM NONE, NONE, NONE ---------------- THESE WERE WRITTEN TO THE PICKLE FILE AS NONE, WHICH ALSO COULD HAVE BEEN CAUSING THE ERROR
+                {"display": "Reps", "key": "ave_reps", "type": "spin", #ave_reps is a bounded int from 1 to 1000 (contained in measure)
                  "min": 1, "max": 1000, "default": 1},
-                {"display": "Wait Time", "key": "wait", "type": "double_spin",
-                 "min": 0.1, "max": 20.0, "default": 10.0},
-                {"display": "Integral only", "key": "integrate", "type": "check",
+                {"display": "Wait Time", "key": "wait", "type": "double_spin", #wait is a bounded float from 0 to 20 (contained in measure)
+                 "min": 0.0, "max": 20.0, "default": 10.0},
+                {"display": "Integral only", "key": "integrate", "type": "check", #integrate is an ipw.Checkbox (contained in measure)
                  "default": False},
-                {"display": "Initialize on read", "key": "init", "type": "check",
+                {"display": "Initialize on read", "key": "init", "type": "check", #init is an ipw.Checkbox
                  "default": True},
-                {"display": "Turn off after sweep", "key": "turn_off", "type": "check",
+                {"display": "Turn off after sweep", "key": "turn_off", "type": "check", #turn_off is an ipw.Checkbox
                  "default": False}],
             "Utility Settings": [
-                {"display": "PSU Addr", "key": "psu_address", "type": "line_edit",
+                {"display": "PSU Addr", "key": "psu_address", "type": "line_edit", #psu_address is an ipw.Dropdown (contained in devices)
                  "default": ""},
-                {"display": "Use PSU", "key": "use_psu", "type": "check",
+                {"display": "Use PSU", "key": "use_psu", "type": "check", #use_psu is an ipw.Checkbox (contained in devices)
                  "default": True},
-                {"display": "Use Lakeshore", "key": "use_temp", "type": "check",
+                {"display": "Use Lakeshore", "key": "use_temp", "type": "check", #use_temp is an ipw.Checkbox (contained in devices)
                  "default": False}]
-        }
+        } #THERE IS A SETTING CALLED "subtime" THAT IS CALCULATED LATER AND ADDED TO THE END OF THE PICKLE FILE. IT IS EQUAL TO (soft_avgs * (period / 400000 * ave_reps))
     },
     "Spin Echo": {
         "groups": {
             "Main Settings": [
-                {"display": "Ch1 Freq, Gain", "key": ["freq", "gain"], "type": "composite",
-                 "default": [2.4, 1]},
-                {"display": "Repetition time", "key": "period", "type": "double_spin",
-                 "min": 0.1, "max": 100.0, "default": 10.0},
+                {"display": "Ch1 Freq, Gain", "key": ["freq", "gain"], "type": "composite", #freq is a bounded float between 50 and 14999, gain is a bounded int from 0 to 32500 (contained in rfsoc controls)
+                 "default": [50.0, 1]},
+                {"display": "Repetition time", "key": "period", "type": "double_spin", #period is a bounded float from 0.1 to 2000000000 (contained in rfsoc)
+                 "min": 0.1, "max": 2000000000.0, "default": 500.0}, #CHANGED THESE FROM 0.0, 100.0, AND 10.0
                 {"display": "Ave", "key": "soft_avgs", "type": "double_spin",
                  "min": 1, "max": 1e7, "default": 1},
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], "type": "composite",
