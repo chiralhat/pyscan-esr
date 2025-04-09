@@ -33,46 +33,46 @@ class SpinechoExperiment:
         if parameters['use_psu'] and not parameters['loopback']:
             devices.psu.set_magnet(parameters)
         
-        setup_experiment(parameters, devices, sweep, soc)
+        setup_experiment(parameters, devices, sweep, soc) #From spinecho_scripts.py
 
     def read_unprocessed(self, sig, config, soc):
 #TO DO: THIS IS HAVING ISSUES WITH A PARAMETER THAT IS A FLOAT AND NEEDS TO BE AN INT
-#         """
-#         Take and plot a single background-subtracted measurement (unprocessed).
-#         """
-#         single = config['single']
-#         avgs = config['soft_avgs']
-#         config['single'] = True
-#         config['soft_avgs'] = 1
-#         prog = CPMGProgram(soc, config)
-#         measure_phase(prog, soc, sig)
-
-#         # Update data for plotting
-#         self.update_plot(sig)
-
-#         config['single'] = single
-#         config['soft_avgs'] = avgs
         """
-        Simulate an experiment and update the plot with fake data.
+        Take and plot a single background-subtracted measurement (unprocessed).
         """
-        # Generate fake signal data
-        time = np.linspace(0, 10, 200)
-        i = np.sin(time)
-        q = np.cos(time)
-        x = np.sqrt(i**2 + q**2)
+        single = config['single']
+        avgs = config['soft_avgs']
+        config['single'] = True
+        config['soft_avgs'] = 1
+        prog = CPMGProgram(soc, config)
+        measure_phase(prog, soc, sig)
 
-        # Create a fake signal-like object
-        class FakeSignal:
-            pass
+        # Update data for plotting
+        self.update_plot(sig)
 
-        fake_sig = FakeSignal()
-        fake_sig.time = time
-        fake_sig.i = i
-        fake_sig.q = q
-        fake_sig.x = x
+        config['single'] = single
+        config['soft_avgs'] = avgs
+        # """
+        # Simulate an experiment and update the plot with fake data.
+        # """
+        # # Generate fake signal data
+        # time = np.linspace(0, 10, 200)
+        # i = np.sin(time)
+        # q = np.cos(time)
+        # x = np.sqrt(i**2 + q**2)
 
-        # Update the plot with the fake signal
-        self.update_plot(fake_sig)
+        # # Create a fake signal-like object
+        # class FakeSignal:
+        #     pass
+
+        # fake_sig = FakeSignal()
+        # fake_sig.time = time
+        # fake_sig.i = i
+        # fake_sig.q = q
+        # fake_sig.x = x
+
+        # # Update the plot with the fake signal
+        # self.update_plot(fake_sig)
 
     def read_processed(self, sig, config, soc):
         """

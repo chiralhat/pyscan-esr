@@ -261,8 +261,8 @@ EXPERIMENT_TEMPLATES = {
             "Main Settings": [                                             #ALL OF THESE COMMENTS REFER TO THE control_dict IN gui_setup.py
                 {"display": "Frequency", "key": "freq", "type": "double_spin", #Freq is a bounded float between 50 and 14999 (contained in rfsoc controls)
                  "min": 50.0, "max": 14999.0, "default": 50.0}, #CHANGED THESE VALUES FROM 0.1, 10.0, AND 2.4
-                {"display": "Avg", "key": "soft_avgs", "type": "double_spin", #Soft_avgs is a bounded int between 1 and 10000000 (contained in rfsoc controls)
-                 "min": 1.0, "max": 1000000.0, "default": 1.0}, #EXPLICITLY MADE THESE FLOATS
+                {"display": "Avg", "key": "soft_avgs", "type": "spin", #Soft_avgs is a bounded int between 1 and 10000000 (contained in rfsoc controls)
+                 "min": 1, "max": 1000000, "default": 1}, #EXPLICITLY MADE THESE INTS
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], #Both save_dir and file_name are strings (contained in save controls)
                  "type": "composite", "default": ["", ""]},
                 {"display": "Experiment", "key": "expt", "type": "combo", #expt is of ipw.Dropdown type (contained in measure)
@@ -274,7 +274,7 @@ EXPERIMENT_TEMPLATES = {
                 {"display": "Time Offset", "key": "h_offset", "type": "double_spin", #h_offset is a bounded float between -10000 and 10000 (contained in rfsoc)
                  "min": -10000.0, "max": 10000.0, "default": 10.0}, #CHANGED THESE VALUES FROM 0, 1000, AND 10.0
                 {"display": "Readout Length", "key": "readout_length", "type": "spin", #readout_length is a bounded float from 0 to 5 (contained in rfsoc)
-                 "min": 1.0, "max": 5.0, "default": 5.0}, #CHANGED THESE VALUES FROM 1, 1000, AND 10 ------------------- THIS ONE WAS SAVED AS AN INTEGER IN THE PICKLE FILE AND COULD HAVE BEEN A CAUSE OF THE ERROR
+                 "min": 1, "max": 5, "default": 5}, #CHANGED THESE VALUES FROM 1, 1000, AND 10 ------------------- THIS ONE WAS SAVED AS AN INTEGER IN THE PICKLE FILE AND COULD HAVE BEEN A CAUSE OF THE ERROR
                 {"display": "Loopback", "key": "loopback", "type": "combo", #loopback is an ipw.Checkbox (contained in rfsoc)
                  "options": ["Enabled", "Disabled"], "default": "Enabled"}],
             "Uncommon Settings": [
@@ -299,7 +299,7 @@ EXPERIMENT_TEMPLATES = {
                 {"display": "PSU Addr", "key": "psu_address", "type": "line_edit", #psu_address is an ipw.Dropdown (contained in devices)
                  "default": ""},
                 {"display": "Use PSU", "key": "use_psu", "type": "check", #use_psu is an ipw.Checkbox (contained in devices)
-                 "default": True},
+                 "default": False},
                 {"display": "Use Lakeshore", "key": "use_temp", "type": "check", #use_temp is an ipw.Checkbox (contained in devices)
                  "default": False}]
         } #THERE IS A SETTING CALLED "subtime" THAT IS CALCULATED LATER AND ADDED TO THE END OF THE PICKLE FILE. IT IS EQUAL TO (soft_avgs * (period / 400000 * ave_reps))
@@ -311,8 +311,8 @@ EXPERIMENT_TEMPLATES = {
                  "default": [50.0, 1]},
                 {"display": "Repetition time", "key": "period", "type": "double_spin", #period is a bounded float from 0.1 to 2000000000 (contained in rfsoc)
                  "min": 0.1, "max": 2000000000.0, "default": 500.0}, #CHANGED THESE FROM 0.0, 100.0, AND 10.0
-                {"display": "Ave", "key": "soft_avgs", "type": "double_spin",
-                 "min": 1, "max": 1e7, "default": 1},
+                {"display": "Ave", "key": "soft_avgs", "type": "spin",
+                 "min": 1, "max": 10000000, "default": 1}, # Ave is an integer
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], "type": "composite",
                  "default": ["", ""]},
                 {"display": "Reps", "key": "pulses", "type": "spin",
@@ -360,7 +360,7 @@ EXPERIMENT_TEMPLATES = {
                 {"display": "PSU Addr", "key": "psu_address", "type": "line_edit",
                  "default": ""},
                 {"display": "Use PSU", "key": "use_psu", "type": "check",
-                 "default": True},
+                 "default": False},
                 {"display": "Use Lakeshore", "key": "use_temp", "type": "check",
                  "default": False}]
         }
@@ -401,6 +401,8 @@ class ExperimentType:
         """This initializes a pyscan experiment with functions from the correct 
         experiment type scripts and GUI files."""
 
+        
+
         if self.type == "Spin Echo":
             # NEW: created spinecho_gui objects from updated spinecho gui file
             self.spinecho_gui = seg.SpinechoExperiment(self.graph)
@@ -438,6 +440,8 @@ class ExperimentType:
 
         inst = ps.ItemAttribute()
 
+        print(self.parameters)
+
         # Initialize PSU if necessary
         if not hasattr(self.devices, 'psu') and self.parameters['use_psu']:
             psu_address = self.parameters.get('psu_address', '').strip()
@@ -453,7 +457,7 @@ class ExperimentType:
         # Initialize temperature device if necessary
         if not hasattr(self.devices, 'ls335') and self.parameters['use_temp']:
             self.devices.ls335 = ps.Lakeshore335()
-            ttemp = self.devices.ls335.get_temp()
+            temp = self.devices.ls335.get_temp()
 
         # Initialize pyscan experiment if necessary
         if not self.parameters.get('init', False):
@@ -755,7 +759,7 @@ class ExperimentUI(QMainWindow):
         self.set_parameters_and_initialize_btn = QPushButton("Initialize")
         self.set_parameters_and_initialize_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.set_parameters_and_initialize_btn.clicked.connect(self.read_and_set_parameters)
-        self.indicator_initialize = QLabel("•")
+        self.indicator_initialize = QLabel(" ")
         self.indicator_initialize.setFixedSize(10, 10)
         self.indicator_initialize.setStyleSheet(
             "background-color: grey; border: 1px solid black; border-radius: 5px;"
@@ -771,7 +775,7 @@ class ExperimentUI(QMainWindow):
         self.read_unprocessed_btn = QPushButton("Read Unprocessed")
         self.read_unprocessed_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.read_unprocessed_btn.clicked.connect(self.read_unprocessed_frontend)
-        self.indicator_read_unprocessed = QLabel("•")
+        self.indicator_read_unprocessed = QLabel(" ")
         self.indicator_read_unprocessed.setFixedSize(10, 10)
         self.indicator_read_unprocessed.setStyleSheet(
             "background-color: grey; border: 1px solid black; border-radius: 5px;"
@@ -787,7 +791,7 @@ class ExperimentUI(QMainWindow):
         self.read_processed_btn = QPushButton("Read Processed")
         self.read_processed_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.read_processed_btn.clicked.connect(self.read_processed_frontend)
-        self.indicator_read_processed = QLabel("•")
+        self.indicator_read_processed = QLabel(" ")
         self.indicator_read_processed.setFixedSize(10, 10)
         self.indicator_read_processed.setStyleSheet(
             "background-color: grey; border: 1px solid black; border-radius: 5px;"
@@ -803,7 +807,7 @@ class ExperimentUI(QMainWindow):
         self.sweep_start_stop_btn = QPushButton("Start Sweep")
         self.sweep_start_stop_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend)
-        self.indicator_sweep = QLabel("•")
+        self.indicator_sweep = QLabel(" ")
         self.indicator_sweep.setFixedSize(10, 10)
         self.indicator_sweep.setStyleSheet(
             "background-color: grey; border: 1px solid black; border-radius: 5px;"
@@ -829,9 +833,9 @@ class ExperimentUI(QMainWindow):
         settings_scroll.setWidget(self.settings_panel)
 
         # Load initial settings
-        self.current_experiment = self.experiments["Pulse Frequency Sweep"]
+        self.current_experiment = self.experiments["Spin Echo"]
         self.temp_parameters = {}
-        self.settings_panel.load_settings_panel(self.experiment_templates.get("Pulse Frequency Sweep", {"main": [], "groups": {}}))
+        self.settings_panel.load_settings_panel(self.experiment_templates.get("Spin Echo", {"main": [], "groups": {}}))
         
         return settings_scroll
 
