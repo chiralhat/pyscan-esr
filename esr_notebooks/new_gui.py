@@ -307,26 +307,28 @@ EXPERIMENT_TEMPLATES = {
     "Spin Echo": {
         "groups": {
             "Main Settings": [
-                {"display": "Ch1 Freq, Gain", "key": ["freq", "gain"], "type": "composite", #freq is a bounded float between 50 and 14999, gain is a bounded int from 0 to 32500 (contained in rfsoc controls)
-                 "default": [50.0, 1]},
+#                 {"display": "Ch1 Freq, Gain", "key": ["freq", "gain"], "type": "composite", #freq is a bounded float between 50 and 14999, gain is a bounded int from 0 to 32500 (contained in rfsoc controls)
+#                  "default": [50.0, 1]}, # Pretty sure that this guy is the culprit, the one is treated as a float?
+                 {"display": "Ch1 Freq", "key": "freq", "type": "double_spin", "default": 50.0},
+                 {"display": "Gain", "key": "gain", "type": "spin", "default": 1},
                 {"display": "Repetition time", "key": "period", "type": "double_spin", #period is a bounded float from 0.1 to 2000000000 (contained in rfsoc)
                  "min": 0.1, "max": 2000000000.0, "default": 500.0}, #CHANGED THESE FROM 0.0, 100.0, AND 10.0
                 {"display": "Ave", "key": "soft_avgs", "type": "spin",
                  "min": 1, "max": 10000000, "default": 1}, # Ave is an integer
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], "type": "composite",
-                 "default": ["", ""]},
+                 "default": ["", ""]}, 
                 {"display": "Reps", "key": "pulses", "type": "spin",
                  "min": 1, "max": 256, "default": 10},
                 {"display": "Experiment", "key": "expt", "type": "combo",
                  "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
                 {"display": "Sweep start, end, step",
                  "key": ["sweep_start", "sweep_end", "sweep_step"], "type": "composite",
-                 "default": [2.6, 3.0, 0.1]}],
+                 "default": [150, 1001, 50]}], # Changed to integers
             "Pulse Settings": [
                 {"display": "Ch1 Delay, 90 Pulse", "key": ["delay", "pulse1_1"], "type": "composite",
                  "default": [10, 10]},
                 {"display": "Nut. Delay, Pulse Width", "key": ["nutation_delay", "nutation_length"],
-                 "type": "composite", "default": [600000, 10.0]}],
+                 "type": "composite", "default": [600000, 10]}], # Changed to integers
             "Second Sweep Settings": [
                 {"display": "Second sweep?", "key": "sweep2", "type": "check",
                  "default": False},
@@ -334,22 +336,22 @@ EXPERIMENT_TEMPLATES = {
                  "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
                 {"display": "Sweep 2 start, end, step",
                  "key": ["sweep2_start", "sweep2_end", "sweep2_step"], "type": "composite",
-                 "default": [2.6, 3.0, 0.1]}],
+                 "default": [0, 0, 0]}], # Changed to integers
             "Readout Settings": [
                 {"display": "Time Offset", "key": "h_offset", "type": "double_spin",
                  "min": -1e5, "max": 1e5, "default": 10.0},
-                {"display": "Readout Length", "key": "readout_length", "type": "spin",
-                 "min": 0, "max": 5, "default": 10},
+                {"display": "Readout Length", "key": "readout_length", "type": "double_spin",
+                 "min": 0.0, "max": 5.0, "default": 0.3}, # Changed to doubles
                 {"display": "Loopback", "key": "loopback", "type": "combo",
                  "options": ["Enabled", "Disabled"], "default": "Enabled"}],
             "Uncommon Settings": [
                 {"display": "Ch1 180 Pulse Mult", "key": "mult1", "type": "double_spin",
-                 "min": 0, "max": 652100, "default": 10.0},
+                 "min": 0, "max": 652100, "default": 10}, # Changed to ints -- NOT COMPLETELY SURE ON THIS ONE
                 {"display": "Magnetic Field, Scale, Current limit",
                  "key": ["field", "gauss_amps", "current_limit"], "type": "composite",
                  "default": [None, None, None]},
                 {"display": "Wait Time", "key": "wait", "type": "double_spin",
-                 "min": 0, "max": 20, "default": 10.0},
+                 "min": 0.0, "max": 20.0, "default": 10.0},
                 {"display": "Integral only", "key": "integrate", "type": "check",
                  "default": False},
                 {"display": "Initialize on read", "key": "init", "type": "check", #COULD REMOVE
@@ -870,6 +872,7 @@ class ExperimentUI(QMainWindow):
 
     def read_and_set_parameters(self):
         # Update the Initialize indicator
+        print("reading and setting parameters")
         self.indicator_initialize.setStyleSheet(
             "background-color: red; border: 1px solid black; border-radius: 5px;"
         )
@@ -892,6 +895,16 @@ class ExperimentUI(QMainWindow):
                     value = widget.isChecked()
                 elif isinstance(widget, QWidget) and hasattr(widget, "composite_values"):
                     value = widget.composite_values()
+                     
+                     # If the value is a list (as in composite), we need to handle individual items.
+                    if isinstance(value, list):
+                        # Iterate over the composite list and check for 'gain'
+                        if underlying:
+                            for idx, (key, v) in enumerate(zip(underlying, value)):
+                                if key == "gain" and isinstance(v, float):
+                                    # Convert only the 'gain' value to an integer
+                                    value[idx] = int(v)
+                                    print(f"Converting 'gain' value {v} to integer.")
                 else:
                     value = None
                 if underlying is not None:
