@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QH
                              QSplitter, QScrollArea, QLabel, QFrame, QComboBox, QSizePolicy, 
                              QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem, 
                              QMessageBox, QTextEdit, QLineEdit, QStyledItemDelegate, QPushButton, QStyledItemDelegate, QStyleOptionViewItem)
-from PyQt5.QtCore import Qt, QRect, QTextStream
+from PyQt5.QtCore import Qt, QRect, QTextStream, QObject, QThread, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QPainter, QTextOption
 
 import sys
@@ -41,6 +41,46 @@ if not hasattr(ps, 'rm'):
     ps.rm = pyvisa.ResourceManager('@py')
 res_list = ps.rm.list_resources()
 # ...]
+
+class Worker(QObject):
+    """
+    A generic worker that runs one of three tasks in a separate thread:
+      - read_processed
+      - read_unprocessed
+      - start_sweep
+    We pass in the current_experiment and which task we want to run.
+    """
+
+    finished = pyqtSignal()         # Signal emitted when the worker is completely done
+    updateStatus = pyqtSignal(str)  # Emit messages that the main thread can display
+
+    def __init__(self, experiment, task_name):
+        super().__init__()
+        self.experiment = experiment
+        self.task_name = task_name
+        self._stop_requested = False  # You can use this later to handle "Stop" logic
+
+    @pyqtSlot()
+    def run_snapshot(self):
+        """
+        Runs the desired method on the experiment in this separate thread
+        so the main GUI thread won't freeze.
+        """
+        if self.task_name == "read_processed":
+            self.updateStatus.emit("Reading processed data...")
+            self.experiment.read_processed()  # Long-running code
+            self.updateStatus.emit("Done reading processed data.")
+        elif self.task_name == "read_unprocessed":
+            self.updateStatus.emit("Reading unprocessed data...")
+            self.experiment.read_unprocessed()  # Long-running code
+            self.updateStatus.emit("Done reading unprocessed data.")
+        # If the user wants to do more tasks, add them here
+
+        # When finished, emit the finished signal
+        self.finished.emit()
+    
+    def run_sweep      
+        self.sweep['expt'].runinfo.running = False
 
 
 class DualStream:
@@ -930,24 +970,66 @@ class ExperimentUI(QMainWindow):
         self.sweep_start_stop_btn.setEnabled(True)
 
     def read_unprocessed_frontend(self):
+        # Update indicator color
         self.indicator_read_unprocessed.setStyleSheet(
             "background-color: red; border: 1px solid black; border-radius: 5px;"
         )
+
+        # If this call is quick, do it here; if it's also slow, you can move it into the Worker
         self.read_and_set_parameters()
-        self.current_experiment.read_unprocessed()
-        self.indicator_read_unprocessed.setStyleSheet(
-            "background-color: grey; border: 1px solid black; border-radius: 5px;"
-        )
+
+        # --- Create a QThread and Worker ---
+        self.thread = QThread(self)  # Store reference to avoid garbage collection
+        self.worker = Worker(self.current_experiment, "read_unprocessed")
+        self.worker.moveToThread(self.thread)
+
+        # --- Connect signals and slots ---
+        self.thread.started.connect(self.worker.run_snapshot)
+        # Worker sends us status messages
+        self.worker.updateStatus.connect(self.onWorkerStatusUpdate)
+        # When finished, the worker signals us to stop the thread
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+
+        # --- Start the thread ---
+        self.thread.start()
+
+        # Reset indicator color once we know it's done:
+        # Option 1: do it immediately, but that won't show "busy"
+        # Option 2: connect it to self.worker.finished
+        def reset_indicator():
+            self.indicator_read_unprocessed.setStyleSheet(
+                "background-color: grey; border: 1px solid black; border-radius: 5px;"
+            )
+        self.worker.finished.connect(reset_indicator)
+
 
     def read_processed_frontend(self):
         self.indicator_read_processed.setStyleSheet(
             "background-color: red; border: 1px solid black; border-radius: 5px;"
         )
+
         self.read_and_set_parameters()
-        self.current_experiment.read_processed()
-        self.indicator_read_processed.setStyleSheet(
-            "background-color: grey; border: 1px solid black; border-radius: 5px;"
-        )
+
+        self.thread = QThread(self)
+        self.worker = Worker(self.current_experiment, "read_processed")
+        self.worker.moveToThread(self.thread)
+
+        self.thread.started.connect(self.worker.run_snapshot)
+        self.worker.updateStatus.connect(self.onWorkerStatusUpdate)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+
+        self.thread.start()
+
+        def reset_indicator():
+            self.indicator_read_processed.setStyleSheet(
+                "background-color: grey; border: 1px solid black; border-radius: 5px;"
+            )
+        self.worker.finished.connect(reset_indicator)
+
 
     def toggle_start_stop_sweep_frontend(self):
         if self.sweep_start_stop_btn.text() == "Start Sweep":
@@ -972,6 +1054,14 @@ class ExperimentUI(QMainWindow):
             self.current_experiment.hardware_off()
         finally:
             self.close()
+
+    def onWorkerStatusUpdate(self, message):
+        """
+        This slot receives status messages from the worker thread
+        and can display them in the log area or console.
+        """
+        print(message)  # prints to console/log
+        self.log_text.append(message)   # appends to the log text box
 
 
 
