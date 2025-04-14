@@ -473,15 +473,15 @@ class ExperimentType:
         Takes a snapshot of the current state and processes it before displaying it
         """
         if self.type == "Spin Echo":
-            seg.read_processed(self.sig, self.parameters, self.soc, self.fig)
+            self.spinecho_gui.read_processed(self.sig, self.parameters, self.soc)
         elif self.type == "Pulse Frequency Sweep":
-            psg.read_processed(self.sig, self.parameters, self.soc, self.fig)
+            self.pulsesweep_gui.read_processed(self.sig, self.parameters, self.soc)
             
     #### NEW: Changed self.config to self.parameters
         # Initialized a current experiment object spinecho_gui in init_pyscan_experiment, 
         # put a graph object in __init__, and changed seg.read_unprocessed(...) to 
         # self.spinecho_gui.read_unprocessed(self.sig, self.parameters, self.soc)
-        # TO DO: repeat all steps for any function involving pulse frequency sweep
+        # TO DO: repeat all steps for all functions
     def read_unprocessed(self):
         """"
         Takes a snapshot of the current state and doesn't process it before display it

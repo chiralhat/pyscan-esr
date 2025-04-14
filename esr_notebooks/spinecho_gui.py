@@ -1,5 +1,5 @@
 import numpy as np
-from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QApplication
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from spinecho_scripts import *  # Assuming this contains relevant functions like CPMGProgram, measure_phase
 import gui_setup as gs
@@ -49,6 +49,7 @@ class SpinechoExperiment:
 
         # Update data for plotting
         self.update_plot(sig)
+        QApplication.processEvents()
 
         config['single'] = single
         config['soft_avgs'] = avgs
