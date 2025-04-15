@@ -1,9 +1,11 @@
 from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QGridLayout, QPushButton,
                              QSplitter, QScrollArea, QLabel, QFrame, QComboBox, QSizePolicy, 
                              QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem, 
-                             QMessageBox, QTextEdit, QLineEdit, QStyledItemDelegate, QPushButton, QStyledItemDelegate, QStyleOptionViewItem)
+                             QMessageBox, QTextEdit, QLineEdit, QStyledItemDelegate, QPushButton, 
+                             QFileDialog, QStyledItemDelegate, QStyleOptionViewItem, QMenu)
 from PyQt5.QtCore import Qt, QRect, QTextStream, QObject, QThread, pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QPainter, QTextOption
+from PyQt5.QtGui import QPainter, QTextOption, QClipboard, QPixmap
+
 
 import sys
 import matplotlib.pyplot as plt
@@ -15,6 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from time import sleep, time
 from datetime import date, datetime
+import io
 from pathlib import Path
 from pulsesweep_gui import *
 from spinecho_gui import *
@@ -174,6 +177,10 @@ class GraphWidget(QWidget):
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
 
+        # Enable custom context menu
+        self.canvas.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.canvas.customContextMenuRequested.connect(self.show_context_menu)
+
 
     def update_canvas(self, time, i, q, x):
         """Clears the current plot and renders new data traces for CH1, CH2, and amplitude. 
@@ -198,6 +205,35 @@ class GraphWidget(QWidget):
         self.ax.legend()
 
         # Refresh the canvas to show the updated plot
+        self.canvas.draw()
+    
+    def show_context_menu(self, pos):
+        menu = QMenu()
+        copy_action = menu.addAction("Copy graph to clipboard")
+        action = menu.exec_(self.canvas.mapToGlobal(pos))
+        if action == copy_action:
+            self.copy_to_clipboard()
+
+    def copy_to_clipboard(self):
+        # Save current canvas to QPixmap
+        buf = io.BytesIO()
+        self.figure.savefig(buf, format='png')
+        buf.seek(0)
+        image = QPixmap()
+        image.loadFromData(buf.getvalue())
+
+        # Copy to clipboard
+        QApplication.clipboard().setPixmap(image)
+        print("📋 Copied graph to clipboard.")
+
+    def update_canvas(self, time, i, q, x):
+        self.ax.clear()
+        self.ax.plot(time, i, label='CH1', color='yellow')
+        self.ax.plot(time, q, label='CH2', color='blue')
+        self.ax.plot(time, x, label='AMP', color='green')
+        self.ax.set_xlabel('Time (μs)')
+        self.ax.set_ylabel('Signal (a.u.)')
+        self.ax.legend()
         self.canvas.draw()
 
 class DynamicSettingsPanel(QWidget):
@@ -640,6 +676,9 @@ class ExperimentUI(QMainWindow):
         #change function assigned to each button
         self.settings_panel.load_settings_panel(self.experiment_templates.get("Spin Echo", {"main": [], "groups": {}}))
 
+        #setup for graph saving
+        self.last_saved_graph_path = None
+
     def init_layout(self):
         """
         Build the overall layout:
@@ -728,6 +767,18 @@ class ExperimentUI(QMainWindow):
         
         # NEW: adds the current experiment graph to the layout
         graph_layout.addWidget(self.current_experiment.graph)
+
+        # Save graph button
+        self.save_graph_btn = QPushButton("Save Graph As...")
+        self.save_graph_btn.clicked.connect(self.save_current_graph)
+        graph_layout.addWidget(self.save_graph_btn)
+
+        # Directory label (clickable path)
+        self.last_saved_path_label = QLabel("No graph saved yet.")
+        self.last_saved_path_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.last_saved_path_label.setStyleSheet("color: blue; text-decoration: underline;")
+        self.last_saved_path_label.mousePressEvent = self.open_saved_graph_folder
+        graph_layout.addWidget(self.last_saved_path_label)
 
         return graph_section_widget
 
@@ -1185,6 +1236,19 @@ class ExperimentUI(QMainWindow):
         and can display them in the log area or console.
         """
         print(message) 
+
+    def save_current_graph(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Graph As", "", "PNG Files (*.png);;All Files (*)", options=options)
+        if file_path:
+            self.current_experiment.graph.figure.savefig(file_path)
+            self.last_saved_graph_path = file_path
+            self.last_saved_path_label.setText(f"Last saved to: {file_path}")
+
+    def open_saved_graph_folder(self, event):
+        if self.last_saved_graph_path:
+            folder = os.path.dirname(self.last_saved_graph_path)
+            os.system(f'open "{folder}"')  # 'xdg-open' for Linux. Use `open` for macOS, or `start` for Windows.
 
 
 def main():
