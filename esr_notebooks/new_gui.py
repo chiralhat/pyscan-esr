@@ -1054,7 +1054,7 @@ class ExperimentUI(QMainWindow):
             self.read_unprocessed_btn.setEnabled(True)
             self.read_processed_btn.setEnabled(True)
             self.sweep_start_stop_btn.setEnabled(True)
-            self.set_parameters_and_initialize_btn.set_enabled(True)
+            self.set_parameters_and_initialize_btn.setEnabled(True)
             self.indicator_read_unprocessed.setStyleSheet(
                 "background-color: grey; border: 1px solid black; border-radius: 5px;"
             )
@@ -1096,7 +1096,7 @@ class ExperimentUI(QMainWindow):
             self.read_unprocessed_btn.setEnabled(True)
             self.read_processed_btn.setEnabled(True)
             self.sweep_start_stop_btn.setEnabled(True)
-            self.set_parameters_and_initialize_btn.set_enabled(True)
+            self.set_parameters_and_initialize_btn.setEnabled(True)
             self.indicator_read_unprocessed.setStyleSheet(
                 "background-color: grey; border: 1px solid black; border-radius: 5px;"
             )
@@ -1144,8 +1144,8 @@ class ExperimentUI(QMainWindow):
             def reset_indicator():
                 self.read_unprocessed_btn.setEnabled(True)
                 self.read_processed_btn.setEnabled(True)
-                self.set_parameters_and_initialize_btn.set_enabled(True)
-                self.set_parameters_and_initialize_btn.set_enabled(True)
+                self.set_parameters_and_initialize_btn.setEnabled(True)
+                self.set_parameters_and_initialize_btn.setEnabled(True)
                 self.indicator_read_unprocessed.setStyleSheet(
                     "background-color: grey; border: 1px solid black; border-radius: 5px;"
                 )
