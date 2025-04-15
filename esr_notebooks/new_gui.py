@@ -9,6 +9,7 @@ from PyQt5.QtGui import QPainter, QTextOption, QClipboard, QPixmap
 
 import sys
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import sys, os
 sys.path.append('../')
@@ -234,6 +235,30 @@ class GraphWidget(QWidget):
         self.ax.set_xlabel('Time (μs)')
         self.ax.set_ylabel('Signal (a.u.)')
         self.ax.legend()
+        self.canvas.draw()
+        
+class SweepPlotWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.figure = Figure()
+        self.canvas = FigureCanvas(self.figure)
+        self.ax = self.figure.add_subplot(111)
+
+        self.xdata = []
+        self.ydata = []
+        self.line, = self.ax.plot([], [], 'o-')
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.canvas)
+        self.setLayout(layout)
+
+    def update_plot(self, x, y):
+        self.xdata.append(x)
+        self.ydata.append(y)
+        self.line.set_data(self.xdata, self.ydata)
+        self.ax.relim()
+        self.ax.autoscale_view()
         self.canvas.draw()
 
 class DynamicSettingsPanel(QWidget):
@@ -504,6 +529,7 @@ class ExperimentType:
             
         # NEW current experiment graph
         self.graph = GraphWidget() #Widget used for plotting experiment results in the graph panel of the UI.
+        self.sweep_graph= SweepPlotWidget()
 
         #Experiment objects that will be initialized later in self.init_pyscan_experiment
         self.spinecho_gui = None
@@ -604,6 +630,8 @@ class ExperimentType:
         runinfo = self.sweep['runinfo']
         expt = ps.Sweep(runinfo, self.devices, self.sweep['name'])
         self.sweep['expt'] = expt
+        
+        
         if self.parameters['expt']=="Hahn Echo":
             self.sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
         elif self.parameters['expt']=="CPMG":
@@ -767,6 +795,7 @@ class ExperimentUI(QMainWindow):
         
         # NEW: adds the current experiment graph to the layout
         graph_layout.addWidget(self.current_experiment.graph)
+        graph_layout.addWidget(self.current_experiment.sweep_graph)
 
         # Save graph button
         self.save_graph_btn = QPushButton("Save Graph As...")

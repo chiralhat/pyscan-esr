@@ -5,6 +5,7 @@ from spinecho_scripts import *  # Assuming this contains relevant functions like
 import gui_setup as gs
 
 class SpinechoExperiment:
+    
     def __init__(self, canvas_widget):
         """
         Initialize with a reference to the CanvasWidget.
@@ -88,7 +89,25 @@ class SpinechoExperiment:
         self.update_plot(sig)
 
         config['single'] = single
+    
+    def update_plot(self, sig):
+        """
+        Update the plot with the data from the experiment.
+        """
+        # Append new data from the current experiment
+        self.time_data.append(sig.time)
+        self.i_data.append(sig.i)
+        self.q_data.append(sig.q)
+        self.x_data.append(sig.x)
 
+        # Flatten the lists for plotting
+        time = np.concatenate(self.time_data)
+        i = np.concatenate(self.i_data)
+        q = np.concatenate(self.q_data)
+        x = np.concatenate(self.x_data)
+
+        # Update the canvas with the new data
+        self.canvas_widget.update_canvas(time, i, q, x)
 
     def get_layout(self):
         """
