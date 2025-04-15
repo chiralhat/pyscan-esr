@@ -67,13 +67,13 @@ class Worker(QObject):
         so the main GUI thread won't freeze.
         """
         if self.task_name == "read_processed":
-            self.updateStatus.emit("Reading processed data...")
+            self.updateStatus.emit("Reading processed data...\n")
             self.experiment.read_processed()
-            self.updateStatus.emit("Done reading processed data.")
+            self.updateStatus.emit("Done reading processed data.\n")
         elif self.task_name == "read_unprocessed":
-            self.updateStatus.emit("Reading unprocessed data...")
+            self.updateStatus.emit("Reading unprocessed data...\n")
             self.experiment.read_unprocessed()  
-            self.updateStatus.emit("Done reading unprocessed data.")
+            self.updateStatus.emit("Done reading unprocessed data.\n")
 
         self.finished.emit()
     
@@ -83,11 +83,11 @@ class Worker(QObject):
         Called when we want to do the 'start_sweep' process in a separate thread. Starts a swweep in a QT Thread, and checks every 15 seconds
         if the sweep is over (killing the QT thread if so). 
         """
-        self.updateStatus.emit("Starting sweep in worker thread...")
+        self.updateStatus.emit("Starting sweep in worker thread...\n")
         self._stop_requested = False
 
         self.experiment.start_sweep()
-        self.updateStatus.emit("Sweeping...")
+        self.updateStatus.emit("Sweeping...\n")
 
         for i in range(1000000):
             if self.experiment.sweep['expt'].runinfo.running == False:
@@ -99,9 +99,9 @@ class Worker(QObject):
             sleep(1)  
 
         if self._stop_requested:
-            self.updateStatus.emit("Stop request detected. Exiting sweep early.")
+            self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
         else:
-            self.updateStatus.emit("Done sweeping (normal exit).")
+            self.updateStatus.emit("Done sweeping (normal exit).\n")
 
         self.finished.emit()
 
@@ -928,6 +928,7 @@ class ExperimentUI(QMainWindow):
 
     def change_experiment_type(self, experiment_type):
         self.current_experiment.stop_sweep()
+        print("Changing experiment type to " + experiment_type + "...\n")
         self.current_experiment = self.experiments[experiment_type]
         self.temp_parameters = {}
         self.init_parameters_from_template()
@@ -939,6 +940,7 @@ class ExperimentUI(QMainWindow):
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
         self.sweep_start_stop_btn.setEnabled(False)
+        self.set_parameters_and_initialize_btn.setEnabled(True)
 
     def init_parameters_from_template(self):
         """Seed self.temp_parameters with every key from the current template."""
@@ -1097,7 +1099,7 @@ class ExperimentUI(QMainWindow):
             self.read_processed_btn.setEnabled(True)
             self.sweep_start_stop_btn.setEnabled(True)
             self.set_parameters_and_initialize_btn.setEnabled(True)
-            self.indicator_read_unprocessed.setStyleSheet(
+            self.indicator_read_processed.setStyleSheet(
                 "background-color: grey; border: 1px solid black; border-radius: 5px;"
             )
 
