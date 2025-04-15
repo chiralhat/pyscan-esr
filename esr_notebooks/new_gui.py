@@ -3,11 +3,12 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QH
                              QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem, 
                              QMessageBox, QTextEdit, QLineEdit, QStyledItemDelegate, QPushButton, 
                              QFileDialog, QStyledItemDelegate, QStyleOptionViewItem, QMenu)
-from PyQt5.QtCore import Qt, QRect, QTextStream, QObject, QThread, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, QRect, QTextStream, QObject, QThread, pyqtSignal, pyqtSlot, QTimer
 from PyQt5.QtGui import QPainter, QTextOption, QClipboard, QPixmap
 
 
 import sys
+import h5py
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -643,11 +644,37 @@ class ExperimentType:
         else:
             self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
         self.run_sweep()
+        
 
     def stop_sweep(self):
         """Stops a sweep that is currently running"""
         if 'expt' in self.sweep.keys():
             self.sweep['expt'].runinfo.running = False
+            
+    def update_sweep_plot(self):
+        try:
+            # Path to latest HDF5 file — adjust if needed
+            folder = os.path.join(os.path.dirname(__file__), "250415_Hahn_looptest")
+            latest_file = sorted(os.listdir(folder))[-1]  # last-created file
+            full_path = os.path.join(folder, latest_file)
+
+            with h5py.File(full_path, "r") as f:
+                # You may prefer 'delay_sweep' if that's the time axis used
+                x_data = f["time"][:] if "time" in f else f["delay_sweep"][:]
+                y_data = f["xmean"][:]
+
+            # Update plot
+            ax = self.sweep_graph.ax  # assuming your graph widget has this attribute
+            ax.clear()
+            ax.plot(x_data, y_data, "o-")
+            ax.set_xlabel("Time (s)")  # Or 'Delay (ns)' depending on your experiment
+            ax.set_ylabel("xmean")
+            self.sweep_graph.canvas.draw()
+
+            print("Live plot updated from HDF5")
+
+        except Exception as e:
+            print("Live plot HDF5 error:", e)
         
     def hardware_off(self):
         """
@@ -706,6 +733,10 @@ class ExperimentUI(QMainWindow):
 
         #setup for graph saving
         self.last_saved_graph_path = None
+        
+        # Create a timer to refresh the sweep plot so it plots live
+        self.plot_timer = QTimer(self)
+        self.plot_timer.timeout.connect(self.refresh_sweep_plot)
 
     def init_layout(self):
         """
@@ -1242,6 +1273,13 @@ class ExperimentUI(QMainWindow):
 
             # Start the thread
             self.thread.start()
+            
+            # Start the plot update timer AFTER sweep starts
+            if not hasattr(self, 'plot_timer'):
+                self.plot_timer = QTimer()
+                self.plot_timer.timeout.connect(self.refresh_sweep_plot)
+
+            self.plot_timer.start(1000)  # Update every 1 second
 
         else:
             self.sweep_start_stop_btn.setText("Start Sweep")
@@ -1265,7 +1303,25 @@ class ExperimentUI(QMainWindow):
         and can display them in the log area or console.
         """
         print(message) 
-
+        
+    @pyqtSlot()
+    def refresh_sweep_plot(self):
+        if self.current_experiment.sweep["expt"].runinfo.running:
+            self.current_experiment.update_sweep_plot()
+            print("Sweep is running — updating plot")
+        else:
+            print("Sweep not running — stopping timer")
+            self.plot_timer.stop()
+#     def refresh_sweep_plot(self):
+#         print("Timer fired")
+#         expt = self.current_experiment.sweep.get('expt')
+#         if expt and hasattr(expt, 'runinfo') and expt.runinfo.running:
+#             print("Sweep is running — updating plot")
+#             self.current_experiment.update_sweep_plot(expt)
+#         else:
+#             print("Sweep not running — stopping timer")
+#             self.plot_timer.stop()
+        
     def save_current_graph(self):
         options = QFileDialog.Options()
         file_path, _ = QFileDialog.getSaveFileName(self, "Save Graph As", "", "PNG Files (*.png);;All Files (*)", options=options)
