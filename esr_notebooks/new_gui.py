@@ -13,7 +13,7 @@ sys.path.append('../')
 from rfsoc2 import *
 import matplotlib.pyplot as plt
 import numpy as np
-from time import sleep
+from time import sleep, time
 from datetime import date, datetime
 from pathlib import Path
 from pulsesweep_gui import *
@@ -58,7 +58,7 @@ class Worker(QObject):
         super().__init__()
         self.experiment = experiment
         self.task_name = task_name
-        self._stop_requested = False  # You can use this later to handle "Stop" logic
+        self._stop_requested = False  
 
     @pyqtSlot()
     def run_snapshot(self):
@@ -68,19 +68,49 @@ class Worker(QObject):
         """
         if self.task_name == "read_processed":
             self.updateStatus.emit("Reading processed data...")
-            self.experiment.read_processed()  # Long-running code
+            self.experiment.read_processed()
             self.updateStatus.emit("Done reading processed data.")
         elif self.task_name == "read_unprocessed":
             self.updateStatus.emit("Reading unprocessed data...")
-            self.experiment.read_unprocessed()  # Long-running code
+            self.experiment.read_unprocessed()  
             self.updateStatus.emit("Done reading unprocessed data.")
-        # If the user wants to do more tasks, add them here
 
-        # When finished, emit the finished signal
         self.finished.emit()
     
-    def run_sweep      
-        self.sweep['expt'].runinfo.running = False
+    @pyqtSlot()
+    def run_sweep(self):
+        """
+        Called when we want to do the 'start_sweep' process in a separate thread. Starts a swweep in a QT Thread, and checks every 15 seconds
+        if the sweep is over (killing the QT thread if so). 
+        """
+        self.updateStatus.emit("Starting sweep in worker thread...")
+        self._stop_requested = False
+
+        self.experiment.start_sweep()
+        self.updateStatus.emit("Sweeping...")
+
+        for i in range(1000000):
+            if self.experiment.sweep['expt'].runinfo.running == False:
+                self._stop_requested = True
+
+            if self._stop_requested:
+                break  
+
+            sleep(1)  
+
+        if self._stop_requested:
+            self.updateStatus.emit("Stop request detected. Exiting sweep early.")
+        else:
+            self.updateStatus.emit("Done sweeping (normal exit).")
+
+        self.finished.emit()
+
+    @pyqtSlot()
+    def stop_sweep(self):
+        """
+        Slot to request the worker to stop. Sets a flag that can be checked in the run_sweep method, killing the thread.
+        """
+        self._stop_requested = True
 
 
 class DualStream:
@@ -90,7 +120,7 @@ class DualStream:
 
     def __init__(self, text_edit):
         self.text_edit = text_edit
-        self.terminal = sys.__stdout__  # Store the original stdout (for terminal output)
+        self.terminal = sys.__stdout__  
 
     def write(self, text):
         """ Writes the provided text to both the QTextEdit widget and the terminal.
@@ -102,17 +132,15 @@ class DualStream:
         """
         # Write to QTextEdit (UI)
         cursor = self.text_edit.textCursor()
-        cursor.movePosition(cursor.End)  # Move the cursor to the end
-        cursor.insertText(text)  # Insert the new text
-        self.text_edit.setTextCursor(cursor)  # Ensure the cursor stays at the end
-        self.text_edit.ensureCursorVisible()  # Make sure the text is always visible
+        cursor.movePosition(cursor.End)  
+        cursor.insertText(text)  
+        self.text_edit.setTextCursor(cursor) 
+        self.text_edit.ensureCursorVisible() 
 
-        # Write to terminal (standard output)
-        self.terminal.write(text)  # Print to terminal
-        self.terminal.flush()  # Ensure it flushes to terminal immediately
+        self.terminal.write(text)  
+        self.terminal.flush()  
 
     def flush(self):
-        # No need to do anything for flush in this case
         self.terminal.flush()
 
 
@@ -227,6 +255,10 @@ class DynamicSettingsPanel(QWidget):
                 label_widget.setWordWrap(True)
                 label_widget.setTextInteractionFlags(Qt.TextSelectableByMouse)
                 label_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                if "tool tip" in setting.keys():
+                    label_widget.setToolTip(setting["tool tip"]) #This references each individual setting's tool tip (see EXPERIMENT_TEMPLATES below)    
+                
+                #update settings tree 
                 self.settings_tree.setItemWidget(item, 0, label_widget)
 
     def create_setting_widget(self, setting):
@@ -242,8 +274,10 @@ class DynamicSettingsPanel(QWidget):
                                 - 'options': List of string options (for combo boxes)
                                 - 'key': Underlying key(s) to associate with this widget
 
+
             @return A QWidget-based input element appropriate for the setting. For composite widgets, a QWidget containing a layout of sub-widgets is returned."""
         stype = setting.get("type")
+        widget = None
         if stype == "spin":
             widget = QSpinBox()
             widget.setMinimum(setting.get("min", 0))
@@ -300,11 +334,11 @@ EXPERIMENT_TEMPLATES = {
         "groups": {
             "Main Settings": [                                             #ALL OF THESE COMMENTS REFER TO THE control_dict IN gui_setup.py
                 {"display": "Frequency", "key": "freq", "type": "double_spin", #Freq is a bounded float between 50 and 14999 (contained in rfsoc controls)
-                 "min": 50.0, "max": 14999.0, "default": 50.0}, #CHANGED THESE VALUES FROM 0.1, 10.0, AND 2.4
+                 "min": 50.0, "max": 14999.0, "default": 50.0, "tool tip": "Helpful information"}, #CHANGED THESE VALUES FROM 0.1, 10.0, AND 2.4
                 {"display": "Avg", "key": "soft_avgs", "type": "spin", #Soft_avgs is a bounded int between 1 and 10000000 (contained in rfsoc controls)
-                 "min": 1, "max": 1000000, "default": 1}, #EXPLICITLY MADE THESE INTS
+                 "min": 1, "max": 1000000, "default": 1, "tool tip": "Helpful information"}, #EXPLICITLY MADE THESE INTS
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], #Both save_dir and file_name are strings (contained in save controls)
-                 "type": "composite", "default": ["", ""]},
+                 "type": "composite", "default": ["", ""], "tool tip": "Helpful information"},
                 {"display": "Experiment", "key": "expt", "type": "combo", #expt is of ipw.Dropdown type (contained in measure)
                  "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
                 {"display": "Sweep start, end, step",
@@ -349,10 +383,10 @@ EXPERIMENT_TEMPLATES = {
             "Main Settings": [
 #                 {"display": "Ch1 Freq, Gain", "key": ["freq", "gain"], "type": "composite", #freq is a bounded float between 50 and 14999, gain is a bounded int from 0 to 32500 (contained in rfsoc controls)
 #                  "default": [50.0, 1]}, # Pretty sure that this guy is the culprit, the one is treated as a float?
-                 {"display": "Ch1 Freq", "key": "freq", "type": "double_spin", "default": 50.0},
-                 {"display": "Gain", "key": "gain", "type": "spin", "default": 1},
+                 {"display": "Ch1 Freq", "key": "freq", "type": "double_spin", "default": 50.0, "tool tip": "Helpful information"},
+                 {"display": "Gain", "key": "gain", "type": "spin", "default": 1, "tool tip": "Helpful information"},
                 {"display": "Repetition time", "key": "period", "type": "double_spin", #period is a bounded float from 0.1 to 2000000000 (contained in rfsoc)
-                 "min": 0.1, "max": 2000000000.0, "default": 500.0}, #CHANGED THESE FROM 0.0, 100.0, AND 10.0
+                 "min": 0.1, "max": 2000000000.0, "default": 500.0, "tool tip": "Helpful information"}, #CHANGED THESE FROM 0.0, 100.0, AND 10.0
                 {"display": "Ave", "key": "soft_avgs", "type": "spin",
                  "min": 1, "max": 10000000, "default": 1}, # Ave is an integer
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], "type": "composite",
@@ -482,8 +516,6 @@ class ExperimentType:
 
         inst = ps.ItemAttribute()
 
-        print(self.parameters)
-
         # Initialize PSU if necessary
         if not hasattr(self.devices, 'psu') and self.parameters['use_psu']:
             psu_address = self.parameters.get('psu_address', '').strip()
@@ -507,7 +539,6 @@ class ExperimentType:
         else:
             self.init_pyscan_experiment()
 
-    #### NEW: Changed self.config to self.parameters
     def read_processed(self):
         """"
         Takes a snapshot of the current state and processes it before displaying it
@@ -517,11 +548,6 @@ class ExperimentType:
         elif self.type == "Pulse Frequency Sweep":
             self.pulsesweep_gui.read_processed(self.sig, self.parameters, self.soc)
             
-    #### NEW: Changed self.config to self.parameters
-        # Initialized a current experiment object spinecho_gui in init_pyscan_experiment, 
-        # put a graph object in __init__, and changed seg.read_unprocessed(...) to 
-        # self.spinecho_gui.read_unprocessed(self.sig, self.parameters, self.soc)
-        # TO DO: repeat all steps for all functions
     def read_unprocessed(self):
         """"
         Takes a snapshot of the current state and doesn't process it before display it
@@ -531,7 +557,6 @@ class ExperimentType:
         elif self.type == "Pulse Frequency Sweep":
             self.pulsesweep_gui.read_unprocessed(self.sig, self.parameters, self.soc)
 
-    # TO DO: change these functions to mimic changes in read_unprocessed
     def run_sweep(self):#, output, fig):
         """actually runs a sweep"""
         self.sweep['expt'].start_time = time()
@@ -580,6 +605,11 @@ class ExperimentUI(QMainWindow):
             "Spin Echo": ExperimentType("Spin Echo"), 
             "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep")
         }
+
+        #For button logic
+        self.is_process_running = False
+        self.settings_changed = False
+
         # Default experiment
         self.current_experiment = self.experiments["Spin Echo"]
         self.experiment_templates = EXPERIMENT_TEMPLATES
@@ -593,6 +623,10 @@ class ExperimentUI(QMainWindow):
 
         # Build the main layout with splitters
         self.init_layout()
+        self.read_unprocessed_btn.setEnabled(False)
+        self.read_processed_btn.setEnabled(False)
+        self.sweep_start_stop_btn.setEnabled(False)
+        self.set_parameters_and_initialize_btn.setEnabled(True)
 
         # Load some default experiment into the settings panel
         self.current_experiment = self.experiments["Spin Echo"]
@@ -734,6 +768,7 @@ class ExperimentUI(QMainWindow):
 
         label = QLabel("Change Experiment Type")
         label.setStyleSheet("font-size: 10pt;")
+        label.setToolTip("Helpful information")
         exp_layout.addWidget(label)
 
         exp_dropdown = QComboBox()
@@ -772,6 +807,7 @@ class ExperimentUI(QMainWindow):
         off_btn = QPushButton("Hardware Off and Close Software")
         off_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         off_btn.clicked.connect(self.hardware_off_frontend)
+        off_btn.setToolTip("Helpful information")
 
         window_controls_layout.addWidget(minimize_btn)
         window_controls_layout.addWidget(fullscreen_btn)
@@ -780,6 +816,11 @@ class ExperimentUI(QMainWindow):
         top_menu.addWidget(window_controls_widget)
 
         return top_menu_container
+    
+    def on_setting_changed(self):
+        self.settings_changed = True
+        if not self.is_process_running:
+            self.set_parameters_and_initialize_btn.setEnabled(True)
 
     def toggle_fullscreen(self):
         # Toggle between full screen and normal window states
@@ -801,6 +842,7 @@ class ExperimentUI(QMainWindow):
         self.set_parameters_and_initialize_btn = QPushButton("Initialize")
         self.set_parameters_and_initialize_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.set_parameters_and_initialize_btn.clicked.connect(self.read_and_set_parameters)
+        self.set_parameters_and_initialize_btn.setToolTip("Helpful information") #Tool tip here!
         self.indicator_initialize = QLabel(" ")
         self.indicator_initialize.setFixedSize(10, 10)
         self.indicator_initialize.setStyleSheet(
@@ -817,6 +859,7 @@ class ExperimentUI(QMainWindow):
         self.read_unprocessed_btn = QPushButton("Read Unprocessed")
         self.read_unprocessed_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.read_unprocessed_btn.clicked.connect(self.read_unprocessed_frontend)
+        self.read_unprocessed_btn.setToolTip("Helpful information") #Tool tip here!
         self.indicator_read_unprocessed = QLabel(" ")
         self.indicator_read_unprocessed.setFixedSize(10, 10)
         self.indicator_read_unprocessed.setStyleSheet(
@@ -833,6 +876,7 @@ class ExperimentUI(QMainWindow):
         self.read_processed_btn = QPushButton("Read Processed")
         self.read_processed_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.read_processed_btn.clicked.connect(self.read_processed_frontend)
+        self.read_processed_btn.setToolTip("Helpful information") #Tool tip here!
         self.indicator_read_processed = QLabel(" ")
         self.indicator_read_processed.setFixedSize(10, 10)
         self.indicator_read_processed.setStyleSheet(
@@ -849,6 +893,7 @@ class ExperimentUI(QMainWindow):
         self.sweep_start_stop_btn = QPushButton("Start Sweep")
         self.sweep_start_stop_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend)
+        self.sweep_start_stop_btn.setToolTip("Helpful information") #Tool tip here!
         self.indicator_sweep = QLabel(" ")
         self.indicator_sweep.setFixedSize(10, 10)
         self.indicator_sweep.setStyleSheet(
@@ -911,8 +956,12 @@ class ExperimentUI(QMainWindow):
                         self.temp_parameters[underlying] = default
 
     def read_and_set_parameters(self):
+        #Button logic
+        self.set_parameters_and_initialize_btn.setEnabled(False)
+        self.settings_changed = False
+
         # Update the Initialize indicator
-        print("reading and setting parameters")
+        print("Reading and setting parameters...\n")
         self.indicator_initialize.setStyleSheet(
             "background-color: red; border: 1px solid black; border-radius: 5px;"
         )
@@ -965,18 +1014,21 @@ class ExperimentUI(QMainWindow):
         self.indicator_initialize.setStyleSheet(
             "background-color: grey; border: 1px solid black; border-radius: 5px;"
         )
-        self.read_unprocessed_btn.setEnabled(True)
-        self.read_processed_btn.setEnabled(True)
-        self.sweep_start_stop_btn.setEnabled(True)
+        print("\n")
+        print("Select an action. \n")
+
 
     def read_unprocessed_frontend(self):
         # Update indicator color
         self.indicator_read_unprocessed.setStyleSheet(
             "background-color: red; border: 1px solid black; border-radius: 5px;"
         )
-
-        # If this call is quick, do it here; if it's also slow, you can move it into the Worker
-        self.read_and_set_parameters()
+        #Button logic
+        self.read_unprocessed_btn.setEnabled(False)
+        self.read_processed_btn.setEnabled(False)
+        self.sweep_start_stop_btn.setEnabled(False)
+        self.set_parameters_and_initialize_btn.setEnabled(False)
+        self.is_process_running = True
 
         # --- Create a QThread and Worker ---
         self.thread = QThread(self)  # Store reference to avoid garbage collection
@@ -986,7 +1038,7 @@ class ExperimentUI(QMainWindow):
         # --- Connect signals and slots ---
         self.thread.started.connect(self.worker.run_snapshot)
         # Worker sends us status messages
-        self.worker.updateStatus.connect(self.onWorkerStatusUpdate)
+        self.worker.updateStatus.connect(self.on_worker_status_update)
         # When finished, the worker signals us to stop the thread
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
@@ -999,9 +1051,20 @@ class ExperimentUI(QMainWindow):
         # Option 1: do it immediately, but that won't show "busy"
         # Option 2: connect it to self.worker.finished
         def reset_indicator():
+            self.read_unprocessed_btn.setEnabled(True)
+            self.read_processed_btn.setEnabled(True)
+            self.sweep_start_stop_btn.setEnabled(True)
+            self.set_parameters_and_initialize_btn.set_enabled(True)
             self.indicator_read_unprocessed.setStyleSheet(
                 "background-color: grey; border: 1px solid black; border-radius: 5px;"
             )
+
+            # Reactivate initialize only if settings were changed during the process
+            if self.settings_changed:
+                self.set_parameters_and_initialize_btn.setEnabled(True)
+
+            self.is_process_running = False
+        
         self.worker.finished.connect(reset_indicator)
 
 
@@ -1010,14 +1073,19 @@ class ExperimentUI(QMainWindow):
             "background-color: red; border: 1px solid black; border-radius: 5px;"
         )
 
-        self.read_and_set_parameters()
-
+        #Button logic
+        self.read_unprocessed_btn.setEnabled(False)
+        self.read_processed_btn.setEnabled(False)
+        self.sweep_start_stop_btn.setEnabled(False)
+        self.set_parameters_and_initialize_btn.setEnabled(False)
+        self.is_process_running = True
+        
         self.thread = QThread(self)
         self.worker = Worker(self.current_experiment, "read_processed")
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run_snapshot)
-        self.worker.updateStatus.connect(self.onWorkerStatusUpdate)
+        self.worker.updateStatus.connect(self.on_worker_status_update)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
@@ -1025,44 +1093,96 @@ class ExperimentUI(QMainWindow):
         self.thread.start()
 
         def reset_indicator():
-            self.indicator_read_processed.setStyleSheet(
+            self.read_unprocessed_btn.setEnabled(True)
+            self.read_processed_btn.setEnabled(True)
+            self.sweep_start_stop_btn.setEnabled(True)
+            self.set_parameters_and_initialize_btn.set_enabled(True)
+            self.indicator_read_unprocessed.setStyleSheet(
                 "background-color: grey; border: 1px solid black; border-radius: 5px;"
             )
+
+            # Reactivate initialize only if settings were changed during the process
+            if self.settings_changed:
+                self.set_parameters_and_initialize_btn.setEnabled(True)
+
+            self.is_process_running = False
+
         self.worker.finished.connect(reset_indicator)
 
 
     def toggle_start_stop_sweep_frontend(self):
+        #Start the process
         if self.sweep_start_stop_btn.text() == "Start Sweep":
-            self.indicator_sweep.setStyleSheet(
-                "background-color: red; border: 1px solid black; border-radius: 5px;"
-            )
-            self.read_and_set_parameters()
+            #Button logic
+            self.read_unprocessed_btn.setEnabled(False)
+            self.read_processed_btn.setEnabled(False)
+            self.set_parameters_and_initialize_btn.setEnabled(False)
+            self.is_process_running = True
+            
+            # We want to start
+            self.indicator_sweep.setStyleSheet("background-color: red; border: 1px solid black; border-radius: 5px;")
             self.sweep_start_stop_btn.setText("Stop Sweep")
-            self.current_experiment.start_sweep()
-            # (Optional) You may add code here to turn the indicator back off when the sweep completes.
+
+            # Create QThread
+            self.thread = QThread(self)
+            # Create Worker, pass in experiment
+            self.worker = Worker(self.current_experiment, "sweep")
+            # Move worker to thread
+            self.worker.moveToThread(self.thread)
+
+            # Connect signals
+            # When thread starts, call worker.run_sweep
+            self.thread.started.connect(self.worker.run_sweep)
+            # If the worker emits updateStatus, call on_worker_status_update
+            self.worker.updateStatus.connect(self.on_worker_status_update)
+            # Worker emits finished -> kill thread
+            self.worker.finished.connect(self.thread.quit)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.thread.finished.connect(self.thread.deleteLater)
+
+            # Optionally reset indicator color after finishing
+            def reset_indicator():
+                self.read_unprocessed_btn.setEnabled(True)
+                self.read_processed_btn.setEnabled(True)
+                self.set_parameters_and_initialize_btn.set_enabled(True)
+                self.set_parameters_and_initialize_btn.set_enabled(True)
+                self.indicator_read_unprocessed.setStyleSheet(
+                    "background-color: grey; border: 1px solid black; border-radius: 5px;"
+                )
+
+                # Reactivate initialize only if settings were changed during the process
+                if self.settings_changed:
+                    self.set_parameters_and_initialize_btn.setEnabled(True)
+
+                self.is_process_running = False
+
+            self.worker.finished.connect(reset_indicator)
+
+            # Start the thread
+            self.thread.start()
+
         else:
-            self.current_experiment.stop_sweep()
             self.sweep_start_stop_btn.setText("Start Sweep")
-            self.indicator_sweep.setStyleSheet(
-                "background-color: grey; border: 1px solid black; border-radius: 5px;"
-            )
+            if hasattr(self, 'worker'):
+                self.worker.stop_sweep()
+            
+                self.indicator_sweep.setStyleSheet("background-color: grey; border: 1px solid black; border-radius: 5px;")
+
 
     def hardware_off_frontend(self):
         """calls a backend function that turns off the harware for the experiment"""
-        print("Shutting off")
+        print("Shutting off.")
         try:
             self.current_experiment.hardware_off()
         finally:
             self.close()
 
-    def onWorkerStatusUpdate(self, message):
+    def on_worker_status_update(self, message):
         """
         This slot receives status messages from the worker thread
         and can display them in the log area or console.
         """
-        print(message)  # prints to console/log
-        self.log_text.append(message)   # appends to the log text box
-
+        print(message) 
 
 
 def main():
