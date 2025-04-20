@@ -93,6 +93,21 @@ class InstrumentDriver(ItemAttribute):
 
         return self.instrument.read()
 
+    def read_raw(self, nbytes=0):
+        '''
+        Wrapper to read a string with no stripped characters from the instrument object
+
+        Args:
+            nbytes - number of bytes to read
+
+        Returns str
+        '''
+
+        if nbytes:
+            return self.instrument.read_raw(nbytes)
+        else:
+            return self.instrument.read_raw()
+
     def find_first_key(self, dictionary, machine_value):
         for key, val in dictionary.items():
             if str(val) == str(machine_value):
