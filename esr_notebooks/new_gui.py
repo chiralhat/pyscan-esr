@@ -392,15 +392,6 @@ class GraphWidget(QWidget):
         QApplication.clipboard().setPixmap(image)
         print("📋 Copied graph to clipboard.")
 
-    # def update_canvas(self, time, i, q, x):
-    #     self.ax.clear()
-    #     self.ax.plot(time, i, label='CH1', color='yellow')
-    #     self.ax.plot(time, q, label='CH2', color='blue')
-    #     self.ax.plot(time, x, label='AMP', color='green')
-    #     self.ax.set_xlabel('Time (μs)')
-    #     self.ax.set_ylabel('Signal (a.u.)')
-    #     self.ax.legend()
-    #     self.canvas.draw()
         
 class SweepPlotWidget(QWidget):
     def __init__(self, parent=None):
