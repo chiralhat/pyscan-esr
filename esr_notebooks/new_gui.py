@@ -7,6 +7,7 @@ from PyQt5.QtCore import Qt, QRect, QTextStream, QObject, QThread, pyqtSignal, p
 from PyQt5.QtGui import QPainter, QTextOption, QClipboard, QPixmap
 
 
+import shutil
 import sys
 import h5py
 import matplotlib.pyplot as plt
@@ -58,6 +59,7 @@ class Worker(QObject):
 
     finished = pyqtSignal()         # Signal emitted when the worker is completely done
     updateStatus = pyqtSignal(str)  # Emit messages that the main thread can display
+    plot_update_signal = pyqtSignal(object)  # to pass colormesh
 
     def __init__(self, experiment, task_name):
         super().__init__()
@@ -116,6 +118,21 @@ class Worker(QObject):
         Slot to request the worker to stop. Sets a flag that can be checked in the run_sweep method, killing the thread.
         """
         self._stop_requested = True
+    
+#     @pyqtSlot(object)
+#     def update_plot(self, colormesh):
+#         self.sweep_graph.ax.clear()
+#         self.sweep_graph.ax.set_title("Sweep Result")
+
+#         # Plot new data
+#         mesh = colormesh  # already a QuadMesh from ps.plot2D
+
+#         # Add colorbar safely
+#         self.sweep_graph.figure.colorbar(mesh, ax=self.sweep_graph.ax)
+
+#         # Redraw canvas
+#         self.sweep_graph.canvas.draw()
+
 
 
 class DualStream:
@@ -228,15 +245,15 @@ class GraphWidget(QWidget):
         QApplication.clipboard().setPixmap(image)
         print("📋 Copied graph to clipboard.")
 
-    def update_canvas(self, time, i, q, x):
-        self.ax.clear()
-        self.ax.plot(time, i, label='CH1', color='yellow')
-        self.ax.plot(time, q, label='CH2', color='blue')
-        self.ax.plot(time, x, label='AMP', color='green')
-        self.ax.set_xlabel('Time (μs)')
-        self.ax.set_ylabel('Signal (a.u.)')
-        self.ax.legend()
-        self.canvas.draw()
+    # def update_canvas(self, time, i, q, x):
+    #     self.ax.clear()
+    #     self.ax.plot(time, i, label='CH1', color='yellow')
+    #     self.ax.plot(time, q, label='CH2', color='blue')
+    #     self.ax.plot(time, x, label='AMP', color='green')
+    #     self.ax.set_xlabel('Time (μs)')
+    #     self.ax.set_ylabel('Signal (a.u.)')
+    #     self.ax.legend()
+    #     self.canvas.draw()
         
 class SweepPlotWidget(QWidget):
     def __init__(self, parent=None):
@@ -253,14 +270,7 @@ class SweepPlotWidget(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self.canvas)
         self.setLayout(layout)
-
-    def update_plot(self, x, y):
-        self.xdata.append(x)
-        self.ydata.append(y)
-        self.line.set_data(self.xdata, self.ydata)
-        self.ax.relim()
-        self.ax.autoscale_view()
-        self.canvas.draw()
+        
 
 class DynamicSettingsPanel(QWidget):
     """A QWidget-based panel that dynamically generates a settings tree from a configuration template.
@@ -443,14 +453,14 @@ EXPERIMENT_TEMPLATES = {
     "Spin Echo": {
         "groups": {
             "Main Settings": [
-#                 {"display": "Ch1 Freq, Gain", "key": ["freq", "gain"], "type": "composite", #freq is a bounded float between 50 and 14999, gain is a bounded int from 0 to 32500 (contained in rfsoc controls)
-#                  "default": [50.0, 1]}, # Pretty sure that this guy is the culprit, the one is treated as a float?
-                 {"display": "Ch1 Freq", "key": "freq", "type": "double_spin", "default": 50.0, "tool tip": "Helpful information"},
-                 {"display": "Gain", "key": "gain", "type": "spin", "default": 1, "tool tip": "Helpful information"},
-                {"display": "Repetition time", "key": "period", "type": "double_spin", #period is a bounded float from 0.1 to 2000000000 (contained in rfsoc)
-                 "min": 0.1, "max": 2000000000.0, "default": 500.0, "tool tip": "Helpful information"}, #CHANGED THESE FROM 0.0, 100.0, AND 10.0
+                 {"display": "Ch1 Freq", "key": "freq", "type": "double_spin", 
+                  "min" : 50, "max" : 14999, "default": 3902, "tool tip": "Helpful information"},
+                 {"display": "Gain", "key": "gain", "type": "spin", 
+                  "min" : 0, "max" : 32500, "default": 32500, "tool tip": "Helpful information"},
+                {"display": "Repetition time", "key": "period", "type": "double_spin", 
+                 "min": 0.1, "max": 2000000000.0, "default": 20.0, "tool tip": "Helpful information"}, #CHANGED THESE FROM 0.0, 100.0, AND 10.0
                 {"display": "Ave", "key": "soft_avgs", "type": "spin",
-                 "min": 1, "max": 10000000, "default": 1}, # Ave is an integer
+                 "min": 1, "max": 10000000, "default": 100}, 
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], "type": "composite",
                  "default": ["", ""]}, 
                 {"display": "Reps", "key": "pulses", "type": "spin",
@@ -462,9 +472,9 @@ EXPERIMENT_TEMPLATES = {
                  "default": [150, 1001, 50]}], # Changed to integers
             "Pulse Settings": [
                 {"display": "Ch1 Delay, 90 Pulse", "key": ["delay", "pulse1_1"], "type": "composite",
-                 "default": [10, 10]},
+                 "default": [50, 20]},
                 {"display": "Nut. Delay, Pulse Width", "key": ["nutation_delay", "nutation_length"],
-                 "type": "composite", "default": [600000, 10]}], # Changed to integers
+                 "type": "composite", "default": [5000, 10]}], # Changed to integers
             "Second Sweep Settings": [
                 {"display": "Second sweep?", "key": "sweep2", "type": "check",
                  "default": False},
@@ -506,11 +516,13 @@ EXPERIMENT_TEMPLATES = {
 }
 
 
-class ExperimentType:
+class ExperimentType(QObject):
     """Handles backend logic, configuration, and hardware interaction for a specific experiment type.
     This class manages the lifecycle of an experiment (e.g., Spin Echo, Pulse Frequency Sweep),
     including setting parameters, initializing hardware, running sweeps, and reading results."""
+    plot_update_signal = pyqtSignal()  # signal with no arguments
     def __init__(self, type):
+        super().__init__()
         self.type = type #The name of the experiment type (e.g., 'Spin Echo').
         
         #harware releated:
@@ -535,6 +547,7 @@ class ExperimentType:
         #Experiment objects that will be initialized later in self.init_pyscan_experiment
         self.spinecho_gui = None
         self.pulsesweep_gui = None
+        
 
     def init_pyscan_experiment(self):
         """This initializes a pyscan experiment with functions from the correct 
@@ -620,10 +633,21 @@ class ExperimentType:
         elif self.type == "Pulse Frequency Sweep":
             self.pulsesweep_gui.read_unprocessed(self.sig, self.parameters, self.soc)
 
+    def emit_plot_update(self):
+        try:
+            colormesh = ps.plot2D(self.sweep['expt'], x_name='t', transpose=1)
+            self.plot_update_signal.emit(colormesh)
+        except Exception as e:
+            print("Plot update failed:", e)
+            
     def run_sweep(self):#, output, fig):
         """actually runs a sweep"""
         self.sweep['expt'].start_time = time()
         self.sweep['expt'].start_thread()
+        
+        # Use a QTimer or separate thread to wait before plotting
+        QTimer.singleShot(20000, self.emit_plot_update)  # wait 20s
+        
     
     def start_sweep(self):
         """starts up the hardware to run a sweep and runs a sweep"""
@@ -651,30 +675,50 @@ class ExperimentType:
         if 'expt' in self.sweep.keys():
             self.sweep['expt'].runinfo.running = False
             
-    def update_sweep_plot(self):
-        try:
-            # Path to latest HDF5 file — adjust if needed
-            folder = os.path.join(os.path.dirname(__file__), "250415_Hahn_looptest")
-            latest_file = sorted(os.listdir(folder))[-1]  # last-created file
-            full_path = os.path.join(folder, latest_file)
+#     def copy_hdf5_safely(source_path, dest_path):
+#         try:
+#             shutil.copy2(source_path, dest_path)
+#             return True
+#         except Exception as e:
+#             print("Copy error:", e)
+#             return False
+            
+#     def update_sweep_plot(self):
+#         print("Sweep is running — updating plot")
 
-            with h5py.File(full_path, "r") as f:
-                # You may prefer 'delay_sweep' if that's the time axis used
-                x_data = f["time"][:] if "time" in f else f["delay_sweep"][:]
-                y_data = f["xmean"][:]
+#         # Find latest file
+#         original = get_latest_hdf5_file("250415_Hahn_looptest")
+#         if original is None:
+#             print("No HDF5 file found yet")
+#             return
 
-            # Update plot
-            ax = self.sweep_graph.ax  # assuming your graph widget has this attribute
-            ax.clear()
-            ax.plot(x_data, y_data, "o-")
-            ax.set_xlabel("Time (s)")  # Or 'Delay (ns)' depending on your experiment
-            ax.set_ylabel("xmean")
-            self.sweep_graph.canvas.draw()
+#         # Copy to temp
+#         temp_copy = "temp_sweep_copy.hdf5"
+#         if copy_hdf5_safely(original, temp_copy):
+#             # Plot from the temp file
+#         try:
+#             with h5py.File(file_path, 'r') as f:
+#                 x = np.array(f['delay_sweep'])   # y-axis
+#                 y = np.array(f['time'])          # x-axis
+#                 z = np.array(f['x'])             # data
 
-            print("Live plot updated from HDF5")
+#             # Clean data
+#             z = np.ma.masked_invalid(z)
 
-        except Exception as e:
-            print("Live plot HDF5 error:", e)
+#             ax.clear()
+#             im = ax.imshow(
+#                 z.T,  # transpose to match live_plot2D
+#                 extent=[x.min(), x.max(), y.min(), y.max()],
+#                 aspect='auto',
+#                 origin='lower'
+#             )
+#             ax.set_xlabel('delay_sweep')
+#             ax.set_ylabel('time')
+#             canvas.draw()
+#         except Exception as e:
+#             print("Live plot HDF5 error:", e)
+            
+          
         
     def hardware_off(self):
         """
@@ -734,9 +778,10 @@ class ExperimentUI(QMainWindow):
         #setup for graph saving
         self.last_saved_graph_path = None
         
-        # Create a timer to refresh the sweep plot so it plots live
-        self.plot_timer = QTimer(self)
-        self.plot_timer.timeout.connect(self.refresh_sweep_plot)
+        self.current_experiment.plot_update_signal.connect(self.update_plot)
+#         # Create a timer to refresh the sweep plot so it plots live
+#         self.plot_timer = QTimer(self)
+#         self.plot_timer.timeout.connect(self.refresh_sweep_plot)
 
     def init_layout(self):
         """
@@ -1274,12 +1319,12 @@ class ExperimentUI(QMainWindow):
             # Start the thread
             self.thread.start()
             
-            # Start the plot update timer AFTER sweep starts
-            if not hasattr(self, 'plot_timer'):
-                self.plot_timer = QTimer()
-                self.plot_timer.timeout.connect(self.refresh_sweep_plot)
+#             # Start the plot update timer AFTER sweep starts
+#             if not hasattr(self, 'plot_timer'):
+#                 self.plot_timer = QTimer()
+#                 self.plot_timer.timeout.connect(self.refresh_sweep_plot)
 
-            self.plot_timer.start(1000)  # Update every 1 second
+#             self.plot_timer.start(1000)  # Update every 1 second
 
         else:
             self.sweep_start_stop_btn.setText("Start Sweep")
@@ -1304,14 +1349,14 @@ class ExperimentUI(QMainWindow):
         """
         print(message) 
         
-    @pyqtSlot()
-    def refresh_sweep_plot(self):
-        if self.current_experiment.sweep["expt"].runinfo.running:
-            self.current_experiment.update_sweep_plot()
-            print("Sweep is running — updating plot")
-        else:
-            print("Sweep not running — stopping timer")
-            self.plot_timer.stop()
+#     @pyqtSlot()
+#     def refresh_sweep_plot(self):
+#         if self.current_experiment.sweep["expt"].runinfo.running:
+#             self.current_experiment.update_sweep_plot()
+#             print("Sweep is running — updating plot")
+#         else:
+#             print("Sweep not running — stopping timer")
+#             self.plot_timer.stop()
 #     def refresh_sweep_plot(self):
 #         print("Timer fired")
 #         expt = self.current_experiment.sweep.get('expt')
@@ -1321,7 +1366,23 @@ class ExperimentUI(QMainWindow):
 #         else:
 #             print("Sweep not running — stopping timer")
 #             self.plot_timer.stop()
-        
+   
+    def update_plot(self):
+        """Slot to update the sweep plot when the experiment emits a signal."""
+        if hasattr(self.current_experiment, 'sweep') and 'expt' in self.current_experiment.sweep:
+            self.sweep_graph.ax.clear()
+            try:
+                colormesh = ps.plot2D(
+                    self.current_experiment.sweep['expt'],
+                    x_name='t',
+                    transpose=1,
+                    ax=self.sweep_graph.ax
+                )
+                self.sweep_graph.colorbar(colormesh, ax=self.sweep_graph.ax)
+                self.canvas.draw()
+            except Exception as e:
+                print(f"Live plot update error: {e}")
+            
     def save_current_graph(self):
         options = QFileDialog.Options()
         file_path, _ = QFileDialog.getSaveFileName(self, "Save Graph As", "", "PNG Files (*.png);;All Files (*)", options=options)
