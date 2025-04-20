@@ -1,3 +1,7 @@
+import matplotlib
+matplotlib.use('Qt5Agg')  # Must be done before importing pyplot!
+import matplotlib.pyplot as plt
+# Do not move the above from the top of the file
 from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QGridLayout, QPushButton,
                              QSplitter, QScrollArea, QLabel, QFrame, QComboBox, QSizePolicy, 
                              QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem, 
@@ -10,13 +14,11 @@ from PyQt5.QtGui import QPainter, QTextOption, QClipboard, QPixmap
 import shutil
 import sys
 import h5py
-import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import sys, os
 sys.path.append('../')
 from rfsoc2 import *
-import matplotlib.pyplot as plt
 import numpy as np
 from time import sleep, time
 from datetime import date, datetime
@@ -388,12 +390,14 @@ class GraphWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAutoFillBackground(True)
-        self.figure, self.ax = plt.subplots() #self.figure -- The Matplotlib figure object
-                                              # self.ax -- The axes for plotting data.
-        self.canvas = FigureCanvas(self.figure) #The Matplotlib canvas embedded in the widget.
+
+        # Create the Figure and Axes safely without using pyplot
+        self.figure = Figure()
+        self.ax = self.figure.add_subplot(111)
+        self.canvas = FigureCanvas(self.figure)
 
         # Layout for the graphing widget
-        self.layout = QVBoxLayout() #Layout manager for placing the canvas in the widget.
+        self.layout = QVBoxLayout()
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
 
@@ -401,30 +405,43 @@ class GraphWidget(QWidget):
         self.canvas.setContextMenuPolicy(Qt.CustomContextMenu)
         self.canvas.customContextMenuRequested.connect(self.show_context_menu)
 
+    def show_context_menu(self, position):
+        # You can implement this if needed
+        pass
 
-    def update_canvas(self, time, i, q, x):
-        """Clears the current plot and renders new data traces for CH1, CH2, and amplitude. 
-        Note that time, i, q, and x should all be the same length!
-
-        @param time -- numpy.ndarray object (array-like) containing time values
-        @param i -- numpy.ndarray object (array-like) containing in-phase signal data values
-        @param q -- numpy.ndarray object (array-like) containing quadrature signal data values
-        @param x -- numpy.ndarray object (array-like) containing amplitude values
-        """
-        # Clear the previous plot
+    def update_canvas_se(self, time, i, q, x):
+        """Clears the current plot and renders new data traces for CH1, CH2, and amplitude."""
         self.ax.clear()
-
-        # Plot the data
         self.ax.plot(time, i, label='CH1', color='yellow')
         self.ax.plot(time, q, label='CH2', color='blue')
         self.ax.plot(time, x, label='AMP', color='green')
-
-        # Set labels and title
         self.ax.set_xlabel('Time (μs)')
         self.ax.set_ylabel('Signal (a.u.)')
         self.ax.legend()
+        self.canvas.draw()
+    
+    def update_canvas_psweep(self, time, x, fit=None, freq=None):
+        print("drawing the graph now")
+        print("Matplotlib backend:", matplotlib.get_backend())  # should say 'Qt5Agg'
+        self.ax.clear()
 
-        # Refresh the canvas to show the updated plot
+        # Plot raw signal
+        self.ax.plot(time, x, color='g', label='AMP')
+
+        if fit is not None:
+            fit_curve = fit[0](time, *fit[1:])
+            self.ax.plot(time, fit_curve, 'r--', label='Exp Fit')
+
+            A, T, Q = fit[1], fit[2], fit[-1]
+            xpt = time[len(time) // 5] / 2
+            ypt = max(x) * np.array([0.75, 0.65])
+            self.ax.text(xpt, ypt[0], f"A={A:.3g} V, T={T:.3g} μs, Q={Q:.3g}")
+            if freq is not None:
+                self.ax.text(xpt, ypt[1], f"freq (MHz): {freq:.3f}")
+
+        self.ax.set_xlabel('Time (μs)')
+        self.ax.set_ylabel('Signal (a.u.)')
+        self.ax.legend()
         self.canvas.draw()
     
     def show_context_menu(self, pos):

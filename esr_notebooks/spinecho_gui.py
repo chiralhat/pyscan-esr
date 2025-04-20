@@ -1,6 +1,6 @@
 import numpy as np
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QApplication
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+# from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from spinecho_scripts import *  
 import pyscan as ps
@@ -86,7 +86,7 @@ class SpinechoExperiment:
         x = np.concatenate(self.x_data)
 
         # Update the canvas with the new data
-        self.canvas_widget.update_canvas(time, i, q, x)
+        self.canvas_widget.update_canvas_se(time, i, q, x)
 
     def get_layout(self):
         """
