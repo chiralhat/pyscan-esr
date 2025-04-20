@@ -1,8 +1,9 @@
 import numpy as np
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QApplication
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from spinecho_scripts import *  # Assuming this contains relevant functions like CPMGProgram, measure_phase
-import gui_setup as gs
+
+from spinecho_scripts import *  
+import pyscan as ps
 
 class SpinechoExperiment:
     
@@ -34,10 +35,9 @@ class SpinechoExperiment:
         if parameters['use_psu'] and not parameters['loopback']:
             devices.psu.set_magnet(parameters)
         
-        setup_experiment(parameters, devices, sweep, soc) #From spinecho_scripts.py
+        setup_experiment(parameters, devices, sweep, soc) #From ______scripts.py
 
     def read_unprocessed(self, sig, config, soc):
-#TO DO: THIS IS HAVING ISSUES WITH A PARAMETER THAT IS A FLOAT AND NEEDS TO BE AN INT
         """
         Take and plot a single background-subtracted measurement (unprocessed).
         """

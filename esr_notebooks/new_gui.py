@@ -74,59 +74,82 @@ EXPERIMENT_TEMPLATES = {
         "groups": {
             "Main Settings": [                                             #ALL OF THESE COMMENTS REFER TO THE control_dict IN gui_setup.py
                 {"display": "Frequency", "key": "freq", "type": "double_spin", #Freq is a bounded float between 50 and 14999 (contained in rfsoc controls)
-                 "min": 50.0, "max": 14999.0, "default": 50.0, "tool tip": "Helpful information"}, #CHANGED THESE VALUES FROM 0.1, 10.0, AND 2.4
+                 "min": 50.0, "max": 14999.0, "default": 3900.0, "tool tip": "Helpful information"}, #CHANGED THESE VALUES FROM 0.1, 10.0, AND 2.4
+                {"display": "Gain", "key": "gain", "type": "spin", 
+                 "min" : 0, "max" : 32500, "default": 32500, "tool tip": "Helpful information"},
                 {"display": "Avg", "key": "soft_avgs", "type": "spin", #Soft_avgs is a bounded int between 1 and 10000000 (contained in rfsoc controls)
-                 "min": 1, "max": 1000000, "default": 1, "tool tip": "Helpful information"}, #EXPLICITLY MADE THESE INTS
+                 "min": 1, "max": 1000000, "default": 1000, "tool tip": "Helpful information"}, #EXPLICITLY MADE THESE INTS
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], #Both save_dir and file_name are strings (contained in save controls)
                  "type": "composite", "default": ["", ""], "tool tip": "Helpful information"},
                 {"display": "Experiment", "key": "expt", "type": "combo", #expt is of ipw.Dropdown type (contained in measure)
-                 "options": ["Hahn Echo", "CPMG"], "default": "Hahn Echo"},
+                 "options": sweep_list, "default": "Pulse Sweep"},
                 {"display": "Sweep start, end, step",
                  "key": ["sweep_start", "sweep_end", "sweep_step"], #sweep_start, sweep_end, and sweep_step are all unbounded floats (contained in measure)
-                 "type": "composite", "default": [2.6, 3.0, 0.1]}],
+                 "type": "composite", "default": [3850.0, 3950.0, 2.0]}],
             "Readout Settings": [
                 {"display": "Time Offset", "key": "h_offset", "type": "double_spin", #h_offset is a bounded float between -10000 and 10000 (contained in rfsoc)
-                 "min": -10000.0, "max": 10000.0, "default": 10.0}, #CHANGED THESE VALUES FROM 0, 1000, AND 10.0
-                {"display": "Readout Length", "key": "readout_length", "type": "spin", #readout_length is a bounded float from 0 to 5 (contained in rfsoc)
-                 "min": 1, "max": 5, "default": 5}, #CHANGED THESE VALUES FROM 1, 1000, AND 10 ------------------- THIS ONE WAS SAVED AS AN INTEGER IN THE PICKLE FILE AND COULD HAVE BEEN A CAUSE OF THE ERROR
-                {"display": "Loopback", "key": "loopback", "type": "combo", #loopback is an ipw.Checkbox (contained in rfsoc)
-                 "options": ["Enabled", "Disabled"], "default": "Enabled"}],
+                 "min": -10000.0, "max": 10000.0, "default": -0.125}, #CHANGED THESE VALUES FROM 0, 1000, AND 10.0
+                {"display": "Readout Length", "key": "readout_length", "type": "double_spin", #readout_length is a bounded float from 0 to 5 (contained in rfsoc)
+                 "min": 1.0, "max": 5.0, "default": 0.2}, #CHANGED THESE VALUES FROM 1, 1000, AND 10 ------------------- THIS ONE WAS SAVED AS AN INTEGER IN THE PICKLE FILE AND COULD HAVE BEEN A CAUSE OF THE ERROR
+                {"display": "Loopback", "key": "loopback", "type": "check", #loopback is an ipw.Checkbox (contained in rfsoc)
+                 "default": False}],
             "Uncommon Settings": [
                 {"display": "Repetition time", "key": "period", "type": "double_spin", #period is a bounded float from 0.1 to 2000000000 (contained in rfsoc)
-                 "min": 0.1, "max": 2000000000.0, "default": 500.0}, #EXPLICITLY MADE THESE FLOATS
+                 "min": 0.1, "max": 2000000000.0, "default": 10.0}, #EXPLICITLY MADE THESE FLOATS
                 {"display": "Ch1 90 Pulse", "key": "pulse1_1", "type": "double_spin", #pulse1_1 is a bounded float from 0 to 652100 (contained in rfsoc)
-                 "min": 0.0, "max": 652100.0, "default": 10.0}, #EXPLICITLY MADE THESE FLOATS
+                 "min": 0.0, "max": 652100.0, "default": 50.0}, #EXPLICITLY MADE THESE FLOATS
                 {"display": "Magnetic Field, Scale, Current limit",
                  "key": ["field", "gauss_amps", "current_limit"], #field, gauss_amps, and current_limit are all bounded floats (contained in psu) -- bounds: (0 - 2500), (0.001, 10000), (0, 10))
-                 "type": "composite", "default": [1.0, 1.0, 1.0]}, #DEFAULTS CHANGED FROM NONE, NONE, NONE ---------------- THESE WERE WRITTEN TO THE PICKLE FILE AS NONE, WHICH ALSO COULD HAVE BEEN CAUSING THE ERROR
+                 "type": "composite", "default": [0.0, 276.0, 3.5]}, #DEFAULTS CHANGED FROM NONE, NONE, NONE ---------------- THESE WERE WRITTEN TO THE PICKLE FILE AS NONE, WHICH ALSO COULD HAVE BEEN CAUSING THE ERROR
                 {"display": "Reps", "key": "ave_reps", "type": "spin", #ave_reps is a bounded int from 1 to 1000 (contained in measure)
                  "min": 1, "max": 1000, "default": 1},
                 {"display": "Wait Time", "key": "wait", "type": "double_spin", #wait is a bounded float from 0 to 20 (contained in measure)
-                 "min": 0.0, "max": 20.0, "default": 10.0},
+                 "min": 0.0, "max": 20.0, "default": 0.3},
                 {"display": "Integral only", "key": "integrate", "type": "check", #integrate is an ipw.Checkbox (contained in measure)
                  "default": False},
                 {"display": "Initialize on read", "key": "init", "type": "check", #init is an ipw.Checkbox
                  "default": True},
                 {"display": "Turn off after sweep", "key": "turn_off", "type": "check", #turn_off is an ipw.Checkbox
-                 "default": False},
-                {"display": "# 180 Pulses", "key": "pulses", "type": "spin",
-                "min": 1, "max": 256, "default": 1}],
+                 "default": False}],
             "Utility Settings": [
                 {"display": "PSU Addr", "key": "psu_address", "type": "line_edit", #psu_address is an ipw.Dropdown (contained in devices)
                  "default": ""},
                 {"display": "Use PSU", "key": "use_psu", "type": "check", #use_psu is an ipw.Checkbox (contained in devices)
                  "default": False},
                 {"display": "Use Lakeshore", "key": "use_temp", "type": "check", #use_temp is an ipw.Checkbox (contained in devices)
-                 "default": False}]
+                 "default": False}],
+            "Never Change": [
+                {"display": "# 180 Pulses", "key": "pulses", "type": "spin",
+                "min": 1, "max": 256, "default": 1},
+                {"display": "Scope Address", "key": "scope_address",  "type": "combo",
+                 "options": res_list, "default": "USB0::1689::261::SGVJ0001055::0::INSTR"},
+                {"display": "FPGA Address", "key": "fpga_address",  "type": "combo",
+                "options": res_list, "default": "ASRL/dev/ttyUSB4::INSTR"},
+                {"display": "Synth Address", "key": "synth_address",  "type": "combo",
+                 "options": res_list, "default": "ASRL/dev/ttyACM0::INSTR"},
+                # Commenting out any setting having to do with a second sweep because we are implementing a queue
+                # also there are more settings related to this that we didn't add / comment out for the same reason
+                # {"display": "Ch2 Freq (MHz)", "key": "freq2", "type": "double_spin",
+                #  "min": 50.0, "max": 14999.0, "default": 3902.0},
+                # {"display": "Ch2 Gain", "key": "gain2", "type": "spin",
+                # "min": 0, "max": 32500, "default": 0},
+                {"display": "Phase", "key": "phase", "type": "double_spin",
+                "min": 0.0, "max": 360.0, "default": 0.0},
+                {"display": "Averaging Time (s)", "key": "sltime", "type": "double_spin",
+                 "min": 0.0, "max": 20.0, "default": 0.0},
+                {"display": "Experiment", "key": "psexpt", "type": "combo",
+                "options" : ['Freq Sweep', 'Field Sweep'], "default": "Freq Sweep"}
+                # freq start, stop, step might be needed here, but we could not find them
+                ]
         } #THERE IS A SETTING CALLED "subtime" THAT IS CALCULATED LATER AND ADDED TO THE END OF THE PICKLE FILE. IT IS EQUAL TO (soft_avgs * (period / 400000 * ave_reps))
     },
     "Spin Echo": {
         "groups": {
             "Main Settings": [
-                 {"display": "Ch1 Freq", "key": "freq", "type": "double_spin", 
-                  "min" : 50.0, "max" : 14999.0, "default": 3902.0, "tool tip": "Helpful information"},
-                 {"display": "Gain", "key": "gain", "type": "spin", 
-                  "min" : 0, "max" : 32500, "default": 32500, "tool tip": "Helpful information"},
+                {"display": "Ch1 Freq", "key": "freq", "type": "double_spin", 
+                 "min" : 50.0, "max" : 14999.0, "default": 3902.0, "tool tip": "Helpful information"},
+                {"display": "Gain", "key": "gain", "type": "spin", 
+                 "min" : 0, "max" : 32500, "default": 32500, "tool tip": "Helpful information"},
                 {"display": "Repetition time", "key": "period", "type": "double_spin", 
                  "min": 0.1, "max": 2000000000.0, "default": 200.0, "tool tip": "Helpful information"}, #CHANGED THESE FROM 0.0, 100.0, AND 10.0
                 {"display": "Ave", "key": "soft_avgs", "type": "spin",
@@ -180,16 +203,47 @@ EXPERIMENT_TEMPLATES = {
                 {"display": "Initialize on read", "key": "init", "type": "check", #COULD REMOVE
                  "default": True},
                 {"display": "Turn off after sweep", "key": "turn_off", "type": "check",
-                 "default": False},
-                {"display": "# 180 Pulses", "key": "pulses", "type": "spin",
-                "min": 1, "max": 256, "default": 1}],
+                 "default": False}],
             "Utility Settings": [
                 {"display": "PSU Addr", "key": "psu_address", "type": "line_edit",
                  "default": ""},
                 {"display": "Use PSU? (no magnet if not)", "key": "use_psu", "type": "check",
                  "default": False},
                 {"display": "Use Lakeshore?", "key": "use_temp", "type": "check",
-                 "default": False}]
+                 "default": False}],
+            "Never Change": [
+                {"display": "# 180 Pulses", "key": "pulses", "type": "spin",
+                "min": 1, "max": 256, "default": 1},
+                {"display": "Scope Address", "key": "scope_address",  "type": "combo",
+                 "options": res_list, "default": "USB0::1689::261::SGVJ0001055::0::INSTR"},
+                {"display": "FPGA Address", "key": "fpga_address",  "type": "combo",
+                "options": res_list, "default": "ASRL/dev/ttyUSB4::INSTR"},
+                {"display": "Synth Address", "key": "synth_address",  "type": "combo",
+                 "options": res_list, "default": "ASRL/dev/ttyACM0::INSTR"},
+                # Commenting out any setting having to do with a second sweep because we are implementing a queue
+                # also there are more settings related to this that we didn't add / comment out for the same reason
+                # {"display": "Ch2 Freq (MHz)", "key": "freq2", "type": "double_spin",
+                #  "min": 50.0, "max": 14999.0, "default": 3902.0},
+                # {"display": "Ch2 Gain", "key": "gain2", "type": "spin",
+                # "min": 0, "max": 32500, "default": 0},
+                {"display": "Phase", "key": "phase", "type": "double_spin",
+                "min": 0.0, "max": 360.0, "default": 0.0},
+                {"display": "Auto Phase Sub", "key": "phase_sub", "type": "check",
+                "default": False},
+                {"display": "Field Start (G)", "key": "field_start", "type": "double_spin",
+                "min": 0.0, "max": 2500.0, "default": 0.0},
+                {"display": "Field End (G)", "key": "field_end", "type": "double_spin",
+                "min": 0.0, "max": 2500.0, "default": 50.0},
+                {"display": "Field Step (G)", "key": "field_step", "type": "double_spin",
+                "min": 0.01, "max": 2500.0, "default": 1.5},
+                {"display": "Sub Method", "key": "field_step", "type": "combo",
+                "options": ['Phase', 'Delay', 'Both', 'None', 'Autophase'], "default": "Phase"},
+                {"display": "Averaging Time (s)", "key": "sltime", "type": "double_spin",
+                 "min": 0.0, "max": 20.0, "default": 0.0}
+                # Leaving out bimod_sweep_list bc different type of experiment
+                # {"display": "Experiment", "key": "bimod_expt", "type": "combo",
+                #  "options": bimod_sweep_list, "default": ""},
+                ]      
         }
     }
 }
@@ -576,9 +630,6 @@ class ExperimentType(QObject):
     def init_pyscan_experiment(self):
         """This initializes a pyscan experiment with functions from the correct 
         experiment type scripts and GUI files."""
-
-        
-
         if self.type == "Spin Echo":
             # NEW: created spinecho_gui objects from updated spinecho gui file
             self.spinecho_gui = seg.SpinechoExperiment(self.graph)
@@ -634,6 +685,7 @@ class ExperimentType(QObject):
             temp = self.devices.ls335.get_temp()
 
         # Initialize pyscan experiment if necessary
+        #NEED TO REVISIT THIS
         if not self.parameters.get('init', False):
             pass  # No action required if 'init' is False
         else:

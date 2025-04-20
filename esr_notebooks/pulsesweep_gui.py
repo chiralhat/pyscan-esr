@@ -1,42 +1,9 @@
-import matplotlib.pyplot as plt
-from IPython.display import display, clear_output
-import gui_setup as gs
-from pulsesweep_scripts import *
-
-# These are all the controls to add for this GUI
-pscont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
-                'rfsoc': [['freq', 'gain', 'period', 'loopback'],
-                            ['pulse1_1','soft_avgs', 'h_offset', 'readout_length']],
-             'psu': [['field', 'gauss_amps', 'current_limit']],
-             'save': [['save_dir', 'file_name']],
-             'measure': [['ave_reps', 'psexpt', 'wait'],
-                         ['sweep_start', 'sweep_end', 'sweep_step'],
-                         ['integrate', 'init', 'turn_off']],
-             }
-
-import matplotlib.pyplot as plt
-from IPython.display import display, clear_output
-import gui_setup as gs
-from pulsesweep_scripts import *
-
 import numpy as np
-from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QApplication
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+
 from pulsesweep_scripts import *
-import gui_setup as gs
 import pyscan as ps
-
-
-# These are all the controls to add for this GUI
-pscont_keys = {'devices': [['psu_address', 'use_psu', 'use_temp']],
-                'rfsoc': [['freq', 'gain', 'period', 'loopback'],
-                            ['pulse1_1','soft_avgs', 'h_offset', 'readout_length']],
-             'psu': [['field', 'gauss_amps', 'current_limit']],
-             'save': [['save_dir', 'file_name']],
-             'measure': [['ave_reps', 'psexpt', 'wait'],
-                         ['sweep_start', 'sweep_end', 'sweep_step'],
-                         ['integrate', 'init', 'turn_off']],
-             }
 
 
 class PulseSweepExperiment:
