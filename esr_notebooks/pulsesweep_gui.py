@@ -56,6 +56,7 @@ class PulseSweepExperiment:
         q = np.concatenate(self.q_data)
         x = np.concatenate(self.x_data)
 
+        print(sig)
         if show_fit:
             fig = self.canvas_widget.figure
             fig.clear()
@@ -72,6 +73,6 @@ class PulseSweepExperiment:
             ax.plot(sig.time, sig.q, label='CH2', color='blue')
             ax.plot(sig.time, sig.x, label='AMP', color='green')
             ax.legend()
-            self.canvas_widget.canvas.draw()
+            self.canvas_widget.update_canvas(time, i, q, x)
         else:
             self.canvas_widget.update_canvas(time, i, q, x)
