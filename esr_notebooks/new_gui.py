@@ -5,11 +5,12 @@ import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QGridLayout, QPushButton,
                              QSplitter, QScrollArea, QLabel, QFrame, QComboBox, QSizePolicy, 
                              QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem, 
-                             QMessageBox, QTextEdit, QLineEdit, QStyledItemDelegate, QPushButton, 
-                             QFileDialog, QStyledItemDelegate, QStyleOptionViewItem, QMenu)
-from PyQt5.QtCore import Qt, QRect, QTextStream, QObject, QThread, pyqtSignal, pyqtSlot, QTimer
+                             QMessageBox, QTextEdit, QLineEdit, QStyledItemDelegate, 
+                             QFileDialog, QStyledItemDelegate, QStyleOptionViewItem, QMenu, QListWidgetItem,
+                             QListWidget,QInputDialog, QAbstractItemView, QDialog, QPushButton)
+                             
+from PyQt5.QtCore import Qt, QRect, QTextStream, QObject, QThread, pyqtSignal, pyqtSlot, QTimer, QSize
 from PyQt5.QtGui import QPainter, QTextOption, QClipboard, QPixmap
-
 
 import shutil
 import sys
@@ -616,9 +617,9 @@ class ExperimentType(QObject):
     This class manages the lifecycle of an experiment (e.g., Spin Echo, Pulse Frequency Sweep),
     including setting parameters, initializing hardware, running sweeps, and reading results."""
     plot_update_signal = pyqtSignal()  # signal with no arguments
-    def __init__(self, type):
+    def __init__(self, exp_type):
         super().__init__()
-        self.type = type #The name of the experiment type (e.g., 'Spin Echo').
+        self.type = type #The name of the experiment type (e.g., 'Spin Echo'). NONE by default
         
         #harware releated:
         self.soc = QickSoc() #Hardware interface for the RFSoC system.
@@ -872,6 +873,8 @@ class ExperimentUI(QMainWindow):
         self.last_saved_graph_path = None
         
         self.current_experiment.plot_update_signal.connect(self.update_plot)
+
+        self.queue_manager = QueueManager()
 #         # Create a timer to refresh the sweep plot so it plots live
 #         self.plot_timer = QTimer(self)
 #         self.plot_timer.timeout.connect(self.refresh_sweep_plot)
@@ -911,8 +914,32 @@ class ExperimentUI(QMainWindow):
             }
         """)
 
-        # Left side: settings
-        self.main_splitter.addWidget(self.settings_panel)
+        # Left side container for settings + queue
+        left_container = QVBoxLayout()
+        left_widget = QWidget()
+        left_widget.setLayout(left_container)
+        left_container.setContentsMargins(0, 0, 0, 0)
+        left_container.setSpacing(10)  # Small spacing between elements
+
+        # Add settings panel on top
+        left_container.addWidget(self.settings_panel)
+
+        # Wrap the queue manager in a wrapper widget to enforce max height when expanded
+        self.queue_manager = QueueManager()
+        queue_wrapper = QWidget()
+        queue_layout = QVBoxLayout(queue_wrapper)
+        queue_layout.setContentsMargins(0, 0, 0, 0)
+        queue_layout.setSpacing(0)
+        queue_layout.addWidget(self.queue_manager)
+
+        # Set a max height for the expanded queue view (tweak as needed)
+        queue_wrapper.setMaximumHeight(350)  # You can try 250–350 depending on feel
+
+        # Add to the left layout
+        left_container.addWidget(queue_wrapper)
+
+        # Add left side to splitter
+        self.main_splitter.addWidget(left_widget)
 
         # Right side: a vertical splitter for graphs vs. error log
         self.right_splitter = QSplitter(Qt.Vertical)
@@ -1028,8 +1055,16 @@ class ExperimentUI(QMainWindow):
 
         top_menu.addWidget(exp_widget)
 
+
+
         # Add extra horizontal spacing between "Change Experiment Type" and the next section
         top_menu.addSpacing(30)
+
+        # --- Add to Queue Button ---
+        add_queue_btn = QPushButton("Add to Queue")
+        add_queue_btn.setStyleSheet("font-size: 10pt; padding: 4px;")
+        add_queue_btn.clicked.connect(self.add_to_queue)
+        top_menu.addWidget(add_queue_btn)
 
         # --- Experiment-Specific Buttons with Indicators ---
         # We pass top_menu to the function that creates the experiment buttons
@@ -1100,6 +1135,7 @@ class ExperimentUI(QMainWindow):
         init_layout.addWidget(self.set_parameters_and_initialize_btn)
         init_layout.addWidget(self.indicator_initialize)
         experiment_buttons_layout.addWidget(init_widget, 0, 0)
+
 
         # --- Read Unprocessed Button ---
         read_unprocessed_widget = QWidget()
@@ -1489,13 +1525,337 @@ class ExperimentUI(QMainWindow):
             folder = os.path.dirname(self.last_saved_graph_path)
             os.system(f'open "{folder}"')  # 'xdg-open' for Linux. Use `open` for macOS, or `start` for Windows.
 
+    def expand_queue_panel(self):
+        self.queue_window = QWidget()
+        self.queue_window.setWindowTitle("Queue Viewer")
+        self.queue_window.setGeometry(300, 300, 500, 400)
+
+        layout = QVBoxLayout()
+
+        # Top control buttons
+        control_bar = QHBoxLayout()
+        for name in ["History", "Clear", "Start/Stop"]:
+            btn = QPushButton(name)
+            control_bar.addWidget(btn)
+        layout.addLayout(control_bar)
+
+        # Active Queue
+        layout.addWidget(QLabel("Active Queue:"))
+        self.active_queue_list = QListWidget()
+        layout.addWidget(self.active_queue_list)
+
+        # Working Queue
+        layout.addWidget(QLabel("Working Queue:"))
+        self.working_queue_list = QListWidget()
+        self.working_queue_list.setDragEnabled(True)
+        self.working_queue_list.setAcceptDrops(True)
+        self.working_queue_list.setDragDropMode(QAbstractItemView.InternalMove)
+        layout.addWidget(self.working_queue_list)
+
+        self.queue_window.setLayout(layout)
+        self.queue_window.show()
+    
+    def add_to_queue(self):
+        # Create new experiment based on current type
+        new_experiment = ExperimentType(self.current_experiment.type)
+        # Optional: clone parameters if needed
+        # new_experiment.set_parameters(self.current_experiment.parameters.copy())
+
+        # Pass the full QueueManager instance
+        queue_item = QueuedExperiment(
+            experiment=new_experiment,
+            queue_manager=self.queue_manager,
+            last_used_directory=self.last_saved_graph_path
+        )
+
+        # Optionally update the queue’s collapsed display text
+        # self.queue_manager.set_current_running(queue_item.display_name)
+
+
+
+
+
+class QueueManager(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # Main layout (vertical)
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
+
+        # Collapsed view
+        self.collapsed_button = QPushButton("Currently Running: [None] ▼")
+        self.collapsed_button.setMaximumHeight(40)
+        self.collapsed_button.setStyleSheet("text-align: left; padding: 8px;")
+        self.collapsed_button.clicked.connect(self.toggle_expand)
+        self.main_layout.addWidget(self.collapsed_button)
+
+        # Expanded container (initially hidden)
+        self.expanded_frame = QFrame()
+        self.expanded_frame.setVisible(False)
+        self.expanded_layout = QVBoxLayout(self.expanded_frame)
+        self.expanded_layout.setContentsMargins(10, 10, 10, 10)
+        self.expanded_layout.setSpacing(10)
+
+        # Top control buttons
+        control_bar = QHBoxLayout()
+        self.history_button = QPushButton("History")
+        self.clear_button = QPushButton("Clear")
+        self.toggle_run_button = QPushButton("Start/Stop")
+        control_bar.addWidget(self.history_button)
+        control_bar.addWidget(self.clear_button)
+        control_bar.addWidget(self.toggle_run_button)
+        self.expanded_layout.addLayout(control_bar)
+
+        # Active Queue
+        self.expanded_layout.addWidget(QLabel("Active Queue:"))
+        self.active_queue_list = QListWidget()
+        self.active_queue_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.expanded_layout.addWidget(self.active_queue_list)
+
+        # Working Queue
+        self.expanded_layout.addWidget(QLabel("Working Queue:"))
+        self.working_queue_list = QListWidget()
+        self.working_queue_list.setDragEnabled(True)
+        self.working_queue_list.setAcceptDrops(True)
+        self.working_queue_list.setDragDropMode(QListWidget.InternalMove)
+        self.working_queue_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.expanded_layout.addWidget(self.working_queue_list)
+
+        # Add expanded frame to the main layout
+        self.main_layout.addWidget(self.expanded_frame)
+
+        # Default running label
+        self.current_running_text = "[None]"
+
+    def toggle_expand(self):
+        is_visible = self.expanded_frame.isVisible()
+        self.expanded_frame.setVisible(not is_visible)
+        arrow = "▲" if not is_visible else "▼"
+        self.collapsed_button.setText(f"Currently Running: {self.current_running_text} {arrow}")
+
+    def set_current_running(self, text):
+        self.current_running_text = text
+        if not self.expanded_frame.isVisible():
+            self.collapsed_button.setText(f"Currently Running: {text} ▼")
+
+    def add_to_active_queue(self, widget_item):
+        self.active_queue_list.addItem(widget_item)
+
+    def add_to_working_queue(self, queued_experiment):
+        self.working_queue_list.addItem(queued_experiment)
+        self.working_queue_list.setItemWidget(queued_experiment, queued_experiment.widget)
+
+
+
+class ExperimentSetupDialog(QDialog):
+    def __init__(self, experiment_type, parameters, last_used_directory=None, edit_settings=False, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Configure Queued Experiment")
+        self.setMinimumSize(600, 400)
+        self.edit_settings = edit_settings
+
+        self.display_name = ""
+        self.save_graph_output = False
+        self.save_directory = last_used_directory or os.getcwd()
+
+        # Layouts
+        main_layout = QHBoxLayout(self)
+
+        # === Left Input Column ===
+        left_box = QVBoxLayout()
+
+        self.name_label = QLabel("Experiment Name:")
+        self.name_input = QLineEdit()
+        # default_name = f"{experiment_type.lower()}:{parameters.get('expt', 'unnamed').lower()}"
+        default_name = "Poopoo Peepee"
+        self.name_input.setText(default_name)
+        left_box.addWidget(self.name_label)
+        left_box.addWidget(self.name_input)
+
+        self.read_processed_checkbox = QCheckBox("Read Processed")
+        left_box.addWidget(self.read_processed_checkbox)
+        self.read_unprocessed_checkbox = QCheckBox("Read Unprocessed")
+        left_box.addWidget(self.read_unprocessed_checkbox)
+        self.sweep_checkbox = QCheckBox("Sweep")
+        left_box.addWidget(self.sweep_checkbox)
+
+        self.save_checkbox = QCheckBox("Save graph output")
+        left_box.addWidget(self.save_checkbox)
+
+        self.dir_label = QLabel("Save to:")
+        self.dir_input = QLineEdit()
+        self.dir_input.setText(self.save_directory)
+        self.browse_button = QPushButton("Browse")
+        self.browse_button.clicked.connect(self.choose_directory)
+
+        dir_row = QHBoxLayout()
+        dir_row.addWidget(self.dir_input)
+        dir_row.addWidget(self.browse_button)
+
+        left_box.addWidget(self.dir_label)
+        left_box.addLayout(dir_row)
+
+        # Bottom buttons
+        button_row = QHBoxLayout()
+        self.cancel_button = QPushButton("Cancel")
+        self.ok_button = QPushButton("Okay")
+        button_row.addWidget(self.cancel_button)
+        button_row.addWidget(self.ok_button)
+        self.cancel_button.clicked.connect(self.reject)
+        self.ok_button.clicked.connect(self.accept)
+
+        left_box.addStretch()
+        left_box.addLayout(button_row)
+
+        # === Right Scrollable Summary Panel ===
+        self.summary_view = QTextEdit()
+        self.summary_view.setReadOnly(True)
+        self.summary_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        summary_text = "\n".join([f"{k}: {v}" for k, v in parameters.items()])
+        self.summary_view.setText(summary_text)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+        scroll_layout.addWidget(self.summary_view)
+
+        # Optional "Edit Settings" button
+        if self.edit_settings:
+            self.edit_settings_button = QPushButton("Edit Settings")
+            self.edit_settings_button.setFixedWidth(120)
+            scroll_layout.addWidget(self.edit_settings_button, alignment=Qt.AlignRight)
+
+        scroll_area.setWidget(scroll_content)
+
+        # Combine into main layout
+        main_layout.addLayout(left_box, 2)
+        main_layout.addWidget(scroll_area, 3)
+
+    def choose_directory(self):
+        selected_dir = QFileDialog.getExistingDirectory(self, "Select Save Directory", self.save_directory)
+        if selected_dir:
+            self.save_directory = selected_dir
+            self.dir_input.setText(selected_dir)
+
+    def get_values(self):
+        return {
+            "display_name": self.name_input.text().strip(),
+            "read_processed": self.read_processed_checkbox.isChecked(),
+            "read_unprocessed": self.read_unprocessed_checkbox.isChecked(),
+            "sweep": self.sweep_checkbox.isChecked(),
+            "save_graph_output": self.save_checkbox.isChecked(),
+            "save_directory": self.dir_input.text().strip()
+        }
+
+    
+
+class QueuedExperiment(QListWidgetItem):
+    def __init__(self, experiment: ExperimentType, queue_manager, last_used_directory=None):
+        super().__init__()
+        self.experiment = experiment
+        self.experiment_type = experiment.type
+        self.parameters = experiment.parameters
+        self.queue_manager = queue_manager
+        self.read_processed = False
+        self.read_unprocessed = False
+        self.sweep = False
+        self.valid = True #This is for the queue manager. It will only display and interact with QueuedExperiment objects that are valid
+
+        # Call dialog
+        dialog = ExperimentSetupDialog(self.experiment_type, self.parameters, last_used_directory)
+        if dialog.exec_() == QDialog.Rejected:
+            return  # Or handle deletion/cancellation outside
+
+        values = dialog.get_values()
+        self.display_name = values["display_name"]
+        self.read_processed = values["read_processed"]
+        self.read_unprocessed = values["read_unprocessed"]
+        self.sweep = values["sweep"]
+        self.save_graph_output = values["save_graph_output"]
+        self.save_directory = values["save_directory"]
+
+        # -- UI Setup --
+        self.widget = QWidget()
+        self.layout = QVBoxLayout(self.widget)
+
+        self.label = QLabel(f"{self.display_name} — {self.experiment_type}")
+        self.layout.addWidget(self.label)
+
+        # Button Row
+        self.button_row = QHBoxLayout()
+        self.change_queue_button = QPushButton("Move")
+        self.duplicate_button = QPushButton("Duplicate")
+        self.delete_button = QPushButton("Delete")
+        self.delete_button.clicked.connect(self.delete_self)
+        self.info_button = QPushButton("Info")
+        self.info_button.clicked.connect(self.show_info_popup)
+
+
+        self.button_row.addWidget(self.change_queue_button)
+        self.button_row.addWidget(self.duplicate_button)
+        self.button_row.addWidget(self.delete_button)
+        self.button_row.addWidget(self.info_button)
+        self.layout.addLayout(self.button_row)
+
+        self.widget.setMinimumSize(QSize(300, 80))
+        self.setSizeHint(self.widget.sizeHint())
+
+        self.queue_manager.add_to_working_queue(self)
+        # queue_manager.setItemWidget(self, self.widget)
+
+
+    def prompt_for_display_name(self):
+        text, ok = QInputDialog.getText(None, "Experiment Name", "Enter a name for this experiment:")
+        return text.strip() if ok and text.strip() else "Unnamed Experiment"
+
+    def show_info_popup(self):
+        dialog = ExperimentSetupDialog(
+            self.experiment_type,
+            self.parameters,
+            last_used_directory=self.save_directory,
+            edit_settings=True
+        )
+        if dialog.exec_() == QDialog.Accepted:
+            values = dialog.get_values()
+            self.display_name = values["display_name"]
+            self.read_processed = values["read_processed"]
+            self.read_unprocessed = values["read_unprocessed"]
+            self.sweep = values["sweep"]
+            self.save_graph_output = values["save_graph_output"]
+            self.save_directory = values["save_directory"]
+
+            # Update label in UI
+            self.label.setText(f"{self.display_name} — {self.experiment_type}")
+    
+    def delete_self(self):
+        """
+        Removes this item from the QListWidget and deletes its resources.
+        """
+        row = self.queue_manager.row(self)
+        if row != -1:
+            self.queue_manager.takeItem(row)
+            del self.widget
+            del self.experiment
+
+    def init_experiment(self):
+        """
+        Should be called by the parent list or queue manager.
+        Sets up internal state and initializes hardware logic.
+        """
+        self.experiment.set_parameters(self.parameters)
+        self.experiment.init_pyscan_experiment()
+
+
+
 
 def main():
     app = QApplication(sys.argv)
     ex = ExperimentUI()
     ex.showFullScreen()
     sys.exit(app.exec_())
-
     
 if __name__ == "__main__":
     main()
