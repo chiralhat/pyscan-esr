@@ -36,13 +36,14 @@ class PulseSweepExperiment:
 
         setup_experiment(parameters, devices, sweep, soc)
 
-    def single_shot(self, sig, config, soc):
+    def read_processed(self, sig, config, soc):
         """
         Run a single decay experiment and plot the result with exponential fit.
         """
         prog = CPMGProgram(soc, config)
         measure_decay(prog, soc, sig)
         freq = config['freq']
+        sig.freq = freq
 
         # Fit the decay and annotate
         ax = self.canvas_widget.figure.add_subplot(111)
@@ -50,9 +51,9 @@ class PulseSweepExperiment:
         sig.fit = fit
 
         # Update plot with fitting overlay
-        self.update_plot(sig, fit=fit, freq=freq)
+        #self.canvas_widget.update_canvas(sig, fit=fit, freq=freq)
 
-        QApplication.processEvents()
+        #QApplication.processEvents()
 
     def read_unprocessed(self, sig, config, soc):
         """
@@ -62,22 +63,22 @@ class PulseSweepExperiment:
         config['soft_avgs'] = 1
         prog = CPMGProgram(soc, config)
         measure_phase(prog, soc, sig)
-        self.update_plot(sig)
-        QApplication.processEvents()
-        print("Just about to return from read_unprocessed")
+        sig.fit = None
+        sig.freq = None
+        #self.canvas_widget.update_canvas(sig)
+        #QApplication.processEvents()
 
-    def update_plot(self, sig, fit=None, freq=None):
-        """
-        Update canvas plot: raw or with fitted curve.
-        """
-        print("updating plot")
-        self.time_data.append(sig.time)
-        self.x_data.append(sig.x)
+    # def update_plot(self, sig, fit=None, freq=None):
+    #     """
+    #     Update canvas plot: raw or with fitted curve.
+    #     """
+    #     self.time_data.append(sig.time)
+    #     self.x_data.append(sig.x)
 
-        time = np.concatenate(self.time_data)
-        x = np.concatenate(self.x_data)
+    #     time = np.concatenate(self.time_data)
+    #     x = np.concatenate(self.x_data)
 
-        self.canvas_widget.update_canvas_psweep(time, x, fit=fit, freq=freq)
+    #     self.canvas_widget.update_canvas_psweep(time, x, fit=fit, freq=freq)
 
     def get_layout(self):
         """

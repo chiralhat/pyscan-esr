@@ -47,13 +47,13 @@ class SpinechoExperiment:
         config['soft_avgs'] = 1
         prog = CPMGProgram(soc, config)
         measure_phase(prog, soc, sig)
-
+        
         # Update data for plotting
-        self.update_plot(sig)
-        QApplication.processEvents()
+        #self.canvas_widget.update_canvas_se(sig)
+        #QApplication.processEvents()
 
-        config['single'] = single
-        config['soft_avgs'] = avgs
+        # config['single'] = single
+        # config['soft_avgs'] = avgs
 
     def read_processed(self, sig, config, soc):
         """
@@ -65,28 +65,28 @@ class SpinechoExperiment:
         measure_phase(prog, soc, sig)
 
         # Update data for plotting
-        self.update_plot(sig)
+        #self.canvas_widget.update_canvas_se(sig)
 
         config['single'] = single
     
-    def update_plot(self, sig):
-        """
-        Update the plot with the data from the experiment.
-        """
-        # Append new data from the current experiment
-        self.time_data.append(sig.time)
-        self.i_data.append(sig.i)
-        self.q_data.append(sig.q)
-        self.x_data.append(sig.x)
+    # def update_plot(self, sig):
+    #     """
+    #     Update the plot with the data from the experiment.
+    #     """
+    #     # Append new data from the current experiment
+    #     self.time_data.append(sig.time)
+    #     self.i_data.append(sig.i)
+    #     self.q_data.append(sig.q)
+    #     self.x_data.append(sig.x)
 
-        # Flatten the lists for plotting
-        time = np.concatenate(self.time_data)
-        i = np.concatenate(self.i_data)
-        q = np.concatenate(self.q_data)
-        x = np.concatenate(self.x_data)
+    #     # Flatten the lists for plotting
+    #     time = np.concatenate(self.time_data)
+    #     i = np.concatenate(self.i_data)
+    #     q = np.concatenate(self.q_data)
+    #     x = np.concatenate(self.x_data)
 
-        # Update the canvas with the new data
-        self.canvas_widget.update_canvas_se(time, i, q, x)
+    #     # Update the canvas with the new data
+    #     self.canvas_widget.update_canvas_se(time, i, q, x)
 
     def get_layout(self):
         """

@@ -264,6 +264,8 @@ class Worker(QObject):
     finished = pyqtSignal()         # Signal emitted when the worker is completely done
     updateStatus = pyqtSignal(str)  # Emit messages that the main thread can display
     plot_update_signal = pyqtSignal(object)  # to pass colormesh
+    dataReady_se = pyqtSignal(object)
+    dataReady_ps = pyqtSignal(object)
 
     def __init__(self, experiment, task_name):
         super().__init__()
@@ -279,14 +281,27 @@ class Worker(QObject):
         """
         if self.task_name == "read_processed":
             self.updateStatus.emit("Reading processed data...\n")
-            self.experiment.read_processed()
+            if self.experiment.type == "Spin Echo":
+                self.experiment.spinecho_gui.read_processed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
+            elif self.experiment.type == "Pulse Frequency Sweep":
+                self.experiment.pulsesweep_gui.read_processed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
             self.updateStatus.emit("Done reading processed data.\n")
+
         elif self.task_name == "read_unprocessed":
             self.updateStatus.emit("Reading unprocessed data...\n")
-            self.experiment.read_unprocessed()  
+            if self.experiment.type == "Spin Echo":
+                self.experiment.spinecho_gui.read_unprocessed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
+            elif self.experiment.type == "Pulse Frequency Sweep":
+                self.experiment.pulsesweep_gui.read_unprocessed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
             self.updateStatus.emit("Done reading unprocessed data.\n")
 
+        if self.experiment.type == "Spin Echo":
+            self.dataReady_se.emit(self.experiment.sig)
+        elif self.experiment.type == "Pulse Frequency Sweep":
+            self.dataReady_ps.emit(self.experiment.sig)
+
         self.finished.emit()
+
     
     @pyqtSlot()
     def run_sweep(self):
@@ -410,8 +425,15 @@ class GraphWidget(QWidget):
         # You can implement this if needed
         pass
 
-    def update_canvas_se(self, time, i, q, x):
+    def update_canvas_se(self, sig):
         """Clears the current plot and renders new data traces for CH1, CH2, and amplitude."""
+
+        # Flatten the lists for plotting
+        time = sig.time
+        i = sig.i
+        q = sig.q
+        x = sig.x
+        
         self.ax.clear()
         self.ax.plot(time, i, label='CH1', color='yellow')
         self.ax.plot(time, q, label='CH2', color='blue')
@@ -421,29 +443,46 @@ class GraphWidget(QWidget):
         self.ax.legend()
         self.canvas.draw()
     
-    def update_canvas_psweep(self, time, x, fit=None, freq=None):
+    def update_canvas_psweep(self, sig):
         print("drawing the graph now")
-        print("Matplotlib backend:", matplotlib.get_backend())  # should say 'Qt5Agg'
+
+        time = sig.time
+        i = sig.i
+        q = sig.q
+        x = sig.x
+
+        # EXISTING UPDATE CANVAS CODE BELOW
         self.ax.clear()
 
         # Plot raw signal
         self.ax.plot(time, x, color='g', label='AMP')
 
-        if fit is not None:
-            fit_curve = fit[0](time, *fit[1:])
+        if sig.fit is not None:
+            # Read processed
+            fit_curve = sig.fit[0](time, *sig.fit[1:])
             self.ax.plot(time, fit_curve, 'r--', label='Exp Fit')
 
-            A, T, Q = fit[1], fit[2], fit[-1]
+            A, T, Q = sig.fit[1], sig.fit[2], sig.fit[-1]
             xpt = time[len(time) // 5] / 2
             ypt = max(x) * np.array([0.75, 0.65])
             self.ax.text(xpt, ypt[0], f"A={A:.3g} V, T={T:.3g} μs, Q={Q:.3g}")
-            if freq is not None:
-                self.ax.text(xpt, ypt[1], f"freq (MHz): {freq:.3f}")
+            if sig.freq is not None:
+                self.ax.text(xpt, ypt[1], f"freq (MHz): {sig.freq:.3f}")
+        else:
+            # Read unprocessed
+            self.ax.plot(time, i, color='yellow', label='CH1')
+            self.ax.plot(time, q, color='b', label='CH2')
+            self.ax.plot(time, x, color='g', label='AMP')
+
+        print(f"time: {time.shape}, x: {x.shape}")
+        print(f"fit is None? {sig.fit is None}")
 
         self.ax.set_xlabel('Time (μs)')
         self.ax.set_ylabel('Signal (a.u.)')
         self.ax.legend()
         self.canvas.draw()
+        print("canvas is visible?", self.canvas.isVisible())
+        print("done drawing")
     
     def show_context_menu(self, pos):
         menu = QMenu()
@@ -619,7 +658,7 @@ class ExperimentType(QObject):
     plot_update_signal = pyqtSignal()  # signal with no arguments
     def __init__(self, exp_type):
         super().__init__()
-        self.type = type #The name of the experiment type (e.g., 'Spin Echo'). NONE by default
+        self.type = exp_type #The name of the experiment type (e.g., 'Spin Echo'). NONE by default
         
         #harware releated:
         self.soc = QickSoc() #Hardware interface for the RFSoC system.
@@ -709,24 +748,6 @@ class ExperimentType(QObject):
         else:
             self.init_pyscan_experiment()
 
-    def read_processed(self):
-        """"
-        Takes a snapshot of the current state and processes it before displaying it
-        """
-        if self.type == "Spin Echo":
-            self.spinecho_gui.read_processed(self.sig, self.parameters, self.soc)
-        elif self.type == "Pulse Frequency Sweep":
-            self.pulsesweep_gui.read_processed(self.sig, self.parameters, self.soc)
-            
-    def read_unprocessed(self):
-        """"
-        Takes a snapshot of the current state and doesn't process it before display it
-        """
-        if self.type == "Spin Echo":
-            self.spinecho_gui.read_unprocessed(self.sig, self.parameters, self.soc)
-        elif self.type == "Pulse Frequency Sweep":
-            self.pulsesweep_gui.read_unprocessed(self.sig, self.parameters, self.soc)
-
     def emit_plot_update(self):
         try:
             colormesh = ps.plot2D(self.sweep['expt'], x_name='t', transpose=1)
@@ -739,8 +760,6 @@ class ExperimentType(QObject):
         self.sweep['expt'].start_time = time()
         self.sweep['expt'].start_thread()
         
-        # Use a QTimer or separate thread to wait before plotting
-        QTimer.singleShot(20000, self.emit_plot_update)  # wait 20s
         
     
     def start_sweep(self):
@@ -872,7 +891,6 @@ class ExperimentUI(QMainWindow):
         #setup for graph saving
         self.last_saved_graph_path = None
         
-        self.current_experiment.plot_update_signal.connect(self.update_plot)
 
         self.queue_manager = QueueManager()
 #         # Create a timer to refresh the sweep plot so it plots live
@@ -991,7 +1009,7 @@ class ExperimentUI(QMainWindow):
         
         # NEW: adds the current experiment graph to the layout
         graph_layout.addWidget(self.current_experiment.graph)
-        graph_layout.addWidget(self.current_experiment.sweep_graph)
+        #graph_layout.addWidget(self.current_experiment.sweep_graph)
 
         # Save graph button
         self.save_graph_btn = QPushButton("Save Graph As...")
@@ -1221,6 +1239,16 @@ class ExperimentUI(QMainWindow):
             self.experiment_templates.get(experiment_type, {"groups": {}})
         )
 
+        # Remove the old graph widget from the layout
+        graph_layout = self.graphs_panel.layout()
+        if graph_layout.count() > 0:
+            old_graph_widget = graph_layout.itemAt(0).widget()
+            graph_layout.removeWidget(old_graph_widget)
+            old_graph_widget.setParent(None)  # Disconnect it from the layout
+
+        # Add the new graph widget
+        graph_layout.insertWidget(0, self.current_experiment.graph)        
+
         # Re-disable action buttons until user clicks "Initialize"
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
@@ -1324,11 +1352,15 @@ class ExperimentUI(QMainWindow):
 
         # --- Connect signals and slots ---
         self.thread.started.connect(self.worker.run_snapshot)
-        # Worker sends us status messages
+
         self.worker.updateStatus.connect(self.on_worker_status_update)
-        # When finished, the worker signals us to stop the thread
+
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
+
+        self.worker.dataReady_se.connect(self.current_experiment.graph.update_canvas_se)
+        self.worker.dataReady_ps.connect(self.current_experiment.graph.update_canvas_psweep)
+
         self.thread.finished.connect(self.thread.deleteLater)
 
         # --- Start the thread ---
@@ -1375,6 +1407,10 @@ class ExperimentUI(QMainWindow):
         self.worker.updateStatus.connect(self.on_worker_status_update)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
+        
+        self.worker.dataReady_se.connect(self.current_experiment.graph.update_canvas_se)
+        self.worker.dataReady_ps.connect(self.current_experiment.graph.update_canvas_psweep)
+
         self.thread.finished.connect(self.thread.deleteLater)
 
         self.thread.start()
