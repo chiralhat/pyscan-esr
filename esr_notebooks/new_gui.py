@@ -25,14 +25,10 @@ from time import sleep, time
 from datetime import date, datetime
 import io
 from pathlib import Path
-from pulsesweep_gui import *
-from spinecho_gui import *
 import pickle
 import pyvisa
 import pulsesweep_scripts
 import spinecho_scripts
-import pulsesweep_gui as psg
-import spinecho_gui as seg
 import pyscan as ps
 import os
 
@@ -268,12 +264,14 @@ class Worker(QObject):
     plot_update_signal = pyqtSignal(object)  # to pass colormesh
     dataReady_se = pyqtSignal(object, object)
     dataReady_ps = pyqtSignal(object, object)
+    live_plot_update_signal = pyqtSignal(object)   
+
 
     def __init__(self, experiment, task_name):
         super().__init__()
         self.experiment = experiment
         self.task_name = task_name
-        self._stop_requested = False  
+        self.stop_requested = False  
 
     @pyqtSlot()
     def run_snapshot(self):
@@ -285,7 +283,6 @@ class Worker(QObject):
         if self.task_name == "read_processed":
             self.updateStatus.emit("Reading processed data...\n")
             if self.experiment.type == "Spin Echo":
-                #self.experiment.spinecho_gui.read_processed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
                 single = self.experiment.parameters['single']
                 self.experiment.parameters['single'] = self.experiment.parameters['loopback']
                 prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
@@ -297,15 +294,12 @@ class Worker(QObject):
                 prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
                 measure_decay(prog, self.experiment.soc, self.experiment.sig)
                 freq = self.experiment.parameters['freq']
-
                 self.experiment.sig.freq = freq
-                #self.experiment.pulsesweep_gui.read_processed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
             self.updateStatus.emit("Done reading processed data.\n")
 
         elif self.task_name == "read_unprocessed":
             self.updateStatus.emit("Reading unprocessed data...\n")
             if self.experiment.type == "Spin Echo":
-                #self.experiment.spinecho_gui.read_unprocessed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
                 single = self.experiment.parameters['single']
                 avgs = self.experiment.parameters['soft_avgs']
                 self.experiment.parameters['single'] = True
@@ -316,12 +310,12 @@ class Worker(QObject):
 
                 self.experiment.parameters['single'] = single
                 self.experiment.parameters['soft_avgs'] = avgs
+            
             elif self.experiment.type == "Pulse Frequency Sweep":
                 self.experiment.parameters['single'] = True
                 self.experiment.parameters['soft_avgs'] = 1
                 prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
                 measure_phase(prog, self.experiment.soc, self.experiment.sig)
-                #self.experiment.pulsesweep_gui.read_unprocessed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
             self.updateStatus.emit("Done reading unprocessed data.\n")
 
         if self.experiment.type == "Spin Echo":
@@ -339,23 +333,30 @@ class Worker(QObject):
         if the sweep is over (killing the QT thread if so). 
         """
         self.updateStatus.emit("Starting sweep in worker thread...\n")
-        self._stop_requested = False
+        self.stop_requested = False
+        self.running = True
 
         self.experiment.start_sweep()
+        expt = self.experiment.sweep['expt']
+        
+
         self.updateStatus.emit("Sweeping...\n")
-
-        for i in range(1000000):
+        while self.stop_requested == False and self.running == True:
             if self.experiment.sweep['expt'].runinfo.running == False:
-                self._stop_requested = True
-
-            if self._stop_requested:
-                break  
-
+                self.running = False
+            elif expt.runinfo.measured != []:
+                
+                pg = ps.PlotGenerator(expt=expt,
+                                        d=2,
+                                        x_name='t',
+                                        y_name=self.experiment.parameters['y_name'],
+                                        transpose=1)
+                self.live_plot_update_signal.emit(pg)                     
             sleep(1)  
 
-        if self._stop_requested:
+        if self.stop_requested:
             self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
-        else:
+        elif self.running == False:
             self.updateStatus.emit("Done sweeping (normal exit).\n")
 
         self.finished.emit()
@@ -365,23 +366,9 @@ class Worker(QObject):
         """
         Slot to request the worker to stop. Sets a flag that can be checked in the run_sweep method, killing the thread.
         """
-        self._stop_requested = True
-    
-#     @pyqtSlot(object)
-#     def update_plot(self, colormesh):
-#         self.sweep_graph.ax.clear()
-#         self.sweep_graph.ax.set_title("Sweep Result")
-
-#         # Plot new data
-#         mesh = colormesh  # already a QuadMesh from ps.plot2D
-
-#         # Add colorbar safely
-#         self.sweep_graph.figure.colorbar(mesh, ax=self.sweep_graph.ax)
-
-#         # Redraw canvas
-#         self.sweep_graph.canvas.draw()
-
-
+        self.stop_requested = True
+        if 'expt' in self.experiment.sweep:
+            self.experiment.sweep['expt'].runinfo.running = False
 
 class DualStream:
     """ A custom stream handler that writes output to both the terminal and a QTextEdit widget.
@@ -450,10 +437,6 @@ class GraphWidget(QWidget):
         self.canvas.setContextMenuPolicy(Qt.CustomContextMenu)
         self.canvas.customContextMenuRequested.connect(self.show_context_menu)
 
-    def show_context_menu(self, position):
-        # You can implement this if needed
-        pass
-
     def update_canvas_se(self, sig, task_name):
         """Clears the current plot and renders new data traces for CH1, CH2, and amplitude."""
 
@@ -489,7 +472,9 @@ class GraphWidget(QWidget):
             self.ax.text(xpt, ypt[0], fitstr)
             self.ax.text(xpt, ypt[1], freqstr)
         elif task_name == "read_unprocessed":
+            # Read unprocessed
 
+            # Plot
             self.ax.plot(sig.time, sig.i, color='yellow', label='CH1')
             self.ax.plot(sig.time, sig.q, color='b', label='CH2')
             self.ax.plot(sig.time, sig.x, color='g', label='AMP')
@@ -528,6 +513,7 @@ class SweepPlotWidget(QWidget):
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
         self.ax = self.figure.add_subplot(111)
+        self.colorbar = None
 
         self.xdata = []
         self.ydata = []
@@ -536,7 +522,41 @@ class SweepPlotWidget(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self.canvas)
         self.setLayout(layout)
+
+    @pyqtSlot(object)
+    def on_live_plot(self, pg):
+        ax = self.ax
+        ax.clear()
+
+        if pg.data.size == 0:
+            print("No data to plot yet.")
+            return
+
+        # Remove existing colorbar cleanly
+        if self.colorbar:
+            self.colorbar.remove()
+            self.colorbar = None
+
+        print(f"x shape: {pg.x.shape}, y shape: {pg.y.shape}, data shape: {pg.data.shape}")
         
+        # Plot data
+        mesh = ax.pcolormesh(
+            pg.x,
+            pg.y,
+            pg.data.T,
+            shading='auto',
+            vmin=pg.get_data_range()[0],
+            vmax=pg.get_data_range()[1]
+        )
+
+        # Store reference to new colorbar
+        self.colorbar = self.figure.colorbar(mesh, ax=ax)
+
+        ax.set_title(pg.get_title())
+        ax.set_xlabel(pg.get_xlabel())
+        ax.set_ylabel(pg.get_ylabel())
+        self.canvas.draw()
+            
 
 class DynamicSettingsPanel(QWidget):
     """A QWidget-based panel that dynamically generates a settings tree from a configuration template.
@@ -797,22 +817,10 @@ class ExperimentType(QObject):
         else:
             self.init_pyscan_experiment()
 
-    def emit_plot_update(self):
-        try:
-            colormesh = ps.plot2D(self.sweep['expt'], x_name='t', transpose=1)
-            self.plot_update_signal.emit(colormesh)
-        except Exception as e:
-            print("Plot update failed:", e)
-            
-    def run_sweep(self):#, output, fig):
-        """actually runs a sweep"""
-        self.sweep['expt'].start_time = time()
-        self.sweep['expt'].start_thread()
-        
-        
     
     def start_sweep(self):
         """starts up the hardware to run a sweep and runs a sweep"""
+        
         self.sweep_running = True
         runinfo = self.sweep['runinfo']
         expt = ps.Sweep(runinfo, self.devices, self.sweep['name'])
@@ -829,59 +837,10 @@ class ExperimentType(QObject):
             self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan1.scan_dict['cpmg_sweep']
         else:
             self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
-        self.run_sweep()
-        
+        self.sweep['expt'].start_time = time()
+        self.sweep['expt'].start_thread()
 
-    def stop_sweep(self):
-        """Stops a sweep that is currently running"""
-        if 'expt' in self.sweep.keys():
-            self.sweep['expt'].runinfo.running = False
-            
-#     def copy_hdf5_safely(source_path, dest_path):
-#         try:
-#             shutil.copy2(source_path, dest_path)
-#             return True
-#         except Exception as e:
-#             print("Copy error:", e)
-#             return False
-            
-#     def update_sweep_plot(self):
-#         print("Sweep is running — updating plot")
-
-#         # Find latest file
-#         original = get_latest_hdf5_file("250415_Hahn_looptest")
-#         if original is None:
-#             print("No HDF5 file found yet")
-#             return
-
-#         # Copy to temp
-#         temp_copy = "temp_sweep_copy.hdf5"
-#         if copy_hdf5_safely(original, temp_copy):
-#             # Plot from the temp file
-#         try:
-#             with h5py.File(file_path, 'r') as f:
-#                 x = np.array(f['delay_sweep'])   # y-axis
-#                 y = np.array(f['time'])          # x-axis
-#                 z = np.array(f['x'])             # data
-
-#             # Clean data
-#             z = np.ma.masked_invalid(z)
-
-#             ax.clear()
-#             im = ax.imshow(
-#                 z.T,  # transpose to match live_plot2D
-#                 extent=[x.min(), x.max(), y.min(), y.max()],
-#                 aspect='auto',
-#                 origin='lower'
-#             )
-#             ax.set_xlabel('delay_sweep')
-#             ax.set_ylabel('time')
-#             canvas.draw()
-#         except Exception as e:
-#             print("Live plot HDF5 error:", e)
-            
           
-        
     def hardware_off(self):
         """
         turns off the hardware 
@@ -1057,8 +1016,8 @@ class ExperimentUI(QMainWindow):
         graph_layout.setContentsMargins(75, 50, 75, 50)
         
         # NEW: adds the current experiment graph to the layout
-        graph_layout.addWidget(self.current_experiment.graph)
-        #graph_layout.addWidget(self.current_experiment.sweep_graph)
+        #graph_layout.addWidget(self.current_experiment.graph)
+        graph_layout.addWidget(self.current_experiment.sweep_graph)
 
         # Save graph button
         self.save_graph_btn = QPushButton("Save Graph As...")
@@ -1279,7 +1238,9 @@ class ExperimentUI(QMainWindow):
         return settings_scroll
 
     def change_experiment_type(self, experiment_type):
-        self.current_experiment.stop_sweep()
+        if hasattr(self, 'worker'):
+            self.worker.stop_sweep()
+            self.indicator_sweep.setStyleSheet("background-color: grey; border: 1px solid black; border-radius: 5px;")
         print("Changing experiment type to " + experiment_type + "...\n")
         self.current_experiment = self.experiments[experiment_type]
         self.temp_parameters = {}
@@ -1495,19 +1456,13 @@ class ExperimentUI(QMainWindow):
             self.indicator_sweep.setStyleSheet("background-color: red; border: 1px solid black; border-radius: 5px;")
             self.sweep_start_stop_btn.setText("Stop Sweep")
 
-            # Create QThread
             self.thread = QThread(self)
-            # Create Worker, pass in experiment
             self.worker = Worker(self.current_experiment, "sweep")
-            # Move worker to thread
             self.worker.moveToThread(self.thread)
 
-            # Connect signals
-            # When thread starts, call worker.run_sweep
             self.thread.started.connect(self.worker.run_sweep)
-            # If the worker emits updateStatus, call on_worker_status_update
+            self.worker.live_plot_update_signal.connect(self.current_experiment.sweep_graph.on_live_plot)
             self.worker.updateStatus.connect(self.on_worker_status_update)
-            # Worker emits finished -> kill thread
             self.worker.finished.connect(self.thread.quit)
             self.worker.finished.connect(self.worker.deleteLater)
             self.thread.finished.connect(self.thread.deleteLater)
@@ -1529,23 +1484,16 @@ class ExperimentUI(QMainWindow):
                 self.is_process_running = False
 
             self.worker.finished.connect(reset_indicator)
-
-            # Start the thread
-            self.thread.start()
-            
-#             # Start the plot update timer AFTER sweep starts
-#             if not hasattr(self, 'plot_timer'):
-#                 self.plot_timer = QTimer()
-#                 self.plot_timer.timeout.connect(self.refresh_sweep_plot)
-
-#             self.plot_timer.start(1000)  # Update every 1 second
+            self.thread.start()            
 
         else:
-            self.sweep_start_stop_btn.setText("Start Sweep")
             if hasattr(self, 'worker'):
+                print("Stopping sweep...")
                 self.worker.stop_sweep()
-            
-                self.indicator_sweep.setStyleSheet("background-color: grey; border: 1px solid black; border-radius: 5px;")
+                print("Sweep stopped")
+            self.indicator_sweep.setStyleSheet("background-color: grey; border: 1px solid black; border-radius: 5px;")
+            self.sweep_start_stop_btn.setText("Start Sweep")
+
 
 
     def hardware_off_frontend(self):
@@ -1562,40 +1510,7 @@ class ExperimentUI(QMainWindow):
         and can display them in the log area or console.
         """
         print(message) 
-        
-#     @pyqtSlot()
-#     def refresh_sweep_plot(self):
-#         if self.current_experiment.sweep["expt"].runinfo.running:
-#             self.current_experiment.update_sweep_plot()
-#             print("Sweep is running — updating plot")
-#         else:
-#             print("Sweep not running — stopping timer")
-#             self.plot_timer.stop()
-#     def refresh_sweep_plot(self):
-#         print("Timer fired")
-#         expt = self.current_experiment.sweep.get('expt')
-#         if expt and hasattr(expt, 'runinfo') and expt.runinfo.running:
-#             print("Sweep is running — updating plot")
-#             self.current_experiment.update_sweep_plot(expt)
-#         else:
-#             print("Sweep not running — stopping timer")
-#             self.plot_timer.stop()
    
-    def update_plot(self):
-        """Slot to update the sweep plot when the experiment emits a signal."""
-        if hasattr(self.current_experiment, 'sweep') and 'expt' in self.current_experiment.sweep:
-            self.sweep_graph.ax.clear()
-            try:
-                colormesh = ps.plot2D(
-                    self.current_experiment.sweep['expt'],
-                    x_name='t',
-                    transpose=1,
-                    ax=self.sweep_graph.ax
-                )
-                self.sweep_graph.colorbar(colormesh, ax=self.sweep_graph.ax)
-                self.canvas.draw()
-            except Exception as e:
-                print(f"Live plot update error: {e}")
             
     def save_current_graph(self):
         options = QFileDialog.Options()
