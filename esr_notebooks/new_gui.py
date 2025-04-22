@@ -30,6 +30,7 @@ from spinecho_gui import *
 import pickle
 import pyvisa
 import pulsesweep_scripts
+import spinecho_scripts
 import pulsesweep_gui as psg
 import spinecho_gui as seg
 import pyscan as ps
@@ -265,7 +266,7 @@ class Worker(QObject):
     finished = pyqtSignal()         # Signal emitted when the worker is completely done
     updateStatus = pyqtSignal(str)  # Emit messages that the main thread can display
     plot_update_signal = pyqtSignal(object)  # to pass colormesh
-    dataReady_se = pyqtSignal(object)
+    dataReady_se = pyqtSignal(object, object)
     dataReady_ps = pyqtSignal(object, object)
 
     def __init__(self, experiment, task_name):
@@ -284,7 +285,14 @@ class Worker(QObject):
         if self.task_name == "read_processed":
             self.updateStatus.emit("Reading processed data...\n")
             if self.experiment.type == "Spin Echo":
-                self.experiment.spinecho_gui.read_processed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
+                #self.experiment.spinecho_gui.read_processed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
+                single = self.experiment.parameters['single']
+                self.experiment.parameters['single'] = self.experiment.parameters['loopback']
+                prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
+
+                measure_phase(prog, self.experiment.soc, self.experiment.sig)
+
+                self.experiment.parameters['single'] = single
             elif self.experiment.type == "Pulse Frequency Sweep":
                 prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
                 measure_decay(prog, self.experiment.soc, self.experiment.sig)
@@ -297,7 +305,17 @@ class Worker(QObject):
         elif self.task_name == "read_unprocessed":
             self.updateStatus.emit("Reading unprocessed data...\n")
             if self.experiment.type == "Spin Echo":
-                self.experiment.spinecho_gui.read_unprocessed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
+                #self.experiment.spinecho_gui.read_unprocessed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
+                single = self.experiment.parameters['single']
+                avgs = self.experiment.parameters['soft_avgs']
+                self.experiment.parameters['single'] = True
+                self.experiment.parameters['soft_avgs'] = 1
+                prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
+
+                measure_phase(prog, self.experiment.soc, self.experiment.sig)
+
+                self.experiment.parameters['single'] = single
+                self.experiment.parameters['soft_avgs'] = avgs
             elif self.experiment.type == "Pulse Frequency Sweep":
                 self.experiment.parameters['single'] = True
                 self.experiment.parameters['soft_avgs'] = 1
@@ -307,7 +325,7 @@ class Worker(QObject):
             self.updateStatus.emit("Done reading unprocessed data.\n")
 
         if self.experiment.type == "Spin Echo":
-            self.dataReady_se.emit(self.experiment.sig)
+            self.dataReady_se.emit(self.experiment.sig, self.task_name)
         elif self.experiment.type == "Pulse Frequency Sweep":
             self.dataReady_ps.emit(self.experiment.sig, self.task_name)
 
@@ -436,7 +454,7 @@ class GraphWidget(QWidget):
         # You can implement this if needed
         pass
 
-    def update_canvas_se(self, sig):
+    def update_canvas_se(self, sig, task_name):
         """Clears the current plot and renders new data traces for CH1, CH2, and amplitude."""
 
         # Flatten the lists for plotting
@@ -471,9 +489,7 @@ class GraphWidget(QWidget):
             self.ax.text(xpt, ypt[0], fitstr)
             self.ax.text(xpt, ypt[1], freqstr)
         elif task_name == "read_unprocessed":
-            # Read unprocessed
 
-            # Plot
             self.ax.plot(sig.time, sig.i, color='yellow', label='CH1')
             self.ax.plot(sig.time, sig.q, color='b', label='CH2')
             self.ax.plot(sig.time, sig.x, color='g', label='AMP')
@@ -688,14 +704,26 @@ class ExperimentType(QObject):
         """This initializes a pyscan experiment with functions from the correct 
         experiment type scripts and GUI files."""
         if self.type == "Spin Echo":
-            # NEW: created spinecho_gui objects from updated spinecho gui file
-            self.spinecho_gui = seg.SpinechoExperiment(self.graph)
-            self.spinecho_gui.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
+           # Initialize the experiment by setting up the parameters and devices.
+            self.parameters['pulse1_2'] = self.parameters['pulse1_1'] * self.parameters['mult1']
+            self.parameters['pi2_phase'] = 0
+            self.parameters['pi_phase'] = 90
+            self.parameters['cpmg_phase'] = 0
+            channel = 1 if self.parameters['loopback'] else 0
+            self.parameters['res_ch'] = channel
+            self.parameters['ro_chs'] = [channel]
+            self.parameters['reps'] = 1
+            self.parameters['single'] = self.parameters['loopback']
+            
+            if self.parameters['use_psu'] and not self.parameters['loopback']:
+                self.devices.psu.set_magnet(self.parameters)
+            
+            spinecho_scripts.setup_experiment(self.parameters, self.devices, self.sweep, self.soc) #From ______scripts.py
+            #self.spinecho_gui = seg.SpinechoExperiment(self.graph)
+            #self.spinecho_gui.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
         elif self.type == "Pulse Frequency Sweep":
-            self.pulsesweep_gui = psg.PulseSweepExperiment(self.graph)
-            """
-            Initialize experiment parameters and devices.
-            """
+            #self.pulsesweep_gui = psg.PulseSweepExperiment(self.graph)
+            # Initialize experiment parameters and devices.
             self.parameters['pulses'] = 0
             self.parameters['pulse1_2'] = self.parameters['pulse1_1']
             self.parameters['pi2_phase'] = 0
