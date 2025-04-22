@@ -46,7 +46,6 @@ class PulseSweepExperiment:
         sig.freq = freq
 
         # Fit the decay and annotate
-        ax = self.canvas_widget.figure.add_subplot(111)
         fit, err = ps.plot_exp_fit_norange(np.array([sig.time, sig.x]), freq, 1, plt=ax)
         sig.fit = fit
 

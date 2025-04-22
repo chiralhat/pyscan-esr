@@ -265,7 +265,7 @@ class Worker(QObject):
     updateStatus = pyqtSignal(str)  # Emit messages that the main thread can display
     plot_update_signal = pyqtSignal(object)  # to pass colormesh
     dataReady_se = pyqtSignal(object)
-    dataReady_ps = pyqtSignal(object)
+    dataReady_ps = pyqtSignal(object, object)
 
     def __init__(self, experiment, task_name):
         super().__init__()
@@ -279,12 +279,18 @@ class Worker(QObject):
         Runs the desired method on the experiment in this separate thread
         so the main GUI thread won't freeze.
         """
+
         if self.task_name == "read_processed":
             self.updateStatus.emit("Reading processed data...\n")
             if self.experiment.type == "Spin Echo":
                 self.experiment.spinecho_gui.read_processed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
             elif self.experiment.type == "Pulse Frequency Sweep":
-                self.experiment.pulsesweep_gui.read_processed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
+                prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
+                measure_decay(prog, self.experiment.soc, self.experiment.sig)
+                freq = self.experiment.parameters['freq']
+
+                self.experiment.sig.freq = freq
+                #self.experiment.pulsesweep_gui.read_processed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
             self.updateStatus.emit("Done reading processed data.\n")
 
         elif self.task_name == "read_unprocessed":
@@ -292,13 +298,17 @@ class Worker(QObject):
             if self.experiment.type == "Spin Echo":
                 self.experiment.spinecho_gui.read_unprocessed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
             elif self.experiment.type == "Pulse Frequency Sweep":
-                self.experiment.pulsesweep_gui.read_unprocessed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
+                self.experiment.parameters['single'] = True
+                self.experiment.parameters['soft_avgs'] = 1
+                prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
+                measure_phase(prog, self.experiment.soc, self.experiment.sig)
+                #self.experiment.pulsesweep_gui.read_unprocessed(self.experiment.sig, self.experiment.parameters, self.experiment.soc)
             self.updateStatus.emit("Done reading unprocessed data.\n")
 
         if self.experiment.type == "Spin Echo":
             self.dataReady_se.emit(self.experiment.sig)
         elif self.experiment.type == "Pulse Frequency Sweep":
-            self.dataReady_ps.emit(self.experiment.sig)
+            self.dataReady_ps.emit(self.experiment.sig, self.task_name)
 
         self.finished.emit()
 
@@ -443,39 +453,29 @@ class GraphWidget(QWidget):
         self.ax.legend()
         self.canvas.draw()
     
-    def update_canvas_psweep(self, sig):
+    def update_canvas_psweep(self, sig, task_name):
         print("drawing the graph now")
 
-        time = sig.time
-        i = sig.i
-        q = sig.q
-        x = sig.x
-
-        # EXISTING UPDATE CANVAS CODE BELOW
         self.ax.clear()
 
-        # Plot raw signal
-        self.ax.plot(time, x, color='g', label='AMP')
+        if task_name == "read_processed":
+            fit, err = ps.plot_exp_fit_norange(np.array([sig.time, sig.x]), sig.freq, 1, plt=self.ax)
+            sig.fit = fit
 
-        if sig.fit is not None:
-            # Read processed
-            fit_curve = sig.fit[0](time, *sig.fit[1:])
-            self.ax.plot(time, fit_curve, 'r--', label='Exp Fit')
-
-            A, T, Q = sig.fit[1], sig.fit[2], sig.fit[-1]
-            xpt = time[len(time) // 5] / 2
-            ypt = max(x) * np.array([0.75, 0.65])
-            self.ax.text(xpt, ypt[0], f"A={A:.3g} V, T={T:.3g} μs, Q={Q:.3g}")
-            if sig.freq is not None:
-                self.ax.text(xpt, ypt[1], f"freq (MHz): {sig.freq:.3f}")
-        else:
+            fitstr = f'A={sig.fit[1]:.3g} V, t={sig.fit[2]:.3g} μs, Q={sig.fit[-1]:.3g}'
+            freqstr = f'freq (MHz): {sig.freq}'
+            #[ax.axvline(x=w*1e6, color='purple', ls='--') for w in win]
+            xpt = sig.time[len(sig.time)//5]/2
+            ypt = sig.x.max()*np.array([0.75, 0.65])
+            self.ax.text(xpt, ypt[0], fitstr)
+            self.ax.text(xpt, ypt[1], freqstr)
+        elif task_name == "read_unprocessed":
             # Read unprocessed
-            self.ax.plot(time, i, color='yellow', label='CH1')
-            self.ax.plot(time, q, color='b', label='CH2')
-            self.ax.plot(time, x, color='g', label='AMP')
 
-        print(f"time: {time.shape}, x: {x.shape}")
-        print(f"fit is None? {sig.fit is None}")
+            # Plot
+            self.ax.plot(sig.time, sig.i, color='yellow', label='CH1')
+            self.ax.plot(sig.time, sig.q, color='b', label='CH2')
+            self.ax.plot(sig.time, sig.x, color='g', label='AMP')
 
         self.ax.set_xlabel('Time (μs)')
         self.ax.set_ylabel('Signal (a.u.)')
