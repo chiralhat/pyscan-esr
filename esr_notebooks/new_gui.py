@@ -29,6 +29,7 @@ from pulsesweep_gui import *
 from spinecho_gui import *
 import pickle
 import pyvisa
+import pulsesweep_scripts
 import pulsesweep_gui as psg
 import spinecho_gui as seg
 import pyscan as ps
@@ -681,7 +682,6 @@ class ExperimentType(QObject):
 
         #Experiment objects that will be initialized later in self.init_pyscan_experiment
         self.spinecho_gui = None
-        self.pulsesweep_gui = None
         
 
     def init_pyscan_experiment(self):
@@ -693,7 +693,28 @@ class ExperimentType(QObject):
             self.spinecho_gui.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
         elif self.type == "Pulse Frequency Sweep":
             self.pulsesweep_gui = psg.PulseSweepExperiment(self.graph)
-            self.pulsesweep_gui.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
+            """
+            Initialize experiment parameters and devices.
+            """
+            self.parameters['pulses'] = 0
+            self.parameters['pulse1_2'] = self.parameters['pulse1_1']
+            self.parameters['pi2_phase'] = 0
+            self.parameters['pi_phase'] = 90
+            self.parameters['delay'] = 300
+            self.parameters['cpmg_phase'] = 0
+            channel = 1 if self.parameters['loopback'] else 0
+            self.parameters['res_ch'] = channel
+            self.parameters['ro_chs'] = [channel]
+            self.parameters['nutation_delay'] = 5000
+            self.parameters['nutation_length'] = 0
+            self.parameters['reps'] = 1
+            self.parameters['sweep2'] = 0
+
+            if self.parameters['use_psu']:
+                self.devices.psu.set_magnet(self.parameters)
+
+            pulsesweep_scripts.setup_experiment(self.parameters, self.devices, self.sweep, self.soc)
+            #self.pulsesweep_gui.init_experiment(self.devices, self.parameters, self.sweep, self.soc)
 
     def set_parameters(self, parameters):
         """Takes in parameters read from the settings panel in the UI, 
