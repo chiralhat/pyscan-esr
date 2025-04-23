@@ -1669,7 +1669,7 @@ class ExperimentSetupDialog(QDialog):
         self.name_label = QLabel("Experiment Name:")
         self.name_input = QLineEdit()
         # default_name = f"{experiment_type.lower()}:{parameters.get('expt', 'unnamed').lower()}"
-        default_name = "Poopoo Peepee"
+        default_name = "default name"
         self.name_input.setText(default_name)
         left_box.addWidget(self.name_label)
         left_box.addWidget(self.name_input)
