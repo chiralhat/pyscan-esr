@@ -873,6 +873,7 @@ class ExperimentUI(QMainWindow):
 
         # Create main UI elements
         self.settings_panel = DynamicSettingsPanel() 
+        self.queue_manager = QueueManager()
         self.graphs_panel = self.init_graphs_panel()
         self.error_log = self.init_error_log_widget()
         self.top_menu_bar = self.init_top_menu_bar()
@@ -899,8 +900,6 @@ class ExperimentUI(QMainWindow):
         #setup for graph saving
         self.last_saved_graph_path = None
         
-
-        self.queue_manager = QueueManager()
 #         # Create a timer to refresh the sweep plot so it plots live
 #         self.plot_timer = QTimer(self)
 #         self.plot_timer.timeout.connect(self.refresh_sweep_plot)
@@ -951,7 +950,6 @@ class ExperimentUI(QMainWindow):
         left_container.addWidget(self.settings_panel)
 
         # Wrap the queue manager in a wrapper widget to enforce max height when expanded
-        self.queue_manager = QueueManager()
         queue_wrapper = QWidget()
         queue_layout = QVBoxLayout(queue_wrapper)
         queue_layout.setContentsMargins(0, 0, 0, 0)
@@ -1550,6 +1548,7 @@ class ExperimentUI(QMainWindow):
         self.working_queue_list.setDragEnabled(True)
         self.working_queue_list.setAcceptDrops(True)
         self.working_queue_list.setDragDropMode(QAbstractItemView.InternalMove)
+        self.working_queue_list.setSpacing(2)
         layout.addWidget(self.working_queue_list)
 
         self.queue_window.setLayout(layout)
@@ -1567,6 +1566,9 @@ class ExperimentUI(QMainWindow):
             queue_manager=self.queue_manager,
             last_used_directory=self.last_saved_graph_path
         )
+
+        if queue_item.valid:
+            self.queue_manager.add_to_working_queue(queue_item)
 
         # Optionally update the queue’s collapsed display text
         # self.queue_manager.set_current_running(queue_item.display_name)
@@ -1644,6 +1646,7 @@ class QueueManager(QWidget):
         self.active_queue_list.addItem(widget_item)
 
     def add_to_working_queue(self, queued_experiment):
+        print(f"Adding queued experiment: {queued_experiment.display_name} to working queue...")
         self.working_queue_list.addItem(queued_experiment)
         self.working_queue_list.setItemWidget(queued_experiment, queued_experiment.widget)
 
@@ -1762,13 +1765,14 @@ class QueuedExperiment(QListWidgetItem):
         self.read_processed = False
         self.read_unprocessed = False
         self.sweep = False
-        self.valid = True #This is for the queue manager. It will only display and interact with QueuedExperiment objects that are valid
+        self.valid = False  # Only valid objects are added to the UI
 
         # Call dialog
         dialog = ExperimentSetupDialog(self.experiment_type, self.parameters, last_used_directory)
         if dialog.exec_() == QDialog.Rejected:
-            return  # Or handle deletion/cancellation outside
+            return
 
+        self.valid = True
         values = dialog.get_values()
         self.display_name = values["display_name"]
         self.read_processed = values["read_processed"]
@@ -1779,32 +1783,60 @@ class QueuedExperiment(QListWidgetItem):
 
         # -- UI Setup --
         self.widget = QWidget()
+        self.widget.setStyleSheet("""
+            QWidget {
+                background-color: #f9f9f9;
+                border: 2px solid #888;
+                border-radius: 6px;
+                padding: 8px;
+            }
+        """)
+
         self.layout = QVBoxLayout(self.widget)
+        self.layout.setContentsMargins(4, 4, 4, 4)
+
+        # Row with label + buttons
+        row_layout = QHBoxLayout()
+        row_layout.setSpacing(8)
 
         self.label = QLabel(f"{self.display_name} — {self.experiment_type}")
-        self.layout.addWidget(self.label)
+        self.label.setStyleSheet("font-weight: bold;")
+        row_layout.addWidget(self.label)
 
-        # Button Row
-        self.button_row = QHBoxLayout()
+        row_layout.addStretch()  # Push buttons to the right
+
+        button_size = QSize(24, 24)
         self.change_queue_button = QPushButton("Move")
-        self.duplicate_button = QPushButton("Duplicate")
-        self.delete_button = QPushButton("Delete")
+        self.duplicate_button = QPushButton("Copy")
+        self.delete_button = QPushButton("X")
+        self.info_button = QPushButton("?")
+
+        for btn in [self.change_queue_button, self.duplicate_button, self.delete_button, self.info_button]:
+            btn.setFixedSize(button_size)
+            btn.setStyleSheet("""
+                QPushButton {
+                    padding: 2px;
+                    border: 1px solid #aaa;
+                    border-radius: 4px;
+                    background-color: #e6e6e6;
+                }
+                QPushButton:hover {
+                    background-color: #d0d0d0;
+                }
+            """)
+
         self.delete_button.clicked.connect(self.delete_self)
-        self.info_button = QPushButton("Info")
         self.info_button.clicked.connect(self.show_info_popup)
 
+        row_layout.addWidget(self.change_queue_button)
+        row_layout.addWidget(self.duplicate_button)
+        row_layout.addWidget(self.delete_button)
+        row_layout.addWidget(self.info_button)
 
-        self.button_row.addWidget(self.change_queue_button)
-        self.button_row.addWidget(self.duplicate_button)
-        self.button_row.addWidget(self.delete_button)
-        self.button_row.addWidget(self.info_button)
-        self.layout.addLayout(self.button_row)
+        self.layout.addLayout(row_layout)
 
-        self.widget.setMinimumSize(QSize(300, 80))
         self.setSizeHint(self.widget.sizeHint())
-
         self.queue_manager.add_to_working_queue(self)
-        # queue_manager.setItemWidget(self, self.widget)
 
 
     def prompt_for_display_name(self):
