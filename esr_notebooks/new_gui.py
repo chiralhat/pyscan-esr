@@ -1014,7 +1014,7 @@ class ExperimentUI(QMainWindow):
         graph_layout.setContentsMargins(75, 50, 75, 50)
         
         # NEW: adds the current experiment graph to the layout
-        #graph_layout.addWidget(self.current_experiment.graph)
+        graph_layout.addWidget(self.current_experiment.graph)
         graph_layout.addWidget(self.current_experiment.sweep_graph)
 
         # Save graph button
@@ -1773,6 +1773,7 @@ class QueuedExperiment(QListWidgetItem):
             return
 
         self.valid = True
+        self.current_queue = "working_queue"
         values = dialog.get_values()
         self.display_name = values["display_name"]
         self.read_processed = values["read_processed"]
@@ -1827,6 +1828,8 @@ class QueuedExperiment(QListWidgetItem):
 
         self.delete_button.clicked.connect(self.delete_self)
         self.info_button.clicked.connect(self.show_info_popup)
+        self.change_queue_button.clicked.connect(self.move_queues)
+        self.duplicate_button.clicked.connect(self.duplicate)
 
         row_layout.addWidget(self.change_queue_button)
         row_layout.addWidget(self.duplicate_button)
@@ -1838,6 +1841,11 @@ class QueuedExperiment(QListWidgetItem):
         self.setSizeHint(self.widget.sizeHint())
         self.queue_manager.add_to_working_queue(self)
 
+    def change_current_queue(self):
+        if self.current_queue == "working_queue":
+            self.current_queue = "active_queue"
+        else:
+            self.current_queue == "working_queue"
 
     def prompt_for_display_name(self):
         text, ok = QInputDialog.getText(None, "Experiment Name", "Enter a name for this experiment:")
@@ -1866,11 +1874,76 @@ class QueuedExperiment(QListWidgetItem):
         """
         Removes this item from the QListWidget and deletes its resources.
         """
-        row = self.queue_manager.row(self)
-        if row != -1:
-            self.queue_manager.takeItem(row)
-            del self.widget
-            del self.experiment
+        if self.current_queue == "working_queue":
+            row = self.queue_manager.working_queue_list.row(self)
+            if row != -1:
+                self.queue_manager.working_queue_list.takeItem(row)
+                del self.widget
+                del self.experiment
+        else:
+            row = self.queue_manager.active_queue_list.row(self)
+            if row != -1:
+                self.queue_manager.active_queue_list.takeItem(row)
+                del self.widget
+                del self.experiment
+
+    def move_queues(self):
+        """
+        Moves the queued experiment between the active and working queues.
+        """
+        if self.current_queue == "working_queue":
+            # Remove from current list
+            row = self.queue_manager.working_queue_list.row(self)
+            self.queue_manager.working_queue_list.takeItem(row)
+            # Add to other list
+            self.queue_manager.active_queue_list.addItem(self)
+            self.queue_manager.active_queue_list.setItemWidget(self, self.widget)
+            self.current_queue = "active_queue"
+        else:
+            # Remove from current list
+            row = self.queue_manager.active_queue_list.row(self)
+            self.queue_manager.active_queue_list.takeItem(row)
+            # Add to other list
+            self.queue_manager.working_queue_list.addItem(self)
+            self.queue_manager.working_queue_list.setItemWidget(self, self.widget)
+            self.current_queue = "working_queue"
+
+
+    def duplicate(self):
+        """
+        Duplicates this experiment in the same queue with a new name.
+        """
+        # Ask for a new display name
+        new_name, ok = QInputDialog.getText(
+            self.widget, "Duplicate Experiment", "Enter a name for the duplicated experiment:",
+            QLineEdit.Normal, self.display_name + " (Copy)"
+        )
+
+        if not ok or not new_name.strip():
+            return  # Cancelled or empty input
+
+        # Create new instance with same experiment
+        new_item = QueuedExperiment(self.experiment, self.queue_manager, self.save_directory)
+
+        if not new_item.valid:
+            return  # User canceled the config dialog (though it shouldn't appear here ideally)
+
+        # Apply copied settings
+        new_item.display_name = new_name.strip()
+        new_item.read_processed = self.read_processed
+        new_item.read_unprocessed = self.read_unprocessed
+        new_item.sweep = self.sweep
+        new_item.save_graph_output = self.save_graph_output
+        new_item.save_directory = self.save_directory
+        new_item.label.setText(f"{new_item.display_name} — {self.experiment_type}")
+
+        # Add to the same list
+        for list_widget in [self.queue_manager.active_queue_list, self.queue_manager.working_queue_list]:
+            for i in range(list_widget.count()):
+                if list_widget.item(i) == self:
+                    list_widget.addItem(new_item)
+                    list_widget.setItemWidget(new_item, new_item.widget)
+                    return
 
     def init_experiment(self):
         """
