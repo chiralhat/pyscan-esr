@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QH
                              QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem, 
                              QMessageBox, QTextEdit, QLineEdit, QStyledItemDelegate, 
                              QFileDialog, QStyledItemDelegate, QStyleOptionViewItem, QMenu, QListWidgetItem,
-                             QListWidget,QInputDialog, QAbstractItemView, QDialog, QPushButton)
+                             QListWidget,QInputDialog, QAbstractItemView, QDialog, QPushButton, QTabWidget)
                              
 from PyQt5.QtCore import Qt, QRect, QTextStream, QObject, QThread, pyqtSignal, pyqtSlot, QTimer, QSize
 from PyQt5.QtGui import QPainter, QTextOption, QClipboard, QPixmap
@@ -421,7 +421,9 @@ class GraphWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setAutoFillBackground(True)
+        
+        # Set the background to transparent and remove any borders or margins
+        self.setStyleSheet("background: transparent; border: none;")
 
         # Create the Figure and Axes safely without using pyplot
         self.figure = Figure()
@@ -509,6 +511,9 @@ class GraphWidget(QWidget):
 class SweepPlotWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        # Set the background to transparent and remove any borders or margins
+        self.setStyleSheet("background: transparent; border: none;")
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
@@ -713,7 +718,8 @@ class ExperimentType(QObject):
             self.default_file = "ps_defaults.pkl" #Default filename used for storing results from ps experiments
             
         # NEW current experiment graph
-        self.graph = GraphWidget() #Widget used for plotting experiment results in the graph panel of the UI.
+        self.read_unprocessed_graph = GraphWidget() #Widget used for plotting experiment results in the graph panel of the UI.
+        self.read_processed_graph = GraphWidget()
         self.sweep_graph= SweepPlotWidget()
 
         #Experiment objects that will be initialized later in self.init_pyscan_experiment
@@ -1007,22 +1013,40 @@ class ExperimentUI(QMainWindow):
         self.show()  # Show the window
          
     def init_graphs_panel(self):
-        """Creates the graphs panel containing Matplotlib graphs."""
-        # Create a container widget for the graphs
+        """Creates the graphs panel containing Matplotlib graphs with tabs."""
+        # Create the main container widget
         graph_section_widget = QWidget()
         graph_layout = QVBoxLayout(graph_section_widget)
-        graph_layout.setContentsMargins(75, 50, 75, 50)
-        
-        # NEW: adds the current experiment graph to the layout
-        graph_layout.addWidget(self.current_experiment.graph)
-        graph_layout.addWidget(self.current_experiment.sweep_graph)
+        # graph_layout.setContentsMargins(25, 10, 25, 25)
+
+        # Create a tab widget for the graphs
+        self.graph_tabs = QTabWidget()
+
+        # Add tabs for each graph
+        graph_tab_1 = QWidget()
+        tab1_layout = QVBoxLayout(graph_tab_1)
+        tab1_layout.addWidget(self.current_experiment.read_unprocessed_graph)
+        self.graph_tabs.addTab(graph_tab_1, "Read Unprocessed")
+
+        graph_tab_2 = QWidget()
+        tab2_layout = QVBoxLayout(graph_tab_2)
+        tab2_layout.addWidget(self.current_experiment.read_processed_graph)
+        self.graph_tabs.addTab(graph_tab_2, "Read Processed")
+
+        graph_tab_3 = QWidget()
+        tab3_layout = QVBoxLayout(graph_tab_3)
+        tab3_layout.addWidget(self.current_experiment.sweep_graph)
+        self.graph_tabs.addTab(graph_tab_3, "Sweep")
+
+        # Add tabs to layout
+        graph_layout.addWidget(self.graph_tabs)
 
         # Save graph button
         self.save_graph_btn = QPushButton("Save Graph As...")
         self.save_graph_btn.clicked.connect(self.save_current_graph)
         graph_layout.addWidget(self.save_graph_btn)
 
-        # Directory label (clickable path)
+        # Last saved path label
         self.last_saved_path_label = QLabel("No graph saved yet.")
         self.last_saved_path_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.last_saved_path_label.setStyleSheet("color: blue; text-decoration: underline;")
@@ -1239,7 +1263,10 @@ class ExperimentUI(QMainWindow):
         if hasattr(self, 'worker'):
             self.worker.stop_sweep()
             self.indicator_sweep.setStyleSheet("background-color: grey; border: 1px solid black; border-radius: 5px;")
+        
         print("Changing experiment type to " + experiment_type + "...\n")
+        
+        # Set the new experiment
         self.current_experiment = self.experiments[experiment_type]
         self.temp_parameters = {}
         self.init_parameters_from_template()
@@ -1247,15 +1274,24 @@ class ExperimentUI(QMainWindow):
             self.experiment_templates.get(experiment_type, {"groups": {}})
         )
 
-        # Remove the old graph widget from the layout
-        graph_layout = self.graphs_panel.layout()
-        if graph_layout.count() > 0:
-            old_graph_widget = graph_layout.itemAt(0).widget()
-            graph_layout.removeWidget(old_graph_widget)
-            old_graph_widget.setParent(None)  # Disconnect it from the layout
+        # Update the graphs in the existing tabs
+        for i in range(self.graph_tabs.count()):
+            tab_widget = self.graph_tabs.widget(i)
+            layout = tab_widget.layout()
 
-        # Add the new graph widget
-        graph_layout.insertWidget(0, self.current_experiment.graph)        
+            # Clear old graph widget in the tab
+            if layout.count() > 0:
+                old_graph = layout.itemAt(0).widget()
+                layout.removeWidget(old_graph)
+                old_graph.setParent(None)
+
+            # Add the new graph widget to the tab
+            if i == 0:
+                layout.addWidget(self.current_experiment.read_unprocessed_graph)
+            elif i == 1:
+                layout.addWidget(self.current_experiment.read_processed_graph)
+            elif i == 2:
+                layout.addWidget(self.current_experiment.sweep_graph)
 
         # Re-disable action buttons until user clicks "Initialize"
         self.read_unprocessed_btn.setEnabled(False)
@@ -1366,8 +1402,8 @@ class ExperimentUI(QMainWindow):
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
 
-        self.worker.dataReady_se.connect(self.current_experiment.graph.update_canvas_se)
-        self.worker.dataReady_ps.connect(self.current_experiment.graph.update_canvas_psweep)
+        self.worker.dataReady_se.connect(self.current_experiment.read_unprocessed_graph.update_canvas_se)
+        self.worker.dataReady_ps.connect(self.current_experiment.read_unprocessed_graph.update_canvas_psweep)
 
         self.thread.finished.connect(self.thread.deleteLater)
 
@@ -1416,8 +1452,8 @@ class ExperimentUI(QMainWindow):
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         
-        self.worker.dataReady_se.connect(self.current_experiment.graph.update_canvas_se)
-        self.worker.dataReady_ps.connect(self.current_experiment.graph.update_canvas_psweep)
+        self.worker.dataReady_se.connect(self.current_experiment.read_processed_graph.update_canvas_se)
+        self.worker.dataReady_ps.connect(self.current_experiment.read_processed_graph.update_canvas_psweep)
 
         self.thread.finished.connect(self.thread.deleteLater)
 
@@ -1510,13 +1546,34 @@ class ExperimentUI(QMainWindow):
         print(message) 
    
             
+    # def save_current_graph(self):
+    #     options = QFileDialog.Options()
+    #     file_path, _ = QFileDialog.getSaveFileName(self, "Save Graph As", "", "PNG Files (*.png);;All Files (*)", options=options)
+    #     if file_path:
+    #         self.current_experiment.graph.figure.savefig(file_path)
+    #         self.last_saved_graph_path = file_path
+    #         self.last_saved_path_label.setText(f"Last saved to: {file_path}")
     def save_current_graph(self):
+        """Saves the graph from the currently selected tab."""
+        current_index = self.graph_tabs.currentIndex()
+
+        if current_index == 0:
+            fig = self.current_experiment.read_unprocessed_graph.figure
+        elif current_index == 1:
+            fig = self.current_experiment.read_processed_graph.figure
+        elif current_index == 2:
+            fig = self.current_experiment.sweep_graph.figure
+        else:
+            return  # Unexpected index, do nothing
+
         options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Graph As", "", "PNG Files (*.png);;All Files (*)", options=options)
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Graph As...", "", "PNG Files (*.png);;PDF Files (*.pdf);;All Files (*)", options=options
+        )
+
         if file_path:
-            self.current_experiment.graph.figure.savefig(file_path)
-            self.last_saved_graph_path = file_path
-            self.last_saved_path_label.setText(f"Last saved to: {file_path}")
+            fig.savefig(file_path)
+            self.last_saved_path_label.setText(file_path)
 
     def open_saved_graph_folder(self, event):
         if self.last_saved_graph_path:
