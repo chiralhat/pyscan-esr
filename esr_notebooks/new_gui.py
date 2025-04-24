@@ -264,7 +264,8 @@ class Worker(QObject):
     plot_update_signal = pyqtSignal(object)  # to pass colormesh
     dataReady_se = pyqtSignal(object, object)
     dataReady_ps = pyqtSignal(object, object)
-    live_plot_update_signal = pyqtSignal(object)   
+    live_plot_2D_update_signal = pyqtSignal(object)   
+    live_plot_1D_update_signal = pyqtSignal(object)   
 
 
     def __init__(self, experiment, task_name):
@@ -358,7 +359,7 @@ class Worker(QObject):
                     if self.last_data is None or not np.array_equal(current_data, self.last_data):
                         self.last_data = current_data.copy()
 
-                        pg = ps.PlotGenerator(
+                        pg_2D = ps.PlotGenerator(
                             expt=expt,
                             d=2,
                             x_name='t',
@@ -367,15 +368,23 @@ class Worker(QObject):
                             transpose=1
                         )
 
-                        self.live_plot_update_signal.emit(pg)
+                        pg_1D = ps.PlotGenerator(
+                            expt=expt,
+                            d=1,
+                            x_name=self.experiment.parameters['y_name'],
+                            data_name='xmean',
+                        )
+
+                        self.live_plot_2D_update_signal.emit(pg_2D)
+                        self.live_plot_1D_update_signal.emit(pg_1D)
 
                 except Exception as e:
                     self.updateStatus.emit("Error in update loop...\n")
                     
             sleep(1)  # optional; reduce or remove if not needed
 
-        # Plot final uodate
-        pg = ps.PlotGenerator(
+        # Plot final updates
+        pg_2D = ps.PlotGenerator(
                             expt=expt,
                             d=2,
                             x_name='t',
@@ -383,14 +392,22 @@ class Worker(QObject):
                             data_name='x',
                             transpose=1
                         )
-        self.live_plot_update_signal.emit(pg)   
+        pg_1D = ps.PlotGenerator(
+                            expt=expt,
+                            d=1,
+                            x_name=self.experiment.parameters['y_name'],
+                            data_name='xmean',
+                        )
+        self.live_plot_2D_update_signal.emit(pg_2D)
+        self.live_plot_1D_update_signal.emit(pg_1D) 
 
         if self.stop_requested:
             self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
         elif self.running == False:
             self.updateStatus.emit("Done sweeping (normal exit).\n")
             
-        self.live_plot_update_signal.emit(None)  # Optionally send a "done" signal to stop updates
+        self.live_plot_2D_update_signal.emit(None)  # Optionally send a "done" signal to stop updates
+        self.live_plot_1D_update_signal.emit(None) 
         self.finished.emit()
 
     @pyqtSlot()
@@ -561,7 +578,7 @@ class SweepPlotWidget(QWidget):
         self.setLayout(layout)
 
     @pyqtSlot(object)
-    def on_live_plot(self, pg):
+    def on_live_plot_2D(self, pg):
         if pg is None:
             print("PlotGenerator is None.")
             return
@@ -599,6 +616,33 @@ class SweepPlotWidget(QWidget):
             self.canvas.draw()
         except Exception as e:
             print(f"Exception during plot update: {e}")
+
+    @pyqtSlot(object)
+    def on_live_plot_1D(self, pg):
+        if pg is None:
+            print("PlotGenerator is None.")
+            return
+        try:
+            ax = self.ax
+            ax.clear()
+
+            if pg.data is None or pg.x is None or pg.data.size == 0:
+                print("No data to plot yet.")
+                return
+
+            print(f"Plotting 1D data: x shape = {pg.x.shape}, y shape = {pg.data.shape}")
+
+            ax.plot(pg.x, pg.data, marker='o', linestyle='-', label=pg.get_title() or "Sweep Result")
+
+            ax.set_title(pg.get_title())
+            ax.set_xlabel(pg.get_xlabel())
+            ax.set_ylabel(pg.get_ylabel())
+            ax.legend()
+            self.canvas.draw()
+
+        except Exception as e:
+            print(f"Exception during 1D plot update: {e}")
+
             
 
 class DynamicSettingsPanel(QWidget):
@@ -758,7 +802,8 @@ class ExperimentType(QObject):
         # NEW current experiment graph
         self.read_unprocessed_graph = GraphWidget() #Widget used for plotting experiment results in the graph panel of the UI.
         self.read_processed_graph = GraphWidget()
-        self.sweep_graph= SweepPlotWidget()
+        self.sweep_graph_2D= SweepPlotWidget()
+        self.sweep_graph_1D= SweepPlotWidget()
 
         #Experiment objects that will be initialized later in self.init_pyscan_experiment
         self.spinecho_gui = None
@@ -1073,8 +1118,13 @@ class ExperimentUI(QMainWindow):
 
         graph_tab_3 = QWidget()
         tab3_layout = QVBoxLayout(graph_tab_3)
-        tab3_layout.addWidget(self.current_experiment.sweep_graph)
-        self.graph_tabs.addTab(graph_tab_3, "Sweep")
+        tab3_layout.addWidget(self.current_experiment.sweep_graph_2D)
+        self.graph_tabs.addTab(graph_tab_3, "2D Sweep")
+
+        graph_tab_4 = QWidget()
+        tab3_layout = QVBoxLayout(graph_tab_4)
+        tab3_layout.addWidget(self.current_experiment.sweep_graph_1D)
+        self.graph_tabs.addTab(graph_tab_4, "1D Sweep")
 
         # Add tabs to layout
         graph_layout.addWidget(self.graph_tabs)
@@ -1329,7 +1379,9 @@ class ExperimentUI(QMainWindow):
             elif i == 1:
                 layout.addWidget(self.current_experiment.read_processed_graph)
             elif i == 2:
-                layout.addWidget(self.current_experiment.sweep_graph)
+                layout.addWidget(self.current_experiment.sweep_graph_2D)
+            elif i == 3:
+                layout.addWidget(self.current_experiment.sweep_graph_1D)
 
         # Re-disable action buttons until user clicks "Initialize"
         self.read_unprocessed_btn.setEnabled(False)
@@ -1536,7 +1588,8 @@ class ExperimentUI(QMainWindow):
 
                 # Connect signals and slots
                 self.thread.started.connect(self.worker.run_sweep)
-                self.worker.live_plot_update_signal.connect(self.current_experiment.sweep_graph.on_live_plot)
+                self.worker.live_plot_2D_update_signal.connect(self.current_experiment.sweep_graph_2D.on_live_plot_2D)
+                self.worker.live_plot_1D_update_signal.connect(self.current_experiment.sweep_graph_1D.on_live_plot_1D)
                 self.worker.updateStatus.connect(self.on_worker_status_update)
                 self.worker.finished.connect(self.thread.quit)
                 self.worker.finished.connect(self.worker.deleteLater)
@@ -1607,7 +1660,9 @@ class ExperimentUI(QMainWindow):
         elif current_index == 1:
             fig = self.current_experiment.read_processed_graph.figure
         elif current_index == 2:
-            fig = self.current_experiment.sweep_graph.figure
+            fig = self.current_experiment.sweep_graph_2D.figure
+        elif current_index == 3:
+            fig = self.current_experiment.sweep_graph_1D.figure
         else:
             return  # Unexpected index, do nothing
 
