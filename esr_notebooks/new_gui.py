@@ -344,10 +344,10 @@ class Worker(QObject):
         # Add these to your class __init__ or before the loop starts:
         self.last_data = None
 
+        expt = self.experiment.sweep['expt']
+
         # Inside your thread's run loop:
         while not self.stop_requested and self.running:
-            expt = self.experiment.sweep['expt']
-
             if not expt.runinfo.running:
                 self.running = False
 
@@ -374,21 +374,16 @@ class Worker(QObject):
                     
             sleep(1)  # optional; reduce or remove if not needed
 
-        print(dir(expt))  # List all available methods and attributes
-        # measured = self.experiment.sweep['expt'].runinfo.measured
-        # print(type(self.experiment.sweep['expt'].runinfo.measured))
-        # for i, m in enumerate(measured[:10]):  # Show first 10 items
-        #     print(f"[{i}] {m}")
-        # pg = ps.PlotGenerator(
-        #                 expt=expt,
-        #                 d=2,
-        #                 x_name='t',
-        #                 y_name=self.experiment.parameters['y_name'],
-        #                 data_name='x',
-        #                 transpose=1
-        #             )
-
-        #self.live_plot_update_signal.emit(pg)   
+        # Plot final uodate
+        pg = ps.PlotGenerator(
+                            expt=expt,
+                            d=2,
+                            x_name='t',
+                            y_name=self.experiment.parameters['y_name'],
+                            data_name='x',
+                            transpose=1
+                        )
+        self.live_plot_update_signal.emit(pg)   
 
         if self.stop_requested:
             self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
