@@ -370,7 +370,7 @@ class Worker(QObject):
                         self.live_plot_update_signal.emit(pg)
 
                 except Exception as e:
-                    print("Error in update loop:", e)
+                    self.updateStatus.emit("Error in update loop...\n")
                     
             sleep(1)  # optional; reduce or remove if not needed
 
@@ -388,13 +388,14 @@ class Worker(QObject):
         #                 transpose=1
         #             )
 
-        self.live_plot_update_signal.emit(pg)   
+        #self.live_plot_update_signal.emit(pg)   
 
         if self.stop_requested:
             self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
         elif self.running == False:
             self.updateStatus.emit("Done sweeping (normal exit).\n")
-
+            
+        self.live_plot_update_signal.emit(None)  # Optionally send a "done" signal to stop updates
         self.finished.emit()
 
     @pyqtSlot()
@@ -566,37 +567,43 @@ class SweepPlotWidget(QWidget):
 
     @pyqtSlot(object)
     def on_live_plot(self, pg):
-        ax = self.ax
-        ax.clear()
-
-        if pg.data.size == 0:
-            print("No data to plot yet.")
+        if pg is None:
+            print("PlotGenerator is None.")
             return
+        try:
+            ax = self.ax
+            ax.clear()
 
-        # Remove existing colorbar cleanly
-        if self.colorbar:
-            self.colorbar.remove()
-            self.colorbar = None
+            if pg.data.size == 0:
+                print("No data to plot yet.")
+                return
 
-        print(f"x shape: {pg.x.shape}, y shape: {pg.y.shape}, data shape: {pg.data.shape}")
-        
-        # Plot data
-        mesh = ax.pcolormesh(
-            pg.x,
-            pg.y,
-            pg.data.T,
-            shading='auto',
-            vmin=pg.get_data_range()[0],
-            vmax=pg.get_data_range()[1]
-        )
+            # Remove existing colorbar cleanly
+            if self.colorbar:
+                self.colorbar.remove()
+                self.colorbar = None
 
-        # Store reference to new colorbar
-        self.colorbar = self.figure.colorbar(mesh, ax=ax)
+            print(f"x shape: {pg.x.shape}, y shape: {pg.y.shape}, data shape: {pg.data.shape}")
+            
+            # Plot data
+            mesh = ax.pcolormesh(
+                pg.x,
+                pg.y,
+                pg.data.T,
+                shading='auto',
+                vmin=pg.get_data_range()[0],
+                vmax=pg.get_data_range()[1]
+            )
 
-        ax.set_title(pg.get_title())
-        ax.set_xlabel(pg.get_xlabel())
-        ax.set_ylabel(pg.get_ylabel())
-        self.canvas.draw()
+            # Store reference to new colorbar
+            self.colorbar = self.figure.colorbar(mesh, ax=ax)
+
+            ax.set_title(pg.get_title())
+            ax.set_xlabel(pg.get_xlabel())
+            ax.set_ylabel(pg.get_ylabel())
+            self.canvas.draw()
+        except Exception as e:
+            print(f"Exception during plot update: {e}")
             
 
 class DynamicSettingsPanel(QWidget):
@@ -1514,55 +1521,62 @@ class ExperimentUI(QMainWindow):
 
 
     def toggle_start_stop_sweep_frontend(self):
-        #Start the process
+        # Start the process
         if self.sweep_start_stop_btn.text() == "Start Sweep":
-            #Button logic
+            # Disable buttons during sweep
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
             self.set_parameters_and_initialize_btn.setEnabled(False)
             self.is_process_running = True
             
-            # We want to start
+            # Update indicator and button text
             self.indicator_sweep.setStyleSheet("background-color: red; border: 1px solid black; border-radius: 5px;")
             self.sweep_start_stop_btn.setText("Stop Sweep")
 
-            self.thread = QThread(self)
-            self.worker = Worker(self.current_experiment, "sweep")
-            self.worker.moveToThread(self.thread)
+            # Initialize thread and worker if not already initialized
+            if not hasattr(self, 'worker'):
+                self.thread = QThread(self)
+                self.worker = Worker(self.current_experiment, "sweep")
+                self.worker.moveToThread(self.thread)
 
-            self.thread.started.connect(self.worker.run_sweep)
-            self.worker.live_plot_update_signal.connect(self.current_experiment.sweep_graph.on_live_plot)
-            self.worker.updateStatus.connect(self.on_worker_status_update)
-            self.worker.finished.connect(self.thread.quit)
-            self.worker.finished.connect(self.worker.deleteLater)
-            self.thread.finished.connect(self.thread.deleteLater)
+                # Connect signals and slots
+                self.thread.started.connect(self.worker.run_sweep)
+                self.worker.live_plot_update_signal.connect(self.current_experiment.sweep_graph.on_live_plot)
+                self.worker.updateStatus.connect(self.on_worker_status_update)
+                self.worker.finished.connect(self.thread.quit)
+                self.worker.finished.connect(self.worker.deleteLater)
+                self.thread.finished.connect(self.thread.deleteLater)
 
-            # Optionally reset indicator color after finishing
-            def reset_indicator():
-                self.read_unprocessed_btn.setEnabled(True)
-                self.read_processed_btn.setEnabled(True)
-                self.set_parameters_and_initialize_btn.setEnabled(True)
-                self.set_parameters_and_initialize_btn.setEnabled(True)
-                self.indicator_read_unprocessed.setStyleSheet(
-                    "background-color: grey; border: 1px solid black; border-radius: 5px;"
-                )
+            # Disconnect existing signals before reconnecting
+            self.worker.finished.disconnect()  # Disconnect if previously connected
+            self.worker.finished.connect(self.reset_indicator)  # Connect reset indicator on completion
 
-                # Reactivate initialize only if settings were changed during the process
-                if self.settings_changed:
-                    self.set_parameters_and_initialize_btn.setEnabled(True)
-
-                self.is_process_running = False
-
-            self.worker.finished.connect(reset_indicator)
-            self.thread.start()            
+            # Start the thread
+            self.thread.start()
 
         else:
+            # Handle stopping the sweep
             if hasattr(self, 'worker'):
                 print("Stopping sweep...")
-                self.worker.stop_sweep()
+                self.worker.stop_sweep()  # Assuming stop_sweep is implemented in the Worker class
                 print("Sweep stopped")
+
+            # Reset UI after stopping
+            self.reset_indicator()
             self.indicator_sweep.setStyleSheet("background-color: grey; border: 1px solid black; border-radius: 5px;")
             self.sweep_start_stop_btn.setText("Start Sweep")
+
+    def reset_indicator(self):
+        """ Reset UI and indicator when the sweep is done or stopped """
+        if self.is_process_running:
+            self.read_unprocessed_btn.setEnabled(True)
+            self.read_processed_btn.setEnabled(True)
+            self.set_parameters_and_initialize_btn.setEnabled(True)
+            self.indicator_read_unprocessed.setStyleSheet("background-color: grey; border: 1px solid black; border-radius: 5px;")
+            self.is_process_running = False
+        else:
+            print("Sweep is already finished or was never started.")
+
 
 
 
