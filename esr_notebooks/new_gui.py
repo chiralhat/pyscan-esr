@@ -406,8 +406,8 @@ class Worker(QObject):
         elif self.running == False:
             self.updateStatus.emit("Done sweeping (normal exit).\n")
             
-        self.live_plot_2D_update_signal.emit(None)  # Optionally send a "done" signal to stop updates
-        self.live_plot_1D_update_signal.emit(None) 
+        #self.live_plot_2D_update_signal.emit(None)  # Optionally send a "done" signal to stop updates
+        #self.live_plot_1D_update_signal.emit(None) 
         self.finished.emit()
 
     @pyqtSlot()
@@ -988,6 +988,8 @@ class ExperimentUI(QMainWindow):
 
         #setup for graph saving
         self.last_saved_graph_path = None
+
+        self.worker_thread = None
         
 #         # Create a timer to refresh the sweep plot so it plots live
 #         self.plot_timer = QTimer(self)
@@ -1468,6 +1470,7 @@ class ExperimentUI(QMainWindow):
 
 
     def read_unprocessed_frontend(self):
+
         # Update indicator color
         self.indicator_read_unprocessed.setStyleSheet(
             "background-color: red; border: 1px solid black; border-radius: 5px;"
@@ -1480,25 +1483,25 @@ class ExperimentUI(QMainWindow):
         self.is_process_running = True
 
         # --- Create a QThread and Worker ---
-        self.thread = QThread(self)  # Store reference to avoid garbage collection
+        self.worker_thread = QThread(self)  # Store reference to avoid garbage collection
         self.worker = Worker(self.current_experiment, "read_unprocessed")
-        self.worker.moveToThread(self.thread)
+        self.worker.moveToThread(self.worker_thread)
 
         # --- Connect signals and slots ---
-        self.thread.started.connect(self.worker.run_snapshot)
+        self.worker_thread.started.connect(self.worker.run_snapshot)
 
         self.worker.updateStatus.connect(self.on_worker_status_update)
 
-        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
 
         self.worker.dataReady_se.connect(self.current_experiment.read_unprocessed_graph.update_canvas_se)
         self.worker.dataReady_ps.connect(self.current_experiment.read_unprocessed_graph.update_canvas_psweep)
 
-        self.thread.finished.connect(self.thread.deleteLater)
+        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
 
         # --- Start the thread ---
-        self.thread.start()
+        self.worker_thread.start()
 
         # Reset indicator color once we know it's done:
         # Option 1: do it immediately, but that won't show "busy"
@@ -1522,9 +1525,6 @@ class ExperimentUI(QMainWindow):
 
 
     def read_processed_frontend(self):
-        self.indicator_read_processed.setStyleSheet(
-            "background-color: red; border: 1px solid black; border-radius: 5px;"
-        )
 
         #Button logic
         self.read_unprocessed_btn.setEnabled(False)
@@ -1533,21 +1533,21 @@ class ExperimentUI(QMainWindow):
         self.set_parameters_and_initialize_btn.setEnabled(False)
         self.is_process_running = True
         
-        self.thread = QThread(self)
+        self.worker_thread = QThread(self)
         self.worker = Worker(self.current_experiment, "read_processed")
-        self.worker.moveToThread(self.thread)
+        self.worker.moveToThread(self.worker_thread)
 
-        self.thread.started.connect(self.worker.run_snapshot)
+        self.worker_thread.started.connect(self.worker.run_snapshot)
         self.worker.updateStatus.connect(self.on_worker_status_update)
-        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         
         self.worker.dataReady_se.connect(self.current_experiment.read_processed_graph.update_canvas_se)
         self.worker.dataReady_ps.connect(self.current_experiment.read_processed_graph.update_canvas_psweep)
 
-        self.thread.finished.connect(self.thread.deleteLater)
+        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
 
-        self.thread.start()
+        self.worker_thread.start()
 
         def reset_indicator():
             self.read_unprocessed_btn.setEnabled(True)
@@ -1568,6 +1568,7 @@ class ExperimentUI(QMainWindow):
 
 
     def toggle_start_stop_sweep_frontend(self):
+
         # Start the process
         if self.sweep_start_stop_btn.text() == "Start Sweep":
             # Disable buttons during sweep
@@ -1581,26 +1582,25 @@ class ExperimentUI(QMainWindow):
             self.sweep_start_stop_btn.setText("Stop Sweep")
 
             # Initialize thread and worker if not already initialized
-            if not hasattr(self, 'worker'):
-                self.thread = QThread(self)
-                self.worker = Worker(self.current_experiment, "sweep")
-                self.worker.moveToThread(self.thread)
+            self.worker_thread = QThread(self)
+            self.worker = Worker(self.current_experiment, "sweep")
+            self.worker.moveToThread(self.worker_thread)
 
-                # Connect signals and slots
-                self.thread.started.connect(self.worker.run_sweep)
-                self.worker.live_plot_2D_update_signal.connect(self.current_experiment.sweep_graph_2D.on_live_plot_2D)
-                self.worker.live_plot_1D_update_signal.connect(self.current_experiment.sweep_graph_1D.on_live_plot_1D)
-                self.worker.updateStatus.connect(self.on_worker_status_update)
-                self.worker.finished.connect(self.thread.quit)
-                self.worker.finished.connect(self.worker.deleteLater)
-                self.thread.finished.connect(self.thread.deleteLater)
+            # Connect signals and slots
+            self.worker_thread.started.connect(self.worker.run_sweep)
+            self.worker.live_plot_2D_update_signal.connect(self.current_experiment.sweep_graph_2D.on_live_plot_2D)
+            self.worker.live_plot_1D_update_signal.connect(self.current_experiment.sweep_graph_1D.on_live_plot_1D)
+            self.worker.updateStatus.connect(self.on_worker_status_update)
+            self.worker.finished.connect(self.worker_thread.quit)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.worker_thread.finished.connect(self.worker_thread.deleteLater)
 
             # Disconnect existing signals before reconnecting
             self.worker.finished.disconnect()  # Disconnect if previously connected
             self.worker.finished.connect(self.reset_indicator)  # Connect reset indicator on completion
 
             # Start the thread
-            self.thread.start()
+            self.worker_thread.start()
 
         else:
             # Handle stopping the sweep
