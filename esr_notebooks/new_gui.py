@@ -163,7 +163,11 @@ EXPERIMENT_TEMPLATES = {
                  "options": sweep_list, "default": "Hahn Echo"},
                 {"display": "Sweep start, end, step",
                  "key": ["sweep_start", "sweep_end", "sweep_step"], "type": "composite",
-                 "default": [150.0, 1000.0, 50.0]}],
+                "default": [150.0, 1000.0, 50.0]},
+                {"display": "2D Sweep variable", "key": "2D Sweep variable", "type": "combo",
+                 "options": ["x", "i", "q"], "default": "x"},
+                 {"display": "1D Sweep variable", "key": "1D Sweep variable", "type": "combo",
+                 "options": ["xmean", "imean", "qmean"], "default": "xmean"}],
             "Pulse Settings": [
                 {"display": "Ch1 Delay", "key": "delay", "type": "double_spin",
                  "min": 0, "max": 652100, "default": 150.0},
@@ -364,7 +368,7 @@ class Worker(QObject):
                             d=2,
                             x_name='t',
                             y_name=self.experiment.parameters['y_name'],
-                            data_name='x',
+                            data_name=self.experiment.parameters['2D Sweep variable'],
                             transpose=1
                         )
 
@@ -372,7 +376,7 @@ class Worker(QObject):
                             expt=expt,
                             d=1,
                             x_name=self.experiment.parameters['y_name'],
-                            data_name='xmean',
+                            data_name=self.experiment.parameters['1D Sweep variable'],
                         )
 
                         self.live_plot_2D_update_signal.emit(pg_2D)
@@ -389,14 +393,14 @@ class Worker(QObject):
                             d=2,
                             x_name='t',
                             y_name=self.experiment.parameters['y_name'],
-                            data_name='x',
+                            data_name=self.experiment.parameters['2D Sweep variable'],
                             transpose=1
                         )
         pg_1D = ps.PlotGenerator(
                             expt=expt,
                             d=1,
                             x_name=self.experiment.parameters['y_name'],
-                            data_name='xmean',
+                            data_name=self.experiment.parameters['1D Sweep variable'],
                         )
         self.live_plot_2D_update_signal.emit(pg_2D)
         self.live_plot_1D_update_signal.emit(pg_1D) 
@@ -1609,10 +1613,10 @@ class ExperimentUI(QMainWindow):
                 self.worker.stop_sweep()  # Assuming stop_sweep is implemented in the Worker class
                 print("Sweep stopped")
 
-            # Reset UI after stopping
-            self.reset_indicator()
-            self.indicator_sweep.setStyleSheet("background-color: grey; border: 1px solid black; border-radius: 5px;")
-            self.sweep_start_stop_btn.setText("Start Sweep")
+        # Reset UI after stopping sweep, or sweep ending naturally
+        self.reset_indicator()
+        self.indicator_sweep.setStyleSheet("background-color: grey; border: 1px solid black; border-radius: 5px;")
+        self.sweep_start_stop_btn.setText("Start Sweep")
 
     def reset_indicator(self):
         """ Reset UI and indicator when the sweep is done or stopped """
