@@ -111,10 +111,6 @@ EXPERIMENT_TEMPLATES = {
                 {"display": "Wait Time", "key": "wait", "type": "double_spin", #wait is a bounded float from 0 to 20 (contained in measure)
                  "min": 0.0, "max": 20.0, "default": 0.3},
                 {"display": "Integral only", "key": "integrate", "type": "check", #integrate is an ipw.Checkbox (contained in measure)
-                 "default": False},
-                {"display": "Initialize on read", "key": "init", "type": "check", #init is an ipw.Checkbox
-                 "default": True},
-                {"display": "Turn off after sweep", "key": "turn_off", "type": "check", #turn_off is an ipw.Checkbox
                  "default": False}],
             "Utility Settings": [
                 {"display": "PSU Addr", "key": "psu_address", "type": "line_edit", #psu_address is an ipw.Dropdown (contained in devices)
@@ -208,10 +204,6 @@ EXPERIMENT_TEMPLATES = {
                 {"display": "Wait Time (s)", "key": "wait", "type": "double_spin",
                  "min": 0.0, "max": 20.0, "default": 0.2},
                 {"display": "Integral only", "key": "integrate", "type": "check",
-                 "default": False},
-                {"display": "Initialize on read", "key": "init", "type": "check", #COULD REMOVE
-                 "default": True},
-                {"display": "Turn off after sweep", "key": "turn_off", "type": "check",
                  "default": False}],
             "Utility Settings": [
                 {"display": "PSU Addr", "key": "psu_address", "type": "line_edit",
@@ -922,12 +914,7 @@ class ExperimentType(QObject):
             self.devices.ls335 = ps.Lakeshore335()
             temp = self.devices.ls335.get_temp()
 
-        # Initialize pyscan experiment if necessary
-        #NEED TO REVISIT THIS
-        if not self.parameters.get('init', False):
-            pass  # No action required if 'init' is False
-        else:
-            self.init_pyscan_experiment()
+        self.init_pyscan_experiment()
 
     
     def start_sweep(self):
