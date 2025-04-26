@@ -82,11 +82,15 @@ EXPERIMENT_TEMPLATES = {
                  "min": 1, "max": 1000000, "default": 1000, "tool tip": "Helpful information"}, #EXPLICITLY MADE THESE INTS
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], #Both save_dir and file_name are strings (contained in save controls)
                  "type": "composite", "default": ["", ""], "tool tip": "Helpful information"},
-                {"display": "Experiment", "key": "expt", "type": "combo", #expt is of ipw.Dropdown type (contained in measure)
-                 "options": sweep_list, "default": "Pulse Sweep"},
+                {"display": "Experiment", "key": "psexpt", "type": "combo", #expt is of ipw.Dropdown type (contained in measure)
+                 "options": ['Freq Sweep', 'Field Sweep'], "default": 'Freq Sweep'},
                 {"display": "Sweep start, end, step",
                  "key": ["sweep_start", "sweep_end", "sweep_step"], #sweep_start, sweep_end, and sweep_step are all unbounded floats (contained in measure)
-                 "type": "composite", "default": [3850.0, 3950.0, 2.0]}],
+                 "type": "composite", "default": [3850.0, 3950.0, 2.0]},                
+                 {"display": "2D Sweep variable", "key": "2D Sweep variable", "type": "combo",
+                 "options": ["x", "i", "q"], "default": "x"},
+                 {"display": "1D Sweep variable", "key": "1D Sweep variable", "type": "combo",
+                 "options": ["X", "I", "Q"], "default": "X"}],
             "Readout Settings": [
                 {"display": "Time Offset", "key": "h_offset", "type": "double_spin", #h_offset is a bounded float between -10000 and 10000 (contained in rfsoc)
                  "min": -10000.0, "max": 10000.0, "default": -0.125}, #CHANGED THESE VALUES FROM 0, 1000, AND 10.0
@@ -138,8 +142,8 @@ EXPERIMENT_TEMPLATES = {
                 "min": 0.0, "max": 360.0, "default": 0.0},
                 {"display": "Averaging Time (s)", "key": "sltime", "type": "double_spin",
                  "min": 0.0, "max": 20.0, "default": 0.0},
-                {"display": "Experiment", "key": "psexpt", "type": "combo",
-                "options" : ['Freq Sweep', 'Field Sweep'], "default": "Freq Sweep"}
+                {"display": "Experiment", "key": "expt", "type": "combo",
+                 "options": sweep_list, "default": "Hahn Echo"},
                 # freq start, stop, step might be needed here, but we could not find them
                 ]
         } #THERE IS A SETTING CALLED "subtime" THAT IS CALCULATED LATER AND ADDED TO THE END OF THE PICKLE FILE. IT IS EQUAL TO (soft_avgs * (period / 400000 * ave_reps))
@@ -317,10 +321,16 @@ class Worker(QObject):
                 self.experiment.parameters['soft_avgs'] = avgs
             
             elif self.experiment.type == "Pulse Frequency Sweep":
+                single = self.experiment.parameters['single']
+                avgs = self.experiment.parameters['soft_avgs']
                 self.experiment.parameters['single'] = True
                 self.experiment.parameters['soft_avgs'] = 1
                 prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
+
                 measure_phase(prog, self.experiment.soc, self.experiment.sig)
+
+                self.experiment.parameters['single'] = single
+                self.experiment.parameters['soft_avgs'] = avgs
             self.updateStatus.emit("Done reading unprocessed data.\n")
 
         if self.experiment.type == "Spin Echo":
@@ -334,7 +344,7 @@ class Worker(QObject):
     @pyqtSlot()
     def run_sweep(self):
         """
-        Called when we want to do the 'start_sweep' process in a separate thread. Starts a swweep in a QT Thread, and checks every 15 seconds
+        Called when we want to do the 'start_sweep' process in a separate thread. Starts a swweep in a QT Thread, and checks every 1 second
         if the sweep is over (killing the QT thread if so). 
         """
         self.updateStatus.emit("Starting sweep in worker thread...\n")
@@ -850,7 +860,6 @@ class ExperimentType(QObject):
             self.parameters['nutation_length'] = 0
             self.parameters['reps'] = 1
             self.parameters['sweep2'] = 0
-
             if self.parameters['use_psu']:
                 self.devices.psu.set_magnet(self.parameters)
 
@@ -913,12 +922,11 @@ class ExperimentType(QObject):
     
     def start_sweep(self):
         """starts up the hardware to run a sweep and runs a sweep"""
-        
+        self.set_parameters(self.parameters)
         self.sweep_running = True
         runinfo = self.sweep['runinfo']
         expt = ps.Sweep(runinfo, self.devices, self.sweep['name'])
         self.sweep['expt'] = expt
-        
         
         if self.parameters['expt']=="Hahn Echo":
             self.sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
@@ -1150,13 +1158,13 @@ class ExperimentUI(QMainWindow):
         return graph_section_widget
 
     def init_error_log_widget(self):
-        """Creates a small widget with an 'Error Log' label and the log text area below it."""
+        """Creates a small widget with an ' Log' label and the log text area below it."""
         error_widget = QWidget()
         vlayout = QVBoxLayout(error_widget)
         vlayout.setContentsMargins(0, 0, 0, 0)
         vlayout.setSpacing(5)
 
-        label = QLabel("Error Log")
+        label = QLabel("Log")
         label.setStyleSheet("font-weight: bold;")
         vlayout.addWidget(label)
 
@@ -1474,160 +1482,151 @@ class ExperimentUI(QMainWindow):
 
 
     def read_unprocessed_frontend(self):
-
-        # Update indicator color
+        # 1) Turn the unprocessed indicator red
         self.indicator_read_unprocessed.setStyleSheet(
             "background-color: red; border: 1px solid black; border-radius: 5px;"
         )
-        #Button logic
-        self.read_unprocessed_btn.setEnabled(False)
-        self.read_processed_btn.setEnabled(False)
-        self.sweep_start_stop_btn.setEnabled(False)
+
+        # 2) Disable all action buttons
+        self.read_unprocessed_btn .setEnabled(False)
+        self.read_processed_btn   .setEnabled(False)
+        self.sweep_start_stop_btn .setEnabled(False)
         self.set_parameters_and_initialize_btn.setEnabled(False)
         self.is_process_running = True
 
-        # --- Create a QThread and Worker ---
-        self.worker_thread = QThread(self)  # Store reference to avoid garbage collection
+        self.graph_tabs.setCurrentIndex(0)
+
+        # 3) Spin up the worker thread
+        self.worker_thread = QThread(self)
         self.worker = Worker(self.current_experiment, "read_unprocessed")
         self.worker.moveToThread(self.worker_thread)
 
-        # --- Connect signals and slots ---
+        # 4) Hook up the worker
         self.worker_thread.started.connect(self.worker.run_snapshot)
-
         self.worker.updateStatus.connect(self.on_worker_status_update)
-
-        self.worker.finished.connect(self.worker_thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-
         self.worker.dataReady_se.connect(self.current_experiment.read_unprocessed_graph.update_canvas_se)
         self.worker.dataReady_ps.connect(self.current_experiment.read_unprocessed_graph.update_canvas_psweep)
 
+        # 5) Clean up and reset UI only when the thread is really done
+        self.worker.finished.connect(self.worker_thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
         self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+        self.worker.finished.connect(self.reset_action_buttons)
 
-        # --- Start the thread ---
+        # 6) Start!
         self.worker_thread.start()
 
-        # Reset indicator color once we know it's done:
-        # Option 1: do it immediately, but that won't show "busy"
-        # Option 2: connect it to self.worker.finished
-        def reset_indicator():
-            self.read_unprocessed_btn.setEnabled(True)
-            self.read_processed_btn.setEnabled(True)
-            self.sweep_start_stop_btn.setEnabled(True)
-            self.set_parameters_and_initialize_btn.setEnabled(True)
-            self.indicator_read_unprocessed.setStyleSheet(
-                "background-color: grey; border: 1px solid black; border-radius: 5px;"
-            )
-
-            # Reactivate initialize only if settings were changed during the process
-            if self.settings_changed:
-                self.set_parameters_and_initialize_btn.setEnabled(True)
-
-            self.is_process_running = False
-        
-        self.worker.finished.connect(reset_indicator)
 
 
     def read_processed_frontend(self):
-
-        #Button logic
-        self.read_unprocessed_btn.setEnabled(False)
-        self.read_processed_btn.setEnabled(False)
-        self.sweep_start_stop_btn.setEnabled(False)
-        self.set_parameters_and_initialize_btn.setEnabled(False)
-        self.is_process_running = True
-        
-        self.worker_thread = QThread(self)
-        self.worker = Worker(self.current_experiment, "read_processed")
-        self.worker.moveToThread(self.worker_thread)
-
-        self.worker_thread.started.connect(self.worker.run_snapshot)
-        self.worker.updateStatus.connect(self.on_worker_status_update)
-        self.worker.finished.connect(self.worker_thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        
-        self.worker.dataReady_se.connect(self.current_experiment.read_processed_graph.update_canvas_se)
-        self.worker.dataReady_ps.connect(self.current_experiment.read_processed_graph.update_canvas_psweep)
-
-        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
-
-        self.worker_thread.start()
-
-        def reset_indicator():
-            self.read_unprocessed_btn.setEnabled(True)
-            self.read_processed_btn.setEnabled(True)
-            self.sweep_start_stop_btn.setEnabled(True)
-            self.set_parameters_and_initialize_btn.setEnabled(True)
+            # 1) Turn the processed indicator red
             self.indicator_read_processed.setStyleSheet(
-                "background-color: grey; border: 1px solid black; border-radius: 5px;"
+                "background-color: red; border: 1px solid black; border-radius: 5px;"
             )
 
-            # Reactivate initialize only if settings were changed during the process
-            if self.settings_changed:
-                self.set_parameters_and_initialize_btn.setEnabled(True)
+            # 2) Disable all action buttons
+            self.read_unprocessed_btn .setEnabled(False)
+            self.read_processed_btn   .setEnabled(False)
+            self.sweep_start_stop_btn .setEnabled(False)
+            self.set_parameters_and_initialize_btn.setEnabled(False)
+            self.is_process_running = True
 
-            self.is_process_running = False
+            self.graph_tabs.setCurrentIndex(1)
 
-        self.worker.finished.connect(reset_indicator)
+            # 3) Spin up the worker thread
+            self.worker_thread = QThread(self)
+            self.worker = Worker(self.current_experiment, "read_processed")
+            self.worker.moveToThread(self.worker_thread)
+
+            # 4) Hook up the worker
+            self.worker_thread.started.connect(self.worker.run_snapshot)
+            self.worker.updateStatus.connect(self.on_worker_status_update)
+            self.worker.dataReady_se.connect(self.current_experiment.read_processed_graph.update_canvas_se)
+            self.worker.dataReady_ps.connect(self.current_experiment.read_processed_graph.update_canvas_psweep)
+
+            # 5) Clean up and reset UI only when the thread is really done
+            self.worker.finished.connect(self.worker_thread.quit)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+            self.worker.finished.connect(self.reset_action_buttons)
+
+            # 6) Start!
+            self.worker_thread.start()
 
 
     def toggle_start_stop_sweep_frontend(self):
-
-        # Start the process
+        # If we're not currently sweeping, start:
         if self.sweep_start_stop_btn.text() == "Start Sweep":
-            # Disable buttons during sweep
+            # Disable all action buttons
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
             self.set_parameters_and_initialize_btn.setEnabled(False)
             self.is_process_running = True
-            
-            # Update indicator and button text
-            self.indicator_sweep.setStyleSheet("background-color: red; border: 1px solid black; border-radius: 5px;")
+
+            # Turn the sweep indicator red and flip the button text
+            self.indicator_sweep.setStyleSheet(
+                "background-color: red; border: 1px solid black; border-radius: 5px;"
+            )
             self.sweep_start_stop_btn.setText("Stop Sweep")
 
-            # Initialize thread and worker if not already initialized
+            self.graph_tabs.setCurrentIndex(2)
+
+            # Spin up the worker thread
             self.worker_thread = QThread(self)
             self.worker = Worker(self.current_experiment, "sweep")
             self.worker.moveToThread(self.worker_thread)
 
-            # Connect signals and slots
+            # Connect the sweep logic & live-plot signals
             self.worker_thread.started.connect(self.worker.run_sweep)
-            self.worker.live_plot_2D_update_signal.connect(self.current_experiment.sweep_graph_2D.on_live_plot_2D)
-            self.worker.live_plot_1D_update_signal.connect(self.current_experiment.sweep_graph_1D.on_live_plot_1D)
+            self.worker.live_plot_2D_update_signal.connect(
+                self.current_experiment.sweep_graph_2D.on_live_plot_2D
+            )
+            self.worker.live_plot_1D_update_signal.connect(
+                self.current_experiment.sweep_graph_1D.on_live_plot_1D
+            )
             self.worker.updateStatus.connect(self.on_worker_status_update)
+
+            # Clean up thread on finish
             self.worker.finished.connect(self.worker_thread.quit)
             self.worker.finished.connect(self.worker.deleteLater)
             self.worker_thread.finished.connect(self.worker_thread.deleteLater)
 
-            # Disconnect existing signals before reconnecting
-            self.worker.finished.disconnect()  # Disconnect if previously connected
-            self.worker.finished.connect(self.reset_indicator)  # Connect reset indicator on completion
+            # ← NEW: reset UI only when sweep really finishes
+            self.worker.finished.connect(self.reset_action_buttons)
 
-            # Start the thread
+            # Kick it off
             self.worker_thread.start()
 
         else:
-            # Handle stopping the sweep
+            # If the button read "Stop Sweep", request the worker to halt
             if hasattr(self, 'worker'):
-                print("Stopping sweep...")
-                self.worker.stop_sweep()  # Assuming stop_sweep is implemented in the Worker class
-                print("Sweep stopped")
+                print("Stopping sweep…")
+                self.worker.stop_sweep()
+                print("Stop requested.")
 
-        # Reset UI after stopping sweep, or sweep ending naturally
-        self.reset_indicator()
-        self.indicator_sweep.setStyleSheet("background-color: grey; border: 1px solid black; border-radius: 5px;")
+    def reset_action_buttons(self):
+        """Re-enable all action buttons and turn all three indicators back to grey."""
+        # 1) Re-enable the buttons
+        self.read_unprocessed_btn .setEnabled(True)
+        self.read_processed_btn   .setEnabled(True)
+        self.sweep_start_stop_btn .setEnabled(True)
+        self.set_parameters_and_initialize_btn.setEnabled(True)
+
+        # 2) Turn the three task-indicators back to grey
+        for indicator in (
+            self.indicator_read_unprocessed,
+            self.indicator_read_processed,
+            self.indicator_sweep
+        ):
+            indicator.setStyleSheet(
+                "background-color: grey; border: 1px solid black; border-radius: 5px;"
+            )
+
+        # 3) Reset sweep button text (in case it was “Stop Sweep”)
         self.sweep_start_stop_btn.setText("Start Sweep")
 
-    def reset_indicator(self):
-        """ Reset UI and indicator when the sweep is done or stopped """
-        if self.is_process_running:
-            self.read_unprocessed_btn.setEnabled(True)
-            self.read_processed_btn.setEnabled(True)
-            self.set_parameters_and_initialize_btn.setEnabled(True)
-            self.indicator_read_unprocessed.setStyleSheet("background-color: grey; border: 1px solid black; border-radius: 5px;")
-            self.is_process_running = False
-        else:
-            print("Sweep is already finished or was never started.")
+        # 4) Clear the “busy” flag
+        self.is_process_running = False
 
 
 
