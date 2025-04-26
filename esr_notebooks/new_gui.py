@@ -504,8 +504,6 @@ class GraphWidget(QWidget):
         self.canvas.draw()
     
     def update_canvas_psweep(self, sig, task_name):
-        print("drawing the graph now")
-
         self.ax.clear()
 
         if task_name == "read_processed":
@@ -531,8 +529,6 @@ class GraphWidget(QWidget):
         self.ax.set_ylabel('Signal (a.u.)')
         self.ax.legend()
         self.canvas.draw()
-        print("canvas is visible?", self.canvas.isVisible())
-        print("done drawing")
     
     def show_context_menu(self, pos):
         menu = QMenu()
@@ -551,7 +547,7 @@ class GraphWidget(QWidget):
 
         # Copy to clipboard
         QApplication.clipboard().setPixmap(image)
-        print("📋 Copied graph to clipboard.")
+        print("Copied graph to clipboard.")
 
         
 class SweepPlotWidget(QWidget):
@@ -622,6 +618,9 @@ class SweepPlotWidget(QWidget):
             
 
 class DynamicSettingsPanel(QWidget):
+    # Declare a signal that will fire when any setting changes
+    settingChanged = pyqtSignal()
+
     def __init__(self):
         super().__init__()
 
@@ -787,7 +786,32 @@ class DynamicSettingsPanel(QWidget):
         else:
             widget = QLabel("N/A")
             widget.setWordWrap(True)
+        self._connect_setting_signals(widget)
         return widget
+
+    def _connect_setting_signals(self, widget):
+        """
+        Connects the appropriate Qt signal on `widget` (or its children, for composites)
+        to emit self.settingChanged.
+        """
+        from PyQt5.QtWidgets import QSpinBox, QDoubleSpinBox, QLineEdit, QComboBox, QCheckBox
+        # 1) Single-value widgets
+        if isinstance(widget, QSpinBox):
+            widget.valueChanged.connect(self.settingChanged.emit)
+        elif isinstance(widget, QDoubleSpinBox):
+            widget.valueChanged.connect(self.settingChanged.emit)
+        elif isinstance(widget, QLineEdit):
+            widget.textChanged.connect(self.settingChanged.emit)
+        elif isinstance(widget, QComboBox):
+            widget.currentIndexChanged.connect(self.settingChanged.emit)
+        elif isinstance(widget, QCheckBox):
+            widget.stateChanged.connect(self.settingChanged.emit)
+        # 2) Composite widgets: iterate through child sub-widgets
+        elif hasattr(widget, 'layout'):
+            layout = widget.layout()
+            for idx in range(layout.count()):
+                subw = layout.itemAt(idx).widget()
+                self._connect_setting_signals(subw)
 
 
 
@@ -971,6 +995,8 @@ class ExperimentUI(QMainWindow):
 
         # Create main UI elements
         self.settings_panel = DynamicSettingsPanel()
+        self.settings_panel.settingChanged.connect(self.on_setting_changed)
+
         self.queue_manager = QueueManager()
         self.graphs_panel = self.init_graphs_panel()
         self.error_log = self.init_error_log_widget()
@@ -1003,6 +1029,20 @@ class ExperimentUI(QMainWindow):
             template,
             default_file=self.current_experiment.default_file
         )
+        
+    def on_setting_changed(self):
+        """
+        Called whenever any setting widget is edited.
+        Greys out the three action buttons and re-enables "Initialize".
+        """
+        self.settings_changed = True
+        if not self.is_process_running:
+            # Grey out action buttons
+            self.read_unprocessed_btn.setEnabled(False)
+            self.read_processed_btn.setEnabled(False)
+            self.sweep_start_stop_btn.setEnabled(False)
+            # Re-enable Initialize
+            self.set_parameters_and_initialize_btn.setEnabled(True)
 
 
     def init_layout(self):
@@ -1346,21 +1386,64 @@ class ExperimentUI(QMainWindow):
         return top_menu
 
     def change_experiment_type(self, experiment_type):
+        # 0) Clear the old experiment's graphs:
+        old = self.current_experiment
+        # Clear Read Unprocessed
+        old.read_unprocessed_graph.ax.clear()
+        old.read_unprocessed_graph.canvas.draw()
+        # Clear Read Processed
+        old.read_processed_graph.ax.clear()
+        old.read_processed_graph.canvas.draw()
+        # Clear 2D Sweep
+        old.sweep_graph_2D.ax.clear()
+        old.sweep_graph_2D.canvas.draw_idle()
+        # Clear 1D Sweep
+        old.sweep_graph_1D.ax.clear()
+        old.sweep_graph_1D.canvas.draw_idle()
+
+        # If a sweep is in progress, stop it
         if hasattr(self, 'worker'):
             self.worker.stop_sweep()
-            self.indicator_sweep.setStyleSheet("background-color: grey; border: 1px solid black; border-radius: 5px;")
-        
-        print("Changing experiment type to " + experiment_type + "...\n")
-        
-        # Set the new experiment
+            self.indicator_sweep.setStyleSheet(
+                "background-color: grey; border: 1px solid black; border-radius: 5px;"
+            )
+
+        print(f"Changing experiment type to {experiment_type}...\n")
+
+        # 1) Swap in the new ExperimentType
         self.current_experiment = self.experiments[experiment_type]
         self.temp_parameters = {}
         self.init_parameters_from_template()
+
+        # 2) Reload settings panel for the new experiment
         self.settings_panel.load_settings_panel(
             self.experiment_templates[experiment_type],
             default_file=self.current_experiment.default_file
         )
 
+        # 3) Re‐wire the graph tabs to the new experiment's widgets
+        for idx in range(self.graph_tabs.count()):
+            tab = self.graph_tabs.widget(idx)
+            layout = tab.layout()
+            # remove old widget
+            if layout.count():
+                old_w = layout.takeAt(0).widget()
+                old_w.setParent(None)
+            # insert new widget
+            if idx == 0:
+                layout.addWidget(self.current_experiment.read_unprocessed_graph)
+            elif idx == 1:
+                layout.addWidget(self.current_experiment.read_processed_graph)
+            elif idx == 2:
+                layout.addWidget(self.current_experiment.sweep_graph_2D)
+            elif idx == 3:
+                layout.addWidget(self.current_experiment.sweep_graph_1D)
+
+        # 4) Reset all action buttons
+        self.read_unprocessed_btn.setEnabled(False)
+        self.read_processed_btn.setEnabled(False)
+        self.sweep_start_stop_btn.setEnabled(False)
+        self.set_parameters_and_initialize_btn.setEnabled(True)
 
         # Update the graphs in the existing tabs
         for i in range(self.graph_tabs.count()):
@@ -1457,7 +1540,7 @@ class ExperimentUI(QMainWindow):
         self.read_unprocessed_btn.setEnabled(True)
         self.read_processed_btn.setEnabled(True)
         self.sweep_start_stop_btn.setEnabled(True)
-        print("✅ Initialized experiment with parameters:")
+        print("Initialized experiment with parameters:")
         for k, v in new_params.items():
             print(f"   {k}: {v}")
         self.indicator_initialize.setStyleSheet(
