@@ -245,7 +245,7 @@ EXPERIMENT_TEMPLATES = {
                 "min": 0.0, "max": 2500.0, "default": 50.0},
                 {"display": "Field Step (G)", "key": "field_step", "type": "double_spin",
                 "min": 0.01, "max": 2500.0, "default": 1.5},
-                {"display": "Sub Method", "key": "field_step", "type": "combo",
+                {"display": "Sub Method", "key": "subtract", "type": "combo",
                 "options": ['Phase', 'Delay', 'Both', 'None', 'Autophase'], "default": "Phase"},
                 {"display": "Averaging Time (s)", "key": "sltime", "type": "double_spin",
                  "min": 0.0, "max": 20.0, "default": 0.0}
@@ -630,65 +630,105 @@ class SweepPlotWidget(QWidget):
             
 
 class DynamicSettingsPanel(QWidget):
-    """A QWidget-based panel that dynamically generates a settings tree from a configuration template.
-        This class is responsible for rendering a scrollable, two-column tree view of
-        experiment settings. It supports various input types such as spin boxes,
-        combo boxes, checkboxes, line edits, and composite widgets, allowing for
-        flexible experiment configuration. t"""
     def __init__(self):
         super().__init__()
-        self.main_layout = QVBoxLayout(self) #The main layout of the panel.
 
-        self.settings_tree = QTreeWidget() #The tree structure displaying setting names and editable widgets.
+        # 1) Create the tree
+        self.settings_tree = QTreeWidget()
         self.settings_tree.setHeaderHidden(False)
         self.settings_tree.setColumnCount(2)
-        self.settings_tree.setHeaderLabels(["Setting", "Value"])
+        self.settings_tree.setHeaderLabels(["Setting","Value"])
         self.settings_tree.setColumnWidth(0, 200)
         self.settings_tree.setColumnWidth(1, 100)
 
-        self.settings_scroll = QScrollArea() #Scrollable area containing the settings tree.
+        # 2) Put it in a scroll area
+        self.settings_scroll = QScrollArea()
         self.settings_scroll.setWidgetResizable(True)
         self.settings_scroll.setWidget(self.settings_tree)
-        self.main_layout.addWidget(self.settings_scroll)
 
-    def load_settings_panel(self, settings):
-        """Populates the settings panel using a structured dictionary of grouped settings.
-            This method clears the current tree and rebuilds it based on the provided
-            template, organizing settings into collapsible groups. Each setting is rendered
-            with an appropriate input widget (e.g., spin box, combo box, checkbox).
+        # 3) Lay it out
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.settings_scroll)
 
-            @param settings -- A triply nested dictionary containing setting groups and items, typically
-                                in the format:
-                                {
-                                    "groups": {
-                                        "Group Name": [
-                                            {"display": ..., "key": ..., "type": ..., ...},
-                                            ...
-                                        ]
-                                    }
-                                }"""
-        self.settings_tree.clear() #reset settings tree
+    def load_settings_panel(self, settings, default_file=None):
+        """Populate settings tree from template and apply typed defaults."""
+        # Build a mapping from parameter key to expected widget type
+        type_map = {}
+        for group in settings.get("groups", {}).values():
+            for setting in group:
+                stype = setting.get("type")
+                key = setting.get("key")
+                if isinstance(key, list):
+                    for subkey in key:
+                        type_map[subkey] = stype
+                else:
+                    type_map[key] = stype
 
-        for group_name, group_settings in settings.get("groups", {}).items(): #iterate through the setting groups and load each one
+        # 1) Clear & build from template
+        self.settings_tree.clear()
+        for group_name, group_settings in settings.get("groups", {}).items():
             group_item = QTreeWidgetItem([group_name])
             self.settings_tree.addTopLevelItem(group_item)
             group_item.setExpanded(group_name == "Main Settings")
-
-            for setting in group_settings: #iterate through the individual settings for each setting group and load each setting
+            for setting in group_settings:
                 item = QTreeWidgetItem()
                 group_item.addChild(item)
                 widget = self.create_setting_widget(setting)
                 widget._underlying_key = setting.get("key")
                 self.settings_tree.setItemWidget(item, 1, widget)
-                label_widget = QLabel(setting.get("display", setting.get("name", "N/A")))
-                label_widget.setWordWrap(True)
-                label_widget.setTextInteractionFlags(Qt.TextSelectableByMouse)
-                label_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-                if "tool tip" in setting.keys():
-                    label_widget.setToolTip(setting["tool tip"]) #This references each individual setting's tool tip (see EXPERIMENT_TEMPLATES below)    
-                
-                #update settings tree 
-                self.settings_tree.setItemWidget(item, 0, label_widget)
+                label = QLabel(setting.get("display", "N/A"))
+                label.setToolTip(setting.get("tool tip", ""))
+                self.settings_tree.setItemWidget(item, 0, label)
+
+        # 2) Load pickle defaults
+        if default_file and os.path.isfile(default_file):
+            try:
+                with open(default_file, 'rb') as f:
+                    defaults = pickle.load(f)
+            except Exception:
+                defaults = {}
+        else:
+            defaults = {}
+
+        # 3) Apply typed defaults
+        tree = self.settings_tree
+        root = tree.invisibleRootItem()
+        for i in range(root.childCount()):
+            grp = root.child(i)
+            for j in range(grp.childCount()):
+                item = grp.child(j)
+                w = tree.itemWidget(item, 1)
+                key = getattr(w, '_underlying_key', None)
+
+                def apply_value(widget, raw_val, expected):
+                    # Convert and apply based on expected type
+                    if isinstance(widget, QSpinBox):
+                        widget.setValue(int(raw_val))
+                    elif isinstance(widget, QDoubleSpinBox):
+                        widget.setValue(float(raw_val))
+                    elif isinstance(widget, QComboBox):
+                        widget.setCurrentText(str(raw_val))
+                    elif isinstance(widget, QCheckBox):
+                        widget.setChecked(bool(raw_val))
+                    elif isinstance(widget, QLineEdit):
+                        widget.setText(str(raw_val))
+
+                # Handle composite widgets
+                if isinstance(key, list):
+                    # Composite widget holds multiple sub-widgets
+                    layout = w.layout()
+                    for idx, subkey in enumerate(key):
+                        if subkey in defaults:
+                            raw = defaults[subkey]
+                            expected = type_map.get(subkey)
+                            subw = layout.itemAt(idx).widget()
+                            apply_value(subw, raw, expected)
+                else:
+                    # Single widget
+                    if key in defaults:
+                        raw = defaults[key]
+                        expected = type_map.get(key)
+                        apply_value(w, raw, expected)
 
     def create_setting_widget(self, setting):
         """Creates and returns an input widget based on the setting's type definition.
@@ -929,11 +969,11 @@ class ExperimentUI(QMainWindow):
 
         # Setup experiments
         self.experiments = {
-            "Spin Echo": ExperimentType("Spin Echo"), 
+            "Spin Echo": ExperimentType("Spin Echo"),
             "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep")
         }
 
-        #For button logic
+        # For button logic
         self.is_process_running = False
         self.settings_changed = False
 
@@ -943,7 +983,7 @@ class ExperimentUI(QMainWindow):
         self.temp_parameters = {}
 
         # Create main UI elements
-        self.settings_panel = DynamicSettingsPanel() 
+        self.settings_panel = DynamicSettingsPanel()
         self.queue_manager = QueueManager()
         self.graphs_panel = self.init_graphs_panel()
         self.error_log = self.init_error_log_widget()
@@ -951,31 +991,32 @@ class ExperimentUI(QMainWindow):
 
         # Build the main layout with splitters
         self.init_layout()
+
+        # Load defaults into the settings panel
+        self.load_defaults_and_build_ui()
+
+        # After defaults, disable action buttons until initialization
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
         self.sweep_start_stop_btn.setEnabled(False)
         self.set_parameters_and_initialize_btn.setEnabled(True)
 
-        # Load some default experiment into the settings panel
-        self.current_experiment = self.experiments["Spin Echo"]
-        self.temp_parameters = {}
-        
-        # Set up the custom stream for stdout and stderr
-        dual_stream = DualStream(self.log_text)  # Create the custom stream object
-        sys.stdout = dual_stream  # Redirect stdout to the dual stream
-        sys.stderr = dual_stream  # Redirect stderr to the dual stream
+        # Setup custom stdout/stderr stream
+        dual_stream = DualStream(self.log_text)
+        sys.stdout = dual_stream
+        sys.stderr = dual_stream
 
-        #change function assigned to each button
-        self.settings_panel.load_settings_panel(self.experiment_templates.get("Spin Echo", {"main": [], "groups": {}}))
-
-        #setup for graph saving
         self.last_saved_graph_path = None
-
         self.worker_thread = None
-        
-#         # Create a timer to refresh the sweep plot so it plots live
-#         self.plot_timer = QTimer(self)
-#         self.plot_timer.timeout.connect(self.refresh_sweep_plot)
+
+    def load_defaults_and_build_ui(self):
+        # 1) Build the tree from template
+        template = self.experiment_templates[self.current_experiment.type]
+        self.settings_panel.load_settings_panel(
+            template,
+            default_file=self.current_experiment.default_file
+        )
+
 
     def init_layout(self):
         """
@@ -1317,20 +1358,6 @@ class ExperimentUI(QMainWindow):
         top_menu.addWidget(experiment_buttons_widget)
         return top_menu
 
-    def init_settings_panel(self):
-        # Settings Panel
-        self.settings_panel = DynamicSettingsPanel()
-        settings_scroll = QScrollArea()
-        settings_scroll.setWidgetResizable(True)
-        settings_scroll.setWidget(self.settings_panel)
-
-        # Load initial settings
-        self.current_experiment = self.experiments["Spin Echo"]
-        self.temp_parameters = {}
-        self.settings_panel.load_settings_panel(self.experiment_templates.get("Spin Echo", {"main": [], "groups": {}}))
-        
-        return settings_scroll
-
     def change_experiment_type(self, experiment_type):
         if hasattr(self, 'worker'):
             self.worker.stop_sweep()
@@ -1343,8 +1370,10 @@ class ExperimentUI(QMainWindow):
         self.temp_parameters = {}
         self.init_parameters_from_template()
         self.settings_panel.load_settings_panel(
-            self.experiment_templates.get(experiment_type, {"groups": {}})
+            self.experiment_templates[experiment_type],
+            default_file=self.current_experiment.default_file
         )
+
 
         # Update the graphs in the existing tabs
         for i in range(self.graph_tabs.count()):

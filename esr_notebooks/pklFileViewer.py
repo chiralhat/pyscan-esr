@@ -2,7 +2,7 @@ import pickle
 
 
 def main():
-    filename = "ps_defaults.pkl" #Pickle file to view
+    filename = "se_defaults.pkl" #Pickle file to view
     with open(filename, 'rb') as file:
         data = pickle.load(file)
         for key in data:
