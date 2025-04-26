@@ -340,89 +340,80 @@ class Worker(QObject):
 
         self.finished.emit()
 
-    
+        
     @pyqtSlot()
     def run_sweep(self):
-        """
-        Called when we want to do the 'start_sweep' process in a separate thread. Starts a swweep in a QT Thread, and checks every 1 second
-        if the sweep is over (killing the QT thread if so). 
-        """
-        self.updateStatus.emit("Starting sweep in worker thread...\n")
+        self.updateStatus.emit("Starting sweep in worker thread…\n")
         self.stop_requested = False
         self.running = True
 
+        # kick off the hardware sweep
         self.experiment.start_sweep()
         expt = self.experiment.sweep['expt']
-        
 
-        self.updateStatus.emit("Sweeping...\n")
-        # Add these to your class __init__ or before the loop starts:
-        self.last_data = None
+        # locals to hold the last arrays
+        last_data_2d = None
+        last_data_1d = None
 
-        expt = self.experiment.sweep['expt']
-
-        # Inside your thread's run loop:
         while not self.stop_requested and self.running:
             if not expt.runinfo.running:
                 self.running = False
+                break
 
-            elif expt.runinfo.measured != []:
+            if expt.runinfo.measured:
                 try:
-                    current_data = expt.x  # Change 'x' to whatever you're interested in
+                    # build new PlotGenerators
+                    pg_2D = ps.PlotGenerator(
+                        expt=expt, d=2,
+                        x_name='t',
+                        y_name=self.experiment.parameters['y_name'],
+                        data_name=self.experiment.parameters['2D Sweep variable'],
+                        transpose=1
+                    )
+                    pg_1D = ps.PlotGenerator(
+                        expt=expt, d=1,
+                        x_name=self.experiment.parameters['y_name'],
+                        data_name=self.experiment.parameters['1D Sweep variable'],
+                    )
 
-                    if self.last_data is None or not np.array_equal(current_data, self.last_data):
-                        self.last_data = current_data.copy()
-
-                        pg_2D = ps.PlotGenerator(
-                            expt=expt,
-                            d=2,
-                            x_name='t',
-                            y_name=self.experiment.parameters['y_name'],
-                            data_name=self.experiment.parameters['2D Sweep variable'],
-                            transpose=1
-                        )
-
-                        pg_1D = ps.PlotGenerator(
-                            expt=expt,
-                            d=1,
-                            x_name=self.experiment.parameters['y_name'],
-                            data_name=self.experiment.parameters['1D Sweep variable'],
-                        )
-
+                    # compare & emit 2D only on change
+                    if last_data_2d is None or not np.array_equal(pg_2D.data, last_data_2d):
+                        last_data_2d = pg_2D.data.copy()
                         self.live_plot_2D_update_signal.emit(pg_2D)
+
+                    # compare & emit 1D only on change
+                    if last_data_1d is None or not np.array_equal(pg_1D.data, last_data_1d):
+                        last_data_1d = pg_1D.data.copy()
                         self.live_plot_1D_update_signal.emit(pg_1D)
 
                 except Exception as e:
-                    self.updateStatus.emit("Error in update loop...\n")
-                    
-            sleep(1)  # optional; reduce or remove if not needed
+                    self.updateStatus.emit(f"Error in update loop: {e}\n")
 
-        # Plot final updates
+            sleep(1)
+
+        # final draw on normal or early exit
         pg_2D = ps.PlotGenerator(
-                            expt=expt,
-                            d=2,
-                            x_name='t',
-                            y_name=self.experiment.parameters['y_name'],
-                            data_name=self.experiment.parameters['2D Sweep variable'],
-                            transpose=1
-                        )
+            expt=expt, d=2,
+            x_name='t',
+            y_name=self.experiment.parameters['y_name'],
+            data_name=self.experiment.parameters['2D Sweep variable'],
+            transpose=1
+        )
         pg_1D = ps.PlotGenerator(
-                            expt=expt,
-                            d=1,
-                            x_name=self.experiment.parameters['y_name'],
-                            data_name=self.experiment.parameters['1D Sweep variable'],
-                        )
+            expt=expt, d=1,
+            x_name=self.experiment.parameters['y_name'],
+            data_name=self.experiment.parameters['1D Sweep variable'],
+        )
         self.live_plot_2D_update_signal.emit(pg_2D)
-        self.live_plot_1D_update_signal.emit(pg_1D) 
+        self.live_plot_1D_update_signal.emit(pg_1D)
 
         if self.stop_requested:
             self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
-        elif self.running == False:
+        else:
             self.updateStatus.emit("Done sweeping (normal exit).\n")
-            
-        #self.live_plot_2D_update_signal.emit(None)  # Optionally send a "done" signal to stop updates
-        #self.live_plot_1D_update_signal.emit(None) 
+
         self.finished.emit()
+
 
     @pyqtSlot()
     def stop_sweep(self):
@@ -574,88 +565,67 @@ class GraphWidget(QWidget):
 class SweepPlotWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-
-        # Set the background to transparent and remove any borders or margins
         self.setStyleSheet("background: transparent; border: none;")
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
         self.ax = self.figure.add_subplot(111)
+
+        # --- cache artists ---
+        self.mesh = None          # for the 2D colormesh
         self.colorbar = None
+        self.line, = self.ax.plot([], [], 'o-')  # for the 1D sweep
 
-        self.xdata = []
-        self.ydata = []
-        self.line, = self.ax.plot([], [], 'o-')
-
-        layout = QVBoxLayout()
+        layout = QVBoxLayout(self)
         layout.addWidget(self.canvas)
-        self.setLayout(layout)
 
     @pyqtSlot(object)
     def on_live_plot_2D(self, pg):
-        if pg is None:
-            print("PlotGenerator is None.")
+        if pg is None or pg.data.size == 0:
             return
-        try:
-            ax = self.ax
-            ax.clear()
 
-            if pg.data.size == 0:
-                print("No data to plot yet.")
-                return
-
-            # Remove existing colorbar cleanly
-            if self.colorbar:
-                self.colorbar.remove()
-                self.colorbar = None
-
-            print(f"x shape: {pg.x.shape}, y shape: {pg.y.shape}, data shape: {pg.data.shape}")
-            
-            # Plot data
-            mesh = ax.pcolormesh(
-                pg.x,
-                pg.y,
-                pg.data.T,
+        # First time: create the QuadMesh
+        if self.mesh is None:
+            self.mesh = self.ax.pcolormesh(
+                pg.x, pg.y, pg.data.T,
                 shading='auto',
                 vmin=pg.get_data_range()[0],
                 vmax=pg.get_data_range()[1]
             )
+            self.colorbar = self.figure.colorbar(self.mesh, ax=self.ax)
+        else:
+            # Only update the array & color scale
+            self.mesh.set_array(pg.data.T.ravel())
+            vmin, vmax = pg.get_data_range()
+            self.mesh.set_clim(vmin, vmax)
+            # no need to recreate colorbar
 
-            # Store reference to new colorbar
-            self.colorbar = self.figure.colorbar(mesh, ax=ax)
+        self.ax.set_title(pg.get_title())
+        self.ax.set_xlabel(pg.get_xlabel())
+        self.ax.set_ylabel(pg.get_ylabel())
 
-            ax.set_title(pg.get_title())
-            ax.set_xlabel(pg.get_xlabel())
-            ax.set_ylabel(pg.get_ylabel())
-            self.canvas.draw()
-        except Exception as e:
-            print(f"Exception during plot update: {e}")
+        # Non‐blocking redraw
+        self.canvas.draw_idle()
 
     @pyqtSlot(object)
     def on_live_plot_1D(self, pg):
-        if pg is None:
-            print("PlotGenerator is None.")
+        if pg is None or pg.data is None or pg.x is None or pg.data.size == 0:
             return
-        try:
-            ax = self.ax
-            ax.clear()
 
-            if pg.data is None or pg.x is None or pg.data.size == 0:
-                print("No data to plot yet.")
-                return
+        # Update the Line2D data
+        self.line.set_data(pg.x, pg.data)
 
-            print(f"Plotting 1D data: x shape = {pg.x.shape}, y shape = {pg.data.shape}")
+        # Rescale axes
+        self.ax.relim()
+        self.ax.autoscale_view()
 
-            ax.plot(pg.x, pg.data, marker='o', linestyle='-', label=pg.get_title() or "Sweep Result")
+        self.ax.set_title(pg.get_title())
+        self.ax.set_xlabel(pg.get_xlabel())
+        self.ax.set_ylabel(pg.get_ylabel())
 
-            ax.set_title(pg.get_title())
-            ax.set_xlabel(pg.get_xlabel())
-            ax.set_ylabel(pg.get_ylabel())
-            ax.legend()
-            self.canvas.draw()
+        # Non‐blocking redraw
+        self.canvas.draw_idle()
 
-        except Exception as e:
-            print(f"Exception during 1D plot update: {e}")
 
             
 
