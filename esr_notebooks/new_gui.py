@@ -1805,50 +1805,106 @@ class ExperimentUI(QMainWindow):
         # self.queue_manager.set_current_running(queue_item.display_name)
 
 
+class QueueRunnerWorker(QThread):
+    experiment_locked = pyqtSignal(object)  # To grey out the experiment
+    experiment_unlocked = pyqtSignal(object)  # To un-grey it if an error occurs
+    queue_stopped = pyqtSignal()  # To stop the queue if needed
+    hardware_error = pyqtSignal(object, str)  # To signal hardware error details
+    
+    def __init__(self, queue_manager):
+        super().__init__()
+        self.queue_manager = queue_manager
+        self.stop_requested = False
+    
+    def run(self):
+        while not self.stop_requested:
+            # Get next experiment
+            experiment = self.get_next_experiment()
+            if not experiment:
+                self.queue_stopped.emit()  # No experiments left, stop the queue
+                return
+            
+            self.experiment_locked.emit(experiment)  # Lock (grey out) the experiment
+            
+            try:
+                # Try to initialize and run the experiment
+                self.initialize_experiment(experiment)
+            except Exception as e:
+                self.hardware_error.emit(experiment, str(e))  # Catch hardware error
+                self.experiment_unlocked.emit(experiment)  # Un-grey the experiment
+                self.queue_stopped.emit()  # Stop the queue
+                return
 
+            self.mark_experiment_done(experiment)
+            self.move_to_next_experiment()  # Move to next experiment in queue
+    
+    def get_next_experiment(self):
+        # Retrieve the next active experiment (first in the active queue)
+        if self.queue_manager.active_queue_list.count() > 0:
+            return self.queue_manager.active_queue_list.item(0)  # Get first item in the list
+        return None
+    
+    def initialize_experiment(self, experiment):
+        # Logic to initialize the experiment (this could be sweep/read process)
+        if experiment.has_sweep:
+            # Simulate passing to a worker for sweeping
+            pass
+        if experiment.has_read_unprocessed:
+            # Simulate passing to a worker for reading unprocessed data
+            pass
+        if experiment.has_read_processed:
+            # Simulate passing to a worker for reading processed data
+            pass
+    
+    def mark_experiment_done(self, experiment):
+        # Mark experiment as done
+        experiment.set_done()
+    
+    def move_to_next_experiment(self):
+        # Move to next experiment (remove it from the active queue)
+        self.queue_manager.active_queue_list.takeItem(0)
 
 
 class QueueManager(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # Main layout (vertical)
+        # Queue attributes
+        self.queue_runner = None  # Don't create QueueRunnerWorker yet
+        self.queue_running = False
+
+        # UI Setup
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
 
-        # Collapsed view
+        # Collapsed Button
         self.collapsed_button = QPushButton("Currently Running: [None] ▼")
         self.collapsed_button.setMaximumHeight(40)
         self.collapsed_button.setStyleSheet("text-align: left; padding: 8px;")
         self.collapsed_button.clicked.connect(self.toggle_expand)
         self.main_layout.addWidget(self.collapsed_button)
 
-        # Expanded container (initially hidden)
+        # Expanded Frame (initially hidden)
         self.expanded_frame = QFrame()
         self.expanded_frame.setVisible(False)
         self.expanded_layout = QVBoxLayout(self.expanded_frame)
         self.expanded_layout.setContentsMargins(10, 10, 10, 10)
         self.expanded_layout.setSpacing(10)
 
-        # Top control buttons
-        # Row with "Active Queue" label + buttons
+        # Active Queue Label + Control Buttons
         active_queue_bar = QHBoxLayout()
-
         active_label = QLabel("Active Queue:")
         active_label.setStyleSheet("font-weight: bold;")
-
         self.history_button = QPushButton("History")
         self.clear_button = QPushButton("Clear")
         self.toggle_run_button = QPushButton("Start")
 
-        # Shrink buttons a little
         for btn in [self.history_button, self.clear_button, self.toggle_run_button]:
-            btn.setFixedHeight(28)  # Smaller height
-            btn.setFixedWidth(70)   # Smaller width
+            btn.setFixedHeight(28)
+            btn.setFixedWidth(70)
             btn.setStyleSheet("font-size: 10pt; padding: 2px;")
 
-        # Add label and buttons inline
         active_queue_bar.addWidget(active_label)
         active_queue_bar.addStretch()
         active_queue_bar.addWidget(self.history_button)
@@ -1857,38 +1913,102 @@ class QueueManager(QWidget):
 
         self.expanded_layout.addLayout(active_queue_bar)
 
-        # Active Queue list below
-        # self.active_queue_list = QListWidget()
-        # self.active_queue_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        # self.expanded_layout.addWidget(self.active_queue_list)      
-
-        #Button mappings
+        # Connect button signals
         self.clear_button.clicked.connect(self.clear_queue)
-        self.toggle_run_button.clicked.connect(self.toggle_run)
+        self.toggle_run_button.clicked.connect(self.start_stop_queue)
 
-        # Active Queue
-        # self.expanded_layout.addWidget(QLabel("Active Queue:"))
+        # Queues
         self.active_queue_list = QListWidget()
-        self.active_queue_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.expanded_layout.addWidget(self.active_queue_list)
 
-        # Working Queue
         self.expanded_layout.addWidget(QLabel("Working Queue:"))
         self.working_queue_list = QListWidget()
         self.working_queue_list.setDragEnabled(True)
         self.working_queue_list.setAcceptDrops(True)
         self.working_queue_list.setDragDropMode(QListWidget.InternalMove)
-        self.working_queue_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.expanded_layout.addWidget(self.working_queue_list)
 
-        # Add expanded frame to the main layout
+        # Add expanded frame
         self.main_layout.addWidget(self.expanded_frame)
 
-        # Default running label
         self.current_running_text = "[None]"
 
-    def toggle_run(self):
+    def start_stop_queue(self):
+        """Handle the start/stop of the queue"""
         self.toggle_run_button_text()
+        if self.queue_runner and self.queue_runner.isRunning():
+            self.stop_queue()  # Stop the queue
+        else:
+            self.start_queue()  # Start the queue
+    
+    def start_queue(self):
+        """Start the queue by launching a QueueRunnerWorker in a new thread."""
+        if self.queue_runner and self.queue_runner.isRunning():
+            print("Queue is already running.")
+            return
+
+        # Create a fresh worker
+        self.queue_runner = QueueRunnerWorker(self)
+
+        # Connect core queue signals
+        self.queue_runner.queue_stopped.connect(self.queue_stopped_due_to_completion_or_error)
+        self.queue_runner.hardware_error.connect(self.handle_hardware_error)
+
+        # Connect worker to existing experiments
+        for list_widget in [self.active_queue_list, self.working_queue_list]:
+            for i in range(list_widget.count()):
+                item = list_widget.item(i)
+                if isinstance(item, QueuedExperiment):
+                    self.queue_runner.experiment_locked.connect(item.lock_experiment)
+                    self.queue_runner.experiment_unlocked.connect(item.unlock_experiment)
+
+        # Also make sure any future-added experiments are connected correctly
+
+        # Start
+        self.queue_running = True
+        self.queue_runner.start()
+    
+    def stop_queue(self):
+        """Request the queue to stop."""
+        if self.queue_runner:
+            self.queue_runner.stop_requested = True
+
+    def queue_stopped_due_to_completion_or_error(self):
+        """Called when the queue runner stops naturally or due to error."""
+        self.queue_running = False
+        self.toggle_run_button.setText("Start")  # Reset button to Start
+        print("Queue has stopped.")
+
+    def handle_hardware_error(self, experiment, error_message):
+        """Handle hardware error by printing/logging."""
+        print(f"Hardware error detected in experiment: {experiment.parameters_dict.get('display_name', 'Unknown')}")
+        print(f"Error: {error_message}")
+
+    def lock_experiment(self, experiment):
+        """Grey out an experiment item."""
+        if isinstance(experiment, QueuedExperiment):
+            experiment.widget.setStyleSheet("""
+                QWidget {
+                    background-color: #cccccc;
+                    border: 2px solid #888;
+                    border-radius: 6px;
+                    padding: 8px;
+                }
+            """)
+            # Optionally disable buttons here too
+
+    def unlock_experiment(self, experiment):
+        """Un-grey an experiment item."""
+        if isinstance(experiment, QueuedExperiment):
+            experiment.widget.setStyleSheet("""
+                QWidget {
+                    background-color: #f9f9f9;
+                    border: 2px solid #888;
+                    border-radius: 6px;
+                    padding: 8px;
+                }
+            """)
+            # Optionally re-enable buttons
     
     def toggle_run_button_text(self):
         """
@@ -2256,6 +2376,35 @@ class QueuedExperiment(QListWidgetItem):
             return base_name
         else:
             return f"{base_name}{count}"
+
+    def lock_experiment(self, experiment):
+        """Lock the experiment widget (grey out)"""
+        if self == experiment:
+            self.widget.setStyleSheet("background-color: #d0d0d0;")  # Grey out the widget
+
+    def unlock_experiment(self, experiment):
+        """Unlock the experiment widget (un-grey)"""
+        if self == experiment:
+            self.widget.setStyleSheet("background-color: #f9f9f9;")  # Un-grey the widget
+
+    @property
+    def has_sweep(self):
+        return self.parameters_dict.get("sweep", False)
+
+    @property
+    def has_read_unprocessed(self):
+        return self.parameters_dict.get("read_unprocessed", False)
+
+    @property
+    def has_read_processed(self):
+        return self.parameters_dict.get("read_processed", False)
+
+    def set_done(self): # ======================== STILL NEED TO IMPLEMENT THIS ================
+        """
+        Called after this experiment has been run fully.
+        (Right now it does nothing.)
+        """
+        pass
 
     def init_experiment(self):
         """
