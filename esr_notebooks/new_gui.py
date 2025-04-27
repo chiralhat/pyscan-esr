@@ -1840,7 +1840,7 @@ class QueueManager(QWidget):
 
         self.history_button = QPushButton("History")
         self.clear_button = QPushButton("Clear")
-        self.toggle_run_button = QPushButton("Start/Stop")
+        self.toggle_run_button = QPushButton("Start")
 
         # Shrink buttons a little
         for btn in [self.history_button, self.clear_button, self.toggle_run_button]:
@@ -1864,7 +1864,7 @@ class QueueManager(QWidget):
 
         #Button mappings
         self.clear_button.clicked.connect(self.clear_queue)
-
+        self.toggle_run_button.clicked.connect(self.toggle_run)
 
         # Active Queue
         # self.expanded_layout.addWidget(QLabel("Active Queue:"))
@@ -1886,6 +1886,20 @@ class QueueManager(QWidget):
 
         # Default running label
         self.current_running_text = "[None]"
+
+    def toggle_run(self):
+        self.toggle_run_button_text()
+    
+    def toggle_run_button_text(self):
+        """
+        Toggles the text between 'Start' and 'Stop' when the button is clicked.
+        """
+        current_text = self.toggle_run_button.text().strip()
+
+        if current_text.lower() == "start" or current_text.lower() == "start/stop":
+            self.toggle_run_button.setText("Stop")
+        else:
+            self.toggle_run_button.setText("Start")
 
     def toggle_expand(self):
         is_visible = self.expanded_frame.isVisible()
@@ -1910,6 +1924,7 @@ class QueueManager(QWidget):
         """
         Clears both the working and active queues after user confirmation.
         """
+        # if self.working_queue_list.count() == 0 and self.active_queue_list.count() == 0:
         reply = QMessageBox.question(
             self,
             "Confirm Clear Queue",
@@ -2123,24 +2138,16 @@ class QueuedExperiment(QListWidgetItem):
         self.queue_manager = queue_manager
         self.experiment_type = experiment.type
 
+        # If copying from existing parameters
         if parameters_dict:
-            # Copying an existing experiment
             self.parameters_dict = parameters_dict.copy()
             self.valid = True
         else:
-            # Creating new experiment
             initial_params = experiment.parameters.copy()
 
-            # Step 1: Create early parameters_dict
-            self.parameters_dict = {
-                "parameters": initial_params,
-                "current_queue": "working_queue"
-            }
-
-            # Step 2: Safely generate display name
+            # Generate the better default display name
             default_name = self.generate_default_display_name()
 
-            # Step 3: Launch configuration dialog
             dialog = ExperimentSetupDialog(
                 self.experiment_type,
                 initial_params,
@@ -2152,21 +2159,19 @@ class QueuedExperiment(QListWidgetItem):
                 self.valid = False
                 return
 
-            # Step 4: After dialog, get user fields
             values = dialog.get_values()
 
-            # Step 5: Update parameters_dict with full info
-            self.parameters_dict.update({
+            self.parameters_dict = {
                 "display_name": values["display_name"],
+                "parameters": initial_params,
                 "read_processed": values["read_processed"],
                 "read_unprocessed": values["read_unprocessed"],
                 "sweep": values["sweep"],
                 "save_graph_output": values["save_graph_output"],
-                "save_directory": values["save_directory"]
-            })
-
+                "save_directory": values["save_directory"],
+                "current_queue": "working_queue"
+            }
             self.valid = True
-
 
         # -- UI Setup --
         self.widget = QWidget()
@@ -2184,7 +2189,7 @@ class QueuedExperiment(QListWidgetItem):
         row_layout = QHBoxLayout()
         row_layout.setSpacing(8)
 
-        self.label = QLabel(f"{self.parameters_dict['display_name']} — {self.experiment_type}")
+        self.label = QLabel(f"{self.parameters_dict['display_name']}")
         self.label.setStyleSheet("font-weight: bold;")
         row_layout.addWidget(self.label)
         row_layout.addStretch()
@@ -2227,16 +2232,13 @@ class QueuedExperiment(QListWidgetItem):
     def generate_default_display_name(self):
         """
         Generates a unique default display name for the queued experiment.
-        Format: Abbreviation:ExperimentNameX
+        Format: Abbreviation:expXXX
         """
         type_abbr = {"Spin Echo": "SE", "Pulse Frequency Sweep": "PFS"}
         abbr = type_abbr.get(self.experiment_type, "UNK")  # fallback abbreviation
 
         # Use self.experiment.parameters directly because parameters_dict not created yet
-        if not self.parameters_dict:
-            expt_name = self.experiment.parameters.get("expt", "Unknown").replace(" ", "")
-        else:
-            expt_name = self.parameters_dict["parameters"]["expt"]
+        expt_name = self.experiment.parameters.get("expt", "exp").replace(" ", "")
 
         base_name = f"{abbr}:{expt_name}"
 
