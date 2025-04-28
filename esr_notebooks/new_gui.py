@@ -412,9 +412,10 @@ class Worker(QObject):
         """
         Slot to request the worker to stop. Sets a flag that can be checked in the run_sweep method, killing the thread.
         """
-        self.stop_requested = True
-        if 'expt' in self.experiment.sweep:
-            self.experiment.sweep['expt'].runinfo.running = False
+        pass
+        # self.stop_requested = True
+        # if 'expt' in self.experiment.sweep:
+        #     self.experiment.sweep['expt'].runinfo.running = False
 
 class DualStream:
     """ A custom stream handler that writes output to both the terminal and a QTextEdit widget.
@@ -1388,20 +1389,20 @@ class ExperimentUI(QMainWindow):
         return top_menu
 
     def change_experiment_type(self, experiment_type):
-        # 0) Clear the old experiment's graphs:
-        old = self.current_experiment
-        # Clear Read Unprocessed
-        old.read_unprocessed_graph.ax.clear()
-        old.read_unprocessed_graph.canvas.draw()
-        # Clear Read Processed
-        old.read_processed_graph.ax.clear()
-        old.read_processed_graph.canvas.draw()
-        # Clear 2D Sweep
-        old.sweep_graph_2D.ax.clear()
-        old.sweep_graph_2D.canvas.draw_idle()
-        # Clear 1D Sweep
-        old.sweep_graph_1D.ax.clear()
-        old.sweep_graph_1D.canvas.draw_idle()
+        # # 0) Clear the old experiment's graphs:
+        # old = self.current_experiment
+        # # Clear Read Unprocessed
+        # old.read_unprocessed_graph.ax.clear()
+        # old.read_unprocessed_graph.canvas.draw()
+        # # Clear Read Processed
+        # old.read_processed_graph.ax.clear()
+        # old.read_processed_graph.canvas.draw()
+        # # Clear 2D Sweep
+        # old.sweep_graph_2D.ax.clear()
+        # old.sweep_graph_2D.canvas.draw_idle()
+        # # Clear 1D Sweep
+        # old.sweep_graph_1D.ax.clear()
+        # old.sweep_graph_1D.canvas.draw_idle()
 
         # If a sweep is in progress, stop it
         if hasattr(self, 'worker'):
