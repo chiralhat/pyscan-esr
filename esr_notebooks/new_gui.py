@@ -79,7 +79,7 @@ EXPERIMENT_TEMPLATES = {
                 {"display": "Gain", "key": "gain", "type": "spin", 
                  "min" : 0, "max" : 32500, "default": 32500, "tool tip": "Helpful information"},
                 {"display": "Avg", "key": "soft_avgs", "type": "spin", #Soft_avgs is a bounded int between 1 and 10000000 (contained in rfsoc controls)
-                 "min": 1, "max": 1000000, "default": 1000, "tool tip": "Helpful information"}, #EXPLICITLY MADE THESE INTS
+                 "min": 1, "max": 1000000, "default": 100, "tool tip": "Helpful information"}, #EXPLICITLY MADE THESE INTS
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], #Both save_dir and file_name are strings (contained in save controls)
                  "type": "composite", "default": ["", ""], "tool tip": "Helpful information"},
                 {"display": "Experiment", "key": "psexpt", "type": "combo", #expt is of ipw.Dropdown type (contained in measure)
@@ -90,7 +90,7 @@ EXPERIMENT_TEMPLATES = {
                  {"display": "2D Sweep variable", "key": "2D Sweep variable", "type": "combo",
                  "options": ["x", "i", "q"], "default": "x"},
                  {"display": "1D Sweep variable", "key": "1D Sweep variable", "type": "combo",
-                 "options": ["X", "I", "Q"], "default": "X"}],
+                 "options": ["x", "i", "q"], "default": "xmean"}],
             "Readout Settings": [
                 {"display": "Time Offset", "key": "h_offset", "type": "double_spin", #h_offset is a bounded float between -10000 and 10000 (contained in rfsoc)
                  "min": -10000.0, "max": 10000.0, "default": -0.125}, #CHANGED THESE VALUES FROM 0, 1000, AND 10.0
@@ -120,8 +120,8 @@ EXPERIMENT_TEMPLATES = {
                 {"display": "Use Lakeshore", "key": "use_temp", "type": "check", #use_temp is an ipw.Checkbox (contained in devices)
                  "default": False}],
             "Never Change": [
-                {"display": "# 180 Pulses", "key": "pulses", "type": "spin",
-                "min": 1, "max": 256, "default": 1},
+                # {"display": "# 180 Pulses", "key": "pulses", "type": "spin",
+                # "min": 1, "max": 256, "default": 1},
                 {"display": "Scope Address", "key": "scope_address",  "type": "combo",
                  "options": res_list, "default": "USB0::1689::261::SGVJ0001055::0::INSTR"},
                 {"display": "FPGA Address", "key": "fpga_address",  "type": "combo",
@@ -137,11 +137,9 @@ EXPERIMENT_TEMPLATES = {
                 {"display": "Phase", "key": "phase", "type": "double_spin",
                 "min": 0.0, "max": 360.0, "default": 0.0},
                 {"display": "Averaging Time (s)", "key": "sltime", "type": "double_spin",
-                 "min": 0.0, "max": 20.0, "default": 0.0},
-                {"display": "Experiment", "key": "expt", "type": "combo",
-                 "options": sweep_list, "default": "Hahn Echo"},
-                # freq start, stop, step might be needed here, but we could not find them
-                ]
+                 "min": 0.0, "max": 20.0, "default": 0.0}
+                #freq start, stop, step might be needed here, but we could not find them
+               ]
         } #THERE IS A SETTING CALLED "subtime" THAT IS CALCULATED LATER AND ADDED TO THE END OF THE PICKLE FILE. IT IS EQUAL TO (soft_avgs * (period / 400000 * ave_reps))
     },
     "Spin Echo": {
@@ -154,7 +152,7 @@ EXPERIMENT_TEMPLATES = {
                 {"display": "Repetition time", "key": "period", "type": "double_spin", 
                  "min": 0.1, "max": 2000000000.0, "default": 200.0, "tool tip": "Helpful information"}, #CHANGED THESE FROM 0.0, 100.0, AND 10.0
                 {"display": "Ave", "key": "soft_avgs", "type": "spin",
-                 "min": 1, "max": 10000000, "default": 10000}, 
+                 "min": 1, "max": 10000000, "default": 100}, 
                 {"display": "Dir and Name", "key": ["save_dir", "file_name"], "type": "composite",
                  "default": ["", ""]}, 
                 {"display": "Reps", "key": "ave_reps", "type": "spin",
@@ -283,15 +281,16 @@ class Worker(QObject):
 
         if self.task_name == "read_processed":
             self.updateStatus.emit("Reading processed data...\n")
+
             if self.experiment.type == "Spin Echo":
                 single = self.experiment.parameters['single']
                 self.experiment.parameters['single'] = self.experiment.parameters['loopback']
                 prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
-
                 measure_phase(prog, self.experiment.soc, self.experiment.sig)
-
                 self.experiment.parameters['single'] = single
+
             elif self.experiment.type == "Pulse Frequency Sweep":
+                self.experiment.parameters['single'] = True
                 prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
                 measure_decay(prog, self.experiment.soc, self.experiment.sig)
                 freq = self.experiment.parameters['freq']
@@ -300,29 +299,23 @@ class Worker(QObject):
 
         elif self.task_name == "read_unprocessed":
             self.updateStatus.emit("Reading unprocessed data...\n")
+
             if self.experiment.type == "Spin Echo":
                 single = self.experiment.parameters['single']
                 avgs = self.experiment.parameters['soft_avgs']
                 self.experiment.parameters['single'] = True
                 self.experiment.parameters['soft_avgs'] = 1
                 prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
-
                 measure_phase(prog, self.experiment.soc, self.experiment.sig)
-
                 self.experiment.parameters['single'] = single
                 self.experiment.parameters['soft_avgs'] = avgs
             
             elif self.experiment.type == "Pulse Frequency Sweep":
-                single = self.experiment.parameters['single']
-                avgs = self.experiment.parameters['soft_avgs']
                 self.experiment.parameters['single'] = True
                 self.experiment.parameters['soft_avgs'] = 1
                 prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
-
                 measure_phase(prog, self.experiment.soc, self.experiment.sig)
 
-                self.experiment.parameters['single'] = single
-                self.experiment.parameters['soft_avgs'] = avgs
             self.updateStatus.emit("Done reading unprocessed data.\n")
 
         if self.experiment.type == "Spin Echo":
@@ -949,17 +942,19 @@ class ExperimentType(QObject):
         runinfo = self.sweep['runinfo']
         expt = ps.Sweep(runinfo, self.devices, self.sweep['name'])
         self.sweep['expt'] = expt
-        
-        if self.parameters['expt']=="Hahn Echo":
-            self.sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
-        elif self.parameters['expt']=="CPMG":
-            self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
-        elif self.parameters['sweep2'] and self.parameters['expt2']=="Hahn Echo":
-            self.sweep['expt'].echo_delay = 2*runinfo.scan1.scan_dict['delay_sweep']*runinfo.parameters['pulses']
-        elif self.parameters['sweep2'] and self.parameters['expt2']=="CPMG":
-            self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan1.scan_dict['cpmg_sweep']
-        else:
-            self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
+
+        if self.type == "Spin Echo":  
+            if self.parameters['expt']=="Hahn Echo":
+                self.sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
+            elif self.parameters['expt']=="CPMG":
+                self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
+            elif self.parameters['sweep2'] and self.parameters['expt2']=="Hahn Echo":
+                self.sweep['expt'].echo_delay = 2*runinfo.scan1.scan_dict['delay_sweep']*runinfo.parameters['pulses']
+            elif self.parameters['sweep2'] and self.parameters['expt2']=="CPMG":
+                self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan1.scan_dict['cpmg_sweep']
+            else:
+                self.sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
+
         self.sweep['expt'].start_time = time()
         self.sweep['expt'].start_thread()
 
