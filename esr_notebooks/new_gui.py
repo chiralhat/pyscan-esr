@@ -1838,6 +1838,24 @@ class QueueRunnerWorker(QThread):
             self.mark_experiment_done(experiment)
             self.move_to_next_experiment()  # Move to next experiment in queue
     
+    def run_worker_task(self, experiment, task):
+        worker = Worker(experiment.experiment, task)  # Worker needs ExperimentType, not QueuedExperiment
+        thread = QThread()
+
+        worker.moveToThread(thread)
+
+        thread.started.connect(worker.run_snapshot)
+
+        worker.dataReady_se.connect(experiment.experiment.read_unprocessed_graph.update_canvas_se)
+        worker.dataReady_ps.connect(experiment.experiment.read_unprocessed_graph.update_canvas_psweep)
+
+        worker.updateStatus.connect(self.queue_manager.parent().on_worker_status_update)  # Pipe logs nicely
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+
+        thread.start()
+    
     def get_next_experiment(self):
         # Retrieve the next active experiment (first in the active queue)
         if self.queue_manager.active_queue_list.count() > 0:
@@ -1845,16 +1863,17 @@ class QueueRunnerWorker(QThread):
         return None
     
     def initialize_experiment(self, experiment):
-        # Logic to initialize the experiment (this could be sweep/read process)
+        # Initialize the experiment hardware
+        experiment.init_experiment()
+
         if experiment.has_sweep:
-            # Simulate passing to a worker for sweeping
-            pass
+            self.run_worker_task(experiment, task="sweep")
+
         if experiment.has_read_unprocessed:
-            # Simulate passing to a worker for reading unprocessed data
-            pass
+            self.run_worker_task(experiment, task="read_unprocessed")
+
         if experiment.has_read_processed:
-            # Simulate passing to a worker for reading processed data
-            pass
+            self.run_worker_task(experiment, task="read_processed")
     
     def mark_experiment_done(self, experiment):
         # Mark experiment as done
@@ -2399,12 +2418,22 @@ class QueuedExperiment(QListWidgetItem):
     def has_read_processed(self):
         return self.parameters_dict.get("read_processed", False)
 
-    def set_done(self): # ======================== STILL NEED TO IMPLEMENT THIS ================
-        """
-        Called after this experiment has been run fully.
-        (Right now it does nothing.)
-        """
-        pass
+    def set_done(self):
+        """Grey out the widget and disable all buttons after experiment finishes."""
+        print("Marking experiment done...")
+        # Grey out the background
+        self.widget.setStyleSheet("""
+            QWidget {
+                background-color: #cccccc;
+                border: 2px solid #444;
+                border-radius: 6px;
+                padding: 8px;
+            }
+        """)
+
+        # Disable all buttons
+        for button in [self.change_queue_button, self.duplicate_button, self.delete_button, self.info_button]:
+            button.setEnabled(False)
 
     def init_experiment(self):
         """
