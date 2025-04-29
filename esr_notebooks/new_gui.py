@@ -1801,7 +1801,6 @@ class ExperimentUI(QMainWindow):
         # Optionally update the queue’s collapsed display text
         # self.queue_manager.set_current_running(queue_item.display_name)
 
-
 class QueueRunnerWorker(QThread):
     experiment_locked = pyqtSignal(object)  # To grey out the experiment
     experiment_unlocked = pyqtSignal(object)  # To un-grey it if an error occurs
@@ -2226,7 +2225,7 @@ class ExperimentSetupDialog(QDialog):
         main_layout.addWidget(self.settings_panel, 3)
 
 
-        # ✅ Fill left-side fields if values provided
+        # Fill left-side fields if values provided
         if values:
             self.name_input.setText(values.get("display_name", "default name"))
             self.read_processed_checkbox.setChecked(values.get("read_processed", False))
@@ -2621,8 +2620,6 @@ class QueuedExperiment(QListWidgetItem):
             """
             self.experiment.set_parameters(self.parameters)
             self.experiment.init_pyscan_experiment()
-
-
 
 
 def main():
