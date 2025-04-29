@@ -72,7 +72,7 @@ class Worker(QObject):
                 self.experiment.parameters['single'] = single
 
             elif self.experiment.type == "Pulse Frequency Sweep":
-                self.experiment.parameters['single'] = True
+                # self.experiment.parameters['single'] = True
                 prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
                 measure_decay(prog, self.experiment.soc, self.experiment.sig)
                 freq = self.experiment.parameters['freq']
@@ -157,22 +157,25 @@ class Worker(QObject):
                     self.updateStatus.emit(f"Error in update loop: {e}\n")
 
             sleep(1)
-
-        # final draw on normal or early exit
-        pg_2D = ps.PlotGenerator(
-            expt=expt, d=2,
-            x_name='t',
-            y_name=self.experiment.parameters['y_name'],
-            data_name=self.experiment.parameters['2D Sweep variable'],
-            transpose=1
-        )
-        pg_1D = ps.PlotGenerator(
-            expt=expt, d=1,
-            x_name=self.experiment.parameters['y_name'],
-            data_name=self.experiment.parameters['1D Sweep variable'],
-        )
-        self.live_plot_2D_update_signal.emit(pg_2D)
-        self.live_plot_1D_update_signal.emit(pg_1D)
+        if expt.runinfo.measured:
+            try:
+                # final draw on normal or early exit
+                pg_2D = ps.PlotGenerator(
+                    expt=expt, d=2,
+                    x_name='t',
+                    y_name=self.experiment.parameters['y_name'],
+                    data_name=self.experiment.parameters['2D Sweep variable'],
+                    transpose=1
+                )
+                pg_1D = ps.PlotGenerator(
+                    expt=expt, d=1,
+                    x_name=self.experiment.parameters['y_name'],
+                    data_name=self.experiment.parameters['1D Sweep variable'],
+                )
+                self.live_plot_2D_update_signal.emit(pg_2D)
+                self.live_plot_1D_update_signal.emit(pg_1D)
+            except Exception as e:
+                self.updateStatus.emit(f"Error final plot update: {e}\n")
 
         if self.stop_requested:
             self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")

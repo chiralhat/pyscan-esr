@@ -100,6 +100,7 @@ class ExperimentType(QObject):
             self.parameters['nutation_length'] = 0
             self.parameters['reps'] = 1
             self.parameters['sweep2'] = 0
+            self.parameters['single'] = self.parameters['loopback'] # ADDED THIS LINE
             if self.parameters['use_psu']:
                 self.devices.psu.set_magnet(self.parameters)
 

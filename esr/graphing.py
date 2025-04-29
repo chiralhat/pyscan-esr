@@ -132,6 +132,7 @@ class SweepPlotWidget(QWidget):
 
     @pyqtSlot(object)
     def on_live_plot_2D(self, pg):
+        print("Updating 2D plot\n")
         if pg is None or pg.data.size == 0:
             return
 
@@ -160,6 +161,7 @@ class SweepPlotWidget(QWidget):
 
     @pyqtSlot(object)
     def on_live_plot_1D(self, pg):
+        print("Updating 1D plot\n")
         if pg is None or pg.data is None or pg.x is None or pg.data.size == 0:
             return
 

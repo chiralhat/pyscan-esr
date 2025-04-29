@@ -82,12 +82,12 @@ EXPERIMENT_TEMPLATES = {
                  {"display": "2D Sweep variable", "key": "2D Sweep variable", "type": "combo",
                  "options": ["x", "i", "q"], "default": "x"},
                  {"display": "1D Sweep variable", "key": "1D Sweep variable", "type": "combo",
-                 "options": ["x", "i", "q"], "default": "xmean"}],
+                 "options": ["X", "I", "Q"], "default": "Q"}],
             "Readout Settings": [
                 {"display": "Time Offset", "key": "h_offset", "type": "double_spin", #h_offset is a bounded float between -10000 and 10000 (contained in rfsoc)
                  "min": -10000.0, "max": 10000.0, "default": -0.125}, #CHANGED THESE VALUES FROM 0, 1000, AND 10.0
                 {"display": "Readout Length", "key": "readout_length", "type": "double_spin", #readout_length is a bounded float from 0 to 5 (contained in rfsoc)
-                 "min": 1.0, "max": 5.0, "default": 0.2}, #CHANGED THESE VALUES FROM 1, 1000, AND 10 ------------------- THIS ONE WAS SAVED AS AN INTEGER IN THE PICKLE FILE AND COULD HAVE BEEN A CAUSE OF THE ERROR
+                 "min": 0.0, "max": 5.0, "default": 0.2}, #CHANGED THESE VALUES FROM 1, 1000, AND 10 ------------------- THIS ONE WAS SAVED AS AN INTEGER IN THE PICKLE FILE AND COULD HAVE BEEN A CAUSE OF THE ERROR
                 {"display": "Loopback", "key": "loopback", "type": "check", #loopback is an ipw.Checkbox (contained in rfsoc)
                  "default": False}],
             "Uncommon Settings": [
@@ -1168,7 +1168,7 @@ class ExperimentUI(QMainWindow):
 
             # ← NEW: reset UI only when sweep really finishes
             self.worker.finished.connect(self.reset_action_buttons)
-            self.worker.finished.connect(self.queue_manager.next_queue_item)
+            #self.worker.finished.connect(self.queue_manager.next_queue_item)
 
             # Kick it off
             self.worker_thread.start()
