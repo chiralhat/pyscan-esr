@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import spinecho_scripts
 import pulsesweep_scripts
 import pyscan as ps
+from time import sleep, time
 
 import sys, os
 sys.path.append('../')
@@ -15,6 +16,8 @@ soc = QickSoc() #Hardware interface for the RFSoC system.
 soccfg = soc #Alias for soc, used for compatibility.
 devices = ps.ItemAttribute() #Container for hardware components (e.g., PSU, temperature controller).
 sig = ps.ItemAttribute() #Container for storing acquired signal data.
+expt = None
+sweep = None
 
 @app.route('/start', methods=['POST'])
 def start():
@@ -27,6 +30,7 @@ def start():
 
 @app.route('/initialize_experiment', methods=['POST'])
 def initialize_experiment():
+    global sweep
     # Step 1: Get the data from the request
     data = request.get_json()  # Assuming the data sent is in JSON format
     print("Received data:", data)
@@ -94,26 +98,59 @@ def initialize_experiment():
 
         pulsesweep_scripts.setup_experiment(parameters, devices, sweep, soc)
 
+    print(sweep)
+    # if 'runinfo' in sweep:
+    #     sweep['runinfo'] = serialize_object(sweep['runinfo'])
     # Step 2: Extract data and handle it accordingly
     return jsonify({"parameters": parameters})
 
-def serialize_sig(sig):
-    result = {}
-    for key in dir(sig):
-        if key.startswith("_"):
-            continue  # Skip private/internal
-        try:
-            value = getattr(sig, key)
-            if callable(value):
-                continue  # Skip methods
-            if isinstance(value, np.ndarray):
-                result[key] = value.tolist()  # Convert ndarray to list
-            else:
-                json.dumps(value)  # Test serializability
-                result[key] = value
-        except Exception:
-            result[key] = str(value)  # Fallback: convert to string
-    return result
+def serialize_object(obj, max_depth=5, _depth=0):
+    if _depth > max_depth:
+        return str(obj)  # Prevent deep recursion
+
+    if isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+
+    if isinstance(obj, dict):
+        return {k: serialize_object(v, max_depth, _depth+1) for k, v in obj.items()}
+
+    if isinstance(obj, (list, tuple, set)):
+        return [serialize_object(v, max_depth, _depth+1) for v in obj]
+
+    # Handle common serializable NumPy-like containers
+    try:
+        import numpy as np
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+    except ImportError:
+        pass
+
+    # For known serializable classes (like PyScan's scans), use their attributes
+    if hasattr(obj, '__dict__'):
+        return {
+            '__class__': obj.__class__.__name__,
+            **{k: serialize_object(v, max_depth, _depth+1)
+               for k, v in vars(obj).items()
+               if not k.startswith('_') and not callable(v)}
+        }
+
+    return str(obj)  # Fallback for anything else
+    # result = {}
+    # for key in dir(object):
+    #     if key.startswith("_"):
+    #         continue  # Skip private/internal
+    #     try:
+    #         value = getattr(object, key)
+    #         if callable(value):
+    #             continue  # Skip methods
+    #         if isinstance(value, np.ndarray):
+    #             result[key] = value.tolist()  # Convert ndarray to list
+    #         else:
+    #             json.dumps(value)  # Test serializability
+    #             result[key] = value
+    #     except Exception:
+    #         result[key] = str(value)  # Fallback: convert to string
+    # return result
 
 @app.route('/run_snapshot', methods=['POST'])
 def run_snapshot():
@@ -126,22 +163,53 @@ def run_snapshot():
     prog = CPMGProgram(soc, parameters)
     measure_phase(prog, soc, sig)
 
-    # if experiment_type == "Pulse Frequency Sweep Read Processed":
-    #     # Freq for processed pulse frequency sweep
-    #     freq = parameters['freq']
-
-    #     fit, err = ps.plot_exp_fit_norange(np.array([sig.time, sig.x]), freq, 1)
-    #     sig.fit = fit
-    #     sig.freq = freq
-
-
     # Serialize all public attributes of `sig`
-    serialized_sig = serialize_sig(sig)
+    serialized_sig = serialize_object(sig)
+    print(serialized_sig)
 
     return jsonify({"sig": serialized_sig})
 
-# prog = CPMGProgram(self.experiment.soc, self.experiment.parameters)
-                # measure_phase(prog, self.experiment.soc, self.experiment.sig)
+@app.route('/start_sweep', methods=['POST'])
+def start_sweep():
+    global sweep
+    global expt
+    """starts up the hardware to run a sweep and runs a sweep"""
+    # Get the data from the request
+    data = request.get_json()  # Assuming the data sent is in JSON format
+    print("Received data:", data)
+    parameters = data.get('parameters')
+    experiment_type = data.get('experiment type')
+    #sweep = data.get('sweep')
+
+    sweep_running = True
+    runinfo = sweep['runinfo']
+    expt = ps.Sweep(runinfo, devices, sweep['name'])
+
+    if experiment_type == "Spin Echo":  
+        if parameters['expt']=="Hahn Echo":
+            expt.echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
+        elif parameters['expt']=="CPMG":
+            expt.echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
+        elif parameters['sweep2'] and parameters['expt2']=="Hahn Echo":
+            expt.echo_delay = 2*runinfo.scan1.scan_dict['delay_sweep']*runinfo.parameters['pulses']
+        elif parameters['sweep2'] and parameters['expt2']=="CPMG":
+            expt.echo_delay = 2*runinfo.parameters['delay']*runinfo.scan1.scan_dict['cpmg_sweep']
+        else:
+            expt.echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
+
+    print(expt)
+    expt.start_time = time()
+    expt.start_thread()
+    return jsonify({"status": "sweep started"})
+
+@app.route('/get_sweep_data', methods=['GET'])
+def get_sweep_data():
+    response = {
+        "serialized_experiment": serialize_object(expt),
+    }
+    print(expt.runinfo.measured)
+    return jsonify({"expt": serialize_object(response)})
+
 @app.route('/stop', methods=['POST'])
 def stop():
     global running
