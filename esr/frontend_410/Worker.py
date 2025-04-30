@@ -1,0 +1,424 @@
+"""
+worker.py
+
+This module defines the Worker class, which manages the execution of experiment tasks
+(reading data, running sweeps) in a separate thread to keep the GUI responsive.
+
+Key responsibilities:
+- Run "read_processed" and "read_unprocessed" tasks in the background
+- Manage live sweeping of experiments with real-time plot updates
+- Emit signals to update status messages and graphs without freezing the UI
+- Handle start, update, and stop requests during experiment runs
+
+Dependencies:
+- PyQt5 for threading (QThread, QObject, pyqtSignal, pyqtSlot)
+- NumPy for efficient array comparisons
+- pyscan.py for hardware interaction and plotting utilities
+"""
+
+import matplotlib
+matplotlib.use('Qt5Agg')  # Must be done before importing pyplot!
+# Do not move the above from the top of the file
+                             
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
+import requests
+
+import sys
+sys.path.append('../')
+#from rfsoc2 import *
+import numpy as np
+from time import sleep
+import pyscan as ps
+
+# class Sig:
+#     def __init__(self, **kwargs):
+#         # Allow dynamic attributes to be passed in
+#         for key, value in kwargs.items():
+#             setattr(self, key, value)
+
+def deserialize_obj(data):
+    try:
+        # Return primitive types directly
+        if isinstance(data, (int, float, str, bool)) or data is None:
+            return data
+
+        # If the data is a list, recursively deserialize all items
+        if isinstance(data, list):
+            return [deserialize_obj(item) for item in data]
+
+        # If the data is a dictionary, process it
+        if isinstance(data, dict):
+            clsname = data.get('__class__')
+
+            # First, deserialize all values into a temporary dictionary
+            temp_data = {
+                k: deserialize_obj(v)
+                for k, v in data.items()
+                if k != '__class__'  # Remove the class name from the dictionary
+            }
+
+            # Handle known classes by directly creating objects
+            if clsname == 'FunctionScan':
+                function = temp_data.get('function', lambda x: x)  # fallback if no function
+                values = list(temp_data.get('scan_dict', {}).values())[0]
+                obj = ps.FunctionScan(function=function, values=values)
+                for k, v in temp_data.items():
+                    setattr(obj, k, v)
+                return obj
+
+            elif clsname == 'PropertyScan':
+                prop = temp_data.get('prop')
+                input_dict = temp_data.get('input_dict', {})
+                
+                # Create PropertyScan object with valid arguments
+                obj = ps.PropertyScan(
+                    prop=prop,
+                    input_dict=input_dict
+                )
+                
+                for k, v in temp_data.items():
+                    if k not in ['prop', 'input_dict']:  # Only pass valid arguments
+                        setattr(obj, k, v)
+
+                return obj
+
+            elif clsname == 'RunInfo':
+                obj = ps.RunInfo()  # Create a new RunInfo object
+                for k, v in temp_data.items():
+                    # Avoid unexpected arguments that don't belong in the constructor
+                    if k not in ['average_d']:  # Adjust this based on your RunInfo constructor
+                        setattr(obj, k, v)
+                return obj
+
+            elif clsname == 'ItemAttribute':
+                obj = ps.ItemAttribute()  # Instantiate the ItemAttribute object
+                for k, v in temp_data.items():
+                    setattr(obj, k, v)
+                return obj
+
+            elif clsname == 'Sweep':
+                # Make sure we are deserializing into a Sweep object
+                runinfo_data = temp_data.get('runinfo')
+                devices_data = temp_data.get('devices')
+
+                # Deserialize runinfo and devices to their respective objects
+                runinfo = deserialize_obj(runinfo_data) if isinstance(runinfo_data, dict) else runinfo_data
+                devices = deserialize_obj(devices_data) if isinstance(devices_data, dict) else devices_data
+
+                # Create the Sweep object directly
+                obj = ps.Sweep(runinfo=runinfo, devices=devices)
+
+                # Now set the remaining attributes for the Sweep object
+                for k, v in temp_data.items():
+                    if k not in ['runinfo', 'devices']:  # Skip these two as they are already set
+                        setattr(obj, k, v)
+
+                return obj  # Directly return the Sweep object
+
+            elif clsname == 'Experiment':
+                # Handle the Experiment object deserialization
+                runinfo_data = temp_data.get('runinfo')
+                devices_data = temp_data.get('devices')
+
+                # Deserialize runinfo and devices to their respective objects
+                runinfo = deserialize_obj(runinfo_data) if isinstance(runinfo_data, dict) else runinfo_data
+                devices = deserialize_obj(devices_data) if isinstance(devices_data, dict) else devices_data
+
+                # Create the Experiment object directly
+                obj = ps.Experiment(runinfo=runinfo, devices=devices)
+
+                # Now set the remaining attributes for the Experiment object
+                for k, v in temp_data.items():
+                    if k not in ['runinfo', 'devices']:  # Skip these two as they are already set
+                        setattr(obj, k, v)
+
+                return obj  # Directly return the Experiment object
+            elif clsname == 'Signal':
+                obj = ps.ItemAttribute()  # or however the Signal object is instantiated
+                for k, v in temp_data.items():
+                    if k in ["x", "time"] and isinstance(v, list):
+                        setattr(obj, k, np.array(v, dtype=np.float64))
+                    else:
+                        setattr(obj, k, deserialize_obj(v))
+                return obj
+            else:
+                # Fallback: if it's an unknown class, return as a plain dictionary
+                return temp_data
+
+        return data  # If the data isn't a dict, list, or primitive, return it as is
+
+    except Exception as e:
+        print(f"Error deserializing data: {e}")
+        raise
+
+
+
+
+
+
+class PyscanObject:
+    def __init__(self, data_dict):
+        for key, value in data_dict.items():
+            if isinstance(value, list):
+                # Assume lists are originally numpy arrays
+                setattr(self, key, np.array(value))
+            else:
+                setattr(self, key, value)
+
+def recursive_deserialize(data):
+    if isinstance(data, dict):
+        return Sig(**data)  # If it's a dictionary, deserialize it into a Sig object
+    elif isinstance(data, list):
+        return [recursive_deserialize(item) for item in data]  # Handle lists
+    else:
+        return data  # If it's a primitive value, just return it
+
+def deserialize_sig(sig_data):
+    return recursive_deserialize(sig_data)
+
+class Worker(QObject):
+    """
+    A generic worker that runs one of three tasks in a separate thread:
+      - read_processed
+      - read_unprocessed
+      - start_sweep
+    We pass in the current_experiment and which task we want to run.
+    """
+
+    finished = pyqtSignal()         # Signal emitted when the worker is completely done
+    updateStatus = pyqtSignal(str)  # Emit messages that the main thread can display
+    plot_update_signal = pyqtSignal(object)  # to pass colormesh
+    dataReady_se = pyqtSignal(object, object)
+    dataReady_ps = pyqtSignal(object, object)
+    live_plot_2D_update_signal = pyqtSignal(object)   
+    live_plot_1D_update_signal = pyqtSignal(object)   
+
+
+    def __init__(self, experiment, task_name):
+        super().__init__()
+        self.experiment = experiment
+        self.task_name = task_name
+        self.stop_requested = False  
+
+    @pyqtSlot()
+    def run_snapshot(self):
+        """
+        Runs the desired method on the experiment in this separate thread
+        so the main GUI thread won't freeze.
+        """
+
+        if self.task_name == "read_processed":
+            print("here 1")
+            self.updateStatus.emit("Reading processed data...\n")
+            print("here 2")
+
+            if self.experiment.type == "Spin Echo":
+                print("here 3")
+                print(self.experiment.parameters)
+                single = self.experiment.parameters['single']
+                print("here 4")
+                self.experiment.parameters['single'] = self.experiment.parameters['loopback']
+                print("here 5")
+                data = {
+                        "parameters": self.experiment.parameters,
+                        "experiment type": "Spin Echo Read Processed"
+                    }
+
+                print("about to ask server")
+                try:
+                    response = requests.post("http://150.209.47.102:5000/run_snapshot", json=data)
+                except Exception as e:
+                    self.updateStatus.emit(f"Error in connecting to server: {e}\n")
+                print("asked server")
+
+                if response.ok:
+                    response_data = response.json()
+                    self.experiment.sig = deserialize_obj(response_data["sig"])
+                else:
+                    print("Error:", response.status_code, response.text)
+                self.experiment.parameters['single'] = single
+
+            elif self.experiment.type == "Pulse Frequency Sweep":
+                data = {
+                        "parameters": self.experiment.parameters,
+                        "experiment type": "Pulse Frequency Sweep Read Processed"
+                    }
+                print("about to ask server")
+                response = requests.post("http://150.209.47.102:5000/run_snapshot", json=data)
+                print("asked server")
+                if response.ok:
+                    response_data = response.json()
+                    self.experiment.sig = deserialize_obj(response_data["sig"])
+                    self.experiment.sig.x = np.array(self.experiment.sig.x)
+                else:
+                    print("Error:", response.status_code, response.text)
+                freq = self.experiment.parameters['freq']
+                self.experiment.sig.freq = freq
+            self.updateStatus.emit("Done reading processed data.\n")
+
+        elif self.task_name == "read_unprocessed":
+            self.updateStatus.emit("Reading unprocessed data...\n")
+
+            if self.experiment.type == "Spin Echo":
+                single = self.experiment.parameters['single']
+                avgs = self.experiment.parameters['soft_avgs']
+                self.experiment.parameters['single'] = True
+                self.experiment.parameters['soft_avgs'] = 1
+                print("here 1")
+                data = {
+                        "parameters": self.experiment.parameters,
+                        "experiment type": "Spin Echo Read Unprocessed"
+                    }
+                print("about to ask server")
+                response = requests.post("http://150.209.47.102:5000/run_snapshot", json=data)
+                print("asked server")
+                if response.ok:
+                    response_data = response.json()
+                    self.experiment.sig = deserialize_obj(response_data["sig"])
+                else:
+                    print("Error:", response.status_code, response.text)
+
+                self.experiment.parameters['single'] = single
+                self.experiment.parameters['soft_avgs'] = avgs
+            
+            elif self.experiment.type == "Pulse Frequency Sweep":
+                self.experiment.parameters['single'] = True
+                self.experiment.parameters['soft_avgs'] = 1
+                data = {
+                        "parameters": self.experiment.parameters,
+                        "experiment type": "Pulse Frequency Sweep Read Unprocessed"
+                    }
+
+                response = requests.post("http://150.209.47.102:5000/run_snapshot", json=data)
+                
+                if response.ok:
+                    response_data = response.json()
+                    self.experiment.sig = deserialize_obj(response_data["sig"])
+                else:
+                    print("Error:", response.status_code, response.text)
+
+            self.updateStatus.emit("Done reading unprocessed data.\n")
+
+        if self.experiment.type == "Spin Echo":
+            self.dataReady_se.emit(self.experiment.sig, self.task_name)
+        elif self.experiment.type == "Pulse Frequency Sweep":
+            self.dataReady_ps.emit(self.experiment.sig, self.task_name)
+
+        self.finished.emit()
+
+        
+    @pyqtSlot()
+    def run_sweep(self):
+        self.updateStatus.emit("Starting sweep in worker thread…\n")
+        self.stop_requested = False
+        self.running = True
+
+        print("Starting sweep in worker thread…")
+        self.experiment.set_parameters(self.experiment.parameters)
+        print("here 2")
+        self.experiment.sweep_running = True
+        print("here 3")
+        # kick off the hardware sweep
+        data = {
+                "parameters": self.experiment.parameters,
+                "experiment type": self.experiment.type,
+                "sweep": self.experiment.sweep
+            }
+        print("here 4")
+        response = requests.post("http://150.209.47.102:5000/start_sweep", json=data)
+        
+        print("here 5")
+        if response.ok:
+            self.running = True
+        else:
+            print("Error:", response.status_code, response.text)
+            return
+        print("here 6")
+
+        # locals to hold the last arrays
+        last_data_2d = None
+        last_data_1d = None
+
+        while not self.stop_requested and self.running:
+
+            response = requests.get("http://150.209.47.102:5000/get_sweep_data")
+            if response.ok:
+                response_data = response.json()
+                expt = deserialize_obj(response_data["expt"]['serialized_experiment'])
+                print("deserialized expt")
+            else:
+                print("Error:", response.status_code, response.text)
+            
+            if not expt.runinfo.running:
+                self.running = False
+                break
+
+            if expt.runinfo.measured:
+                print("here")
+                try:
+                    # build new PlotGenerators
+                    pg_2D = ps.PlotGenerator(
+                        expt=expt, d=2,
+                        x_name='t',
+                        y_name=self.experiment.parameters['y_name'],
+                        data_name=self.experiment.parameters['2D Sweep variable'],
+                        transpose=1
+                    )
+                    pg_1D = ps.PlotGenerator(
+                        expt=expt, d=1,
+                        x_name=self.experiment.parameters['y_name'],
+                        data_name=self.experiment.parameters['1D Sweep variable'],
+                    )
+
+                    # compare & emit 2D only on change
+                    if last_data_2d is None or not np.array_equal(pg_2D.data, last_data_2d):
+                        last_data_2d = pg_2D.data.copy()
+                        self.live_plot_2D_update_signal.emit(pg_2D)
+
+                    # compare & emit 1D only on change
+                    if last_data_1d is None or not np.array_equal(pg_1D.data, last_data_1d):
+                        last_data_1d = pg_1D.data.copy()
+                        self.live_plot_1D_update_signal.emit(pg_1D)
+
+                except Exception as e:
+                    self.updateStatus.emit(f"Error in update loop: {e}\n")
+
+            sleep(1)
+
+        if expt.runinfo.measured:
+            try:
+                # final draw on normal or early exit
+                pg_2D = ps.PlotGenerator(
+                    expt=expt, d=2,
+                    x_name='t',
+                    y_name=self.experiment.parameters['y_name'],
+                    data_name=self.experiment.parameters['2D Sweep variable'],
+                    transpose=1
+                )
+                pg_1D = ps.PlotGenerator(
+                    expt=expt, d=1,
+                    x_name=self.experiment.parameters['y_name'],
+                    data_name=self.experiment.parameters['1D Sweep variable'],
+                )
+                self.live_plot_2D_update_signal.emit(pg_2D)
+                self.live_plot_1D_update_signal.emit(pg_1D)
+            except Exception as e:
+                self.updateStatus.emit(f"Error final plot update: {e}\n")
+
+        if self.stop_requested:
+            self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
+        else:
+            self.updateStatus.emit("Done sweeping (normal exit).\n")
+
+        self.finished.emit()
+
+
+    @pyqtSlot()
+    def stop_sweep(self):
+        """
+        Slot to request the worker to stop. Sets a flag that can be checked in the run_sweep method, killing the thread.
+        """
+        pass
+        # self.stop_requested = True
+        # if 'expt' in self.experiment.sweep:
+        #     self.experiment.sweep['expt'].runinfo.running = False
