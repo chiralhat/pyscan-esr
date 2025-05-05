@@ -14,12 +14,12 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import sys, os
 sys.path.append('../')
-#from rfsoc2 import *
+from rfsoc2 import *
 from time import sleep, time
 from datetime import date, datetime
 import pickle
-#import pyvisa
-#import pyscan as ps
+import pyvisa
+import pyscan as ps
 
 from Worker import *
 from graphing import *
@@ -502,7 +502,7 @@ class ExperimentUI(QMainWindow):
         self.settings_panel = DynamicSettingsPanel()
         self.settings_panel.settingChanged.connect(self.on_setting_changed)
 
-        self.queue_manager = QueueManager(self.toggle_start_stop_sweep_frontend, )
+        self.queue_manager = QueueManager(self.toggle_start_stop_sweep_frontend)
         self.graphs_panel = self.init_graphs_panel()
         self.error_log = self.init_error_log_widget()
         self.top_menu_bar = self.init_top_menu_bar()
@@ -1299,20 +1299,24 @@ class ExperimentUI(QMainWindow):
         self.queue_window.show()
     
     def add_to_queue(self):
-        # Create new experiment based on current type
-        new_experiment = ExperimentType(self.current_experiment.type)
-        # Optional: clone parameters if needed
-        # new_experiment.set_parameters(self.current_experiment.parameters.copy())
+        try:
+            # Create new experiment based on current type
+            new_experiment = ExperimentType(self.current_experiment.type)
+            # Optional: clone parameters if needed
+            # new_experiment.set_parameters(self.current_experiment.parameters.copy())
 
-        # Pass the full QueueManager instance
-        queue_item = QueuedExperiment(
-            experiment=new_experiment,
-            queue_manager=self.queue_manager,
-            last_used_directory=self.last_saved_graph_path
-        )
+            # Pass the full QueueManager instance
+            queue_item = QueuedExperiment(
+                start_stop_sweep_function = self.toggle_start_stop_sweep_frontend,
+                experiment=new_experiment,
+                queue_manager=self.queue_manager,
+                last_used_directory=self.last_saved_graph_path
+            )
 
-        if queue_item.valid:
-            self.queue_manager.add_to_working_queue(queue_item)
+            if queue_item.valid:
+                self.queue_manager.add_to_working_queue(queue_item)
+        except Exception as e:
+            print(e)
 
         # Optionally update the queue’s collapsed display text
         # self.queue_manager.set_current_running(queue_item.display_name)
@@ -1491,6 +1495,7 @@ class QueueManager(QWidget):
             self.stop_queue()  # Stop the queue
         else:
             self.queue_running = True
+            print("calling next queue item()")
             self.next_queue_item()  # Start the queue
     
     # def start_queue(self):
@@ -1527,11 +1532,17 @@ class QueueManager(QWidget):
 
     def next_queue_item(self):
         "Runs the next queue item and deletes from queue when complete"
-        if self.active_queue_list.count != 0:
-            next_experiment = self.active_queue_list.takeItem(0)
-            next_experiment.init_experiment()
-            next_experiment.experiment.experiment_type.toggle_start_stop_sweep_frontend()
-            
+        try:
+            if self.active_queue_list.count != 0:
+                next_experiment = self.active_queue_list.takeItem(0)
+                print()
+                print(type(next_experiment))
+                print()
+                print(next_experiment.parameters_dict)
+                next_experiment.init_experiment()
+                next_experiment.start_stop_sweep_function()
+        except Exception as e:
+            print(e)
 
     def queue_stopped_due_to_completion_or_error(self):
         """Called when the queue runner stops naturally or due to error."""
@@ -1843,14 +1854,16 @@ class ExperimentSetupDialog(QDialog):
             self.dir_input.setText(selected_dir)
 
 class QueuedExperiment(QListWidgetItem):
-    def __init__(self, experiment: ExperimentType, queue_manager, last_used_directory=None, parameters_dict=None):
+    def __init__(self, start_stop_sweep_function, experiment: ExperimentType, queue_manager, last_used_directory=None, parameters_dict=None):
         super().__init__()
 
+        self.start_stop_sweep_function = start_stop_sweep_function
         self.experiment = experiment
         self.queue_manager = queue_manager
         self.experiment_type = experiment.type
 
         # If copying from existing parameters
+        print("now, parameters_dict is:", parameters_dict)
         if parameters_dict:
             self.parameters_dict = parameters_dict.copy()
             self.valid = True
@@ -1871,18 +1884,24 @@ class QueuedExperiment(QListWidgetItem):
                 self.valid = False
                 return
 
+            updated_params = dialog.get_updated_parameters()
+            print("this is where we got the parameters...they are:")
+            print("updated_params:",  updated_params)
+
             values = dialog.get_values()
 
             self.parameters_dict = {
-                "display_name": values["display_name"],
-                "parameters": initial_params,
-                "read_processed": values["read_processed"],
-                "read_unprocessed": values["read_unprocessed"],
-                "sweep": values["sweep"],
+                "display_name":    values["display_name"],
+                "parameters":      updated_params,       # ← use these instead of the empty copy
+                "read_processed":  values["read_processed"],
+                "read_unprocessed":values["read_unprocessed"],
+                "sweep":           values["sweep"],
                 "save_graph_output": values["save_graph_output"],
-                "save_directory": values["save_directory"],
-                "current_queue": "working_queue"
+                "save_directory":  values["save_directory"],
+                "current_queue":   "working_queue"
             }
+            
+            print("self.parameters_dict:", self.parameters_dict)
             self.valid = True
 
         # -- UI Setup --
@@ -1895,6 +1914,8 @@ class QueuedExperiment(QListWidgetItem):
                 padding: 8px;
             }
         """)
+        print()
+        print("after we've initialized the queueed experiment", self.parameters_dict)
 
 
 
@@ -2025,6 +2046,9 @@ class QueuedExperiment(QListWidgetItem):
         """
         Initialize the experiment hardware setup based on saved parameters.
         """
+
+        print("called queuedexperiment.init_experiment()")
+        print(self.parameters_dict["parameters"])
         self.experiment.set_parameters(self.parameters_dict["parameters"])
         #self.experiment.init_pyscan_experiment()
 
@@ -2077,6 +2101,8 @@ class QueuedExperiment(QListWidgetItem):
         This duplicates the experiment and deletes the original to avoid segmentation faults.
         """
         # Prepare a full clone of parameters
+        print()
+        print("Before queue move: ", self.parameters_dict)
         clone_dict = self.parameters_dict.copy()
 
         # Swap the queue type
@@ -2086,10 +2112,16 @@ class QueuedExperiment(QListWidgetItem):
         else:
             clone_dict["current_queue"] = "working_queue"
             target_queue = self.queue_manager.working_queue_list
+        
+        print()
+        print("clone dict:", clone_dict)
 
         # Create a new QueuedExperiment using the cloned parameters
-        new_item = QueuedExperiment(self.experiment, self.queue_manager, parameters_dict=clone_dict)
-
+        new_item = QueuedExperiment(self.start_stop_sweep_function, self.experiment, self.queue_manager, parameters_dict=clone_dict)
+        
+        print()
+        print("After Queue Move: ", new_item.parameters_dict)
+        
         if not new_item.valid:
             return
 
@@ -2114,7 +2146,7 @@ class QueuedExperiment(QListWidgetItem):
         clone_dict = self.parameters_dict.copy()
         clone_dict["display_name"] = new_name.strip()
 
-        new_item = QueuedExperiment(self.experiment, self.queue_manager, parameters_dict=clone_dict)
+        new_item = QueuedExperiment(self.start_stop_sweep_function, self.experiment, self.queue_manager, parameters_dict=clone_dict)
 
         if not new_item.valid:
             return
@@ -2125,13 +2157,13 @@ class QueuedExperiment(QListWidgetItem):
         else:
             self.queue_manager.working_queue_list.addItem(new_item)
             self.queue_manager.working_queue_list.setItemWidget(new_item, new_item.widget)
-        def init_experiment(self):
-            """
-            Should be called by the parent list or queue manager.
-            Sets up internal state and initializes hardware logic.
-            """
-            self.experiment.set_parameters(self.parameters)
-            #self.experiment.init_pyscan_experiment()
+        # def init_experiment(self):
+        #     """
+        #     Should be called by the parent list or queue manager.
+        #     Sets up internal state and initializes hardware logic.
+        #     """
+        #     self.experiment.set_parameters(self.parameters)
+        #     #self.experiment.init_pyscan_experiment()
 
 def main():
     app = QApplication(sys.argv)

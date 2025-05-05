@@ -70,49 +70,50 @@ class ExperimentType(QObject):
         so they are ready for the experiment
         
         @param parameters -- dictionary of settings used to configure the experiment taken from EXPERIMENT_TEMPLATES"""
-        print("setting Parameters")
+        print("Setting Parameters")
         self.parameters = parameters
 
-        if 'ave_reps' in self.parameters.keys():
-            reps = self.parameters['ave_reps']
-        else:
-            reps = 1
-        if 'period' in self.parameters.keys():
-            period = self.parameters['period']
-        else:
-            period = 500
-        tmult = period / 1e6 * 4 * reps
-        self.parameters['subtime'] = self.parameters['soft_avgs'] * tmult
-        datestr = date.today().strftime('%y%m%d')
-        fname = datestr + str(self.parameters['file_name']) + '_'
-        self.parameters['outfile'] = str(Path(self.parameters['save_dir']) / fname)
+        try:
+            if 'ave_reps' in self.parameters.keys():
+                reps = self.parameters['ave_reps']
+            else:
+                reps = 1
+            if 'period' in self.parameters.keys():
+                period = self.parameters['period']
+            else:
+                period = 500
+            tmult = period / 1e6 * 4 * reps
+            self.parameters['subtime'] = self.parameters['soft_avgs'] * tmult
+            datestr = date.today().strftime('%y%m%d')
+            fname = datestr + str(self.parameters['file_name']) + '_'
+            self.parameters['outfile'] = str(Path(self.parameters['save_dir']) / fname)
 
-        # Save parameters to default file
-        with open(self.default_file, 'wb') as f:
-            pickle.dump(self.parameters, f)
-        print(self.parameters)
-        print()
-        print(self.sweep)
-        print()
-        print(self.type)
-        data = {
-            "parameters": self.parameters,
-            "sweep": self.sweep,
-            "experiment type": self.type
-        }
-        print("about to ask server!")
-        response = requests.post("http://150.209.47.102:5000/initialize_experiment", json=data)
-        print("asked server")
-        if response.ok:
-            print("1")
-            response_data = response.json()
-            print("2")
-            self.parameters = response_data.get('parameters')
-            print("3")
-            print("4")
-        else:
-            print("Error:", response.status_code, response.text)
-        print(response.json())
+            # Save parameters to default file
+            with open(self.default_file, 'wb') as f:
+                pickle.dump(self.parameters, f)
+            data = {
+                "parameters": self.parameters,
+                "sweep": self.sweep,
+                "experiment type": self.type
+            }
+            print("about to ask server!")
+
+            response = requests.post("http://150.209.47.102:5000/initialize_experiment", json=data)
+            print("asked server")
+            if response.ok:
+                print("1")
+                response_data = response.json()
+                print("2")
+                self.parameters = response_data.get('parameters')
+                print("3")
+                print("4")
+            else:
+                print("Error:", response.status_code, response.text)
+            print(response.json())
+            print("parameters set")
+            print()
+        except Exception as e:
+            print(e)
 
     
     # def start_sweep(self):
