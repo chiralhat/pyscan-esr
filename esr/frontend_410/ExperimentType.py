@@ -23,6 +23,8 @@ from time import sleep, time
 import requests
 from Worker import PyscanObject
 
+import globals
+
 from PyQt5.QtCore import QObject, pyqtSignal
 
 import sys, os
@@ -99,7 +101,7 @@ class ExperimentType(QObject):
 
             print("about to send parameters to teh server")
 
-            response = requests.post("http://150.209.47.102:5000/initialize_experiment", json=data)
+            response = requests.post(globals.server_address + "/initialize_experiment", json=data)
             print("parameters sent to server")
             print()
             if response.ok:

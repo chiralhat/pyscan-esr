@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QH
                              QFileDialog, QListWidgetItem,
                              QListWidget,QInputDialog, QAbstractItemView, QDialog, QPushButton, QTabWidget, QDesktopWidget)
                              
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize, QTimer
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -19,8 +19,10 @@ from time import sleep, time
 from datetime import date, datetime
 import pickle
 import pyvisa
+import requests
 import pyscan as ps
 
+import globals
 from Worker import *
 from graphing import *
 from ExperimentType import *
@@ -32,13 +34,11 @@ tdivs = []
 for n in range(9, -1, -1):
     tdivs += [2*10**-n, 4*10**-n, 10*10**-n]#[2.5*10**-n, 5*10**-n, 10*10**-n]
 
-# scopes = {'TBS1052C': ps.Tektronix1052B,
-#           'MSO24': ps.TektronixMSO2}
+scopes = []
 
-# if not hasattr(ps, 'rm'):
-#     ps.rm = pyvisa.ResourceManager('@py')
-# res_list = ps.rm.list_resources()
-res_list = []
+if not hasattr(ps, 'rm'):
+    ps.rm = pyvisa.ResourceManager('@py')
+res_list = ps.rm.list_resources()
 
 #Global setting trees for the Pulse Frequency Sweep and Spin Echo experiment settings
 sweep_list = ['Pulse Sweep',
@@ -79,11 +79,7 @@ EXPERIMENT_TEMPLATES = {
                  "options": ['Freq Sweep', 'Field Sweep'], "default": 'Freq Sweep'},
                 {"display": "Sweep start, end, step",
                  "key": ["sweep_start", "sweep_end", "sweep_step"], #sweep_start, sweep_end, and sweep_step are all unbounded floats (contained in measure)
-                 "type": "composite", "default": [3850.0, 3950.0, 2.0]},                
-                 {"display": "2D Sweep variable", "key": "2D Sweep variable", "type": "combo",
-                 "options": ["x", "i", "q"], "default": "x"},
-                 {"display": "1D Sweep variable", "key": "1D Sweep variable", "type": "combo",
-                 "options": ["X", "I", "Q"], "default": "Q"}],
+                 "type": "composite", "default": [3850.0, 3950.0, 2.0]},                ],
             "Readout Settings": [
                 {"display": "Time Offset", "key": "h_offset", "type": "double_spin", #h_offset is a bounded float between -10000 and 10000 (contained in rfsoc)
                  "min": -10000.0, "max": 10000.0, "default": -0.125}, #CHANGED THESE VALUES FROM 0, 1000, AND 10.0
@@ -154,11 +150,7 @@ EXPERIMENT_TEMPLATES = {
                  "options": sweep_list, "default": "Hahn Echo"},
                 {"display": "Sweep start, end, step",
                  "key": ["sweep_start", "sweep_end", "sweep_step"], "type": "composite",
-                "default": [150.0, 1000.0, 50.0]},
-                {"display": "2D Sweep variable", "key": "2D Sweep variable", "type": "combo",
-                 "options": ["x", "i", "q"], "default": "x"},
-                 {"display": "1D Sweep variable", "key": "1D Sweep variable", "type": "combo",
-                 "options": ["xmean", "imean", "qmean"], "default": "xmean"}],
+                "default": [150.0, 1000.0, 50.0]},],
             "Pulse Settings": [
                 {"display": "Ch1 Delay", "key": "delay", "type": "double_spin",
                  "min": 0, "max": 652100, "default": 150.0},
@@ -489,6 +481,12 @@ class ExperimentUI(QMainWindow):
             "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep")
         }
 
+        # Get the scopes from the backend
+        # self.get_scope_timer = QTimer(self)
+        # self.get_scope_timer.setInterval(5000)  # 5 seconds
+        # self.get_scope_timer.timeout.connect(self.get_scopes_from_backend)
+        # self.get_scope_timer.start()
+
         # For button logic
         self.is_process_running = False
         self.settings_changed = False
@@ -526,6 +524,18 @@ class ExperimentUI(QMainWindow):
 
         self.last_saved_graph_path = None
         self.worker_thread = None
+
+    def get_scopes_from_backend(self):
+        try:
+            response = requests.get(globals.server_address + "/get_scopes", json=data, timeout=2)
+            response.raise_for_status()
+            data = response.json()
+            global scopes
+            scopes = data
+            print(scopes)
+            self.poll_timer.stop()  # Stop polling once successful
+        except Exception as e:
+            self.label.setText(f"Unable to get scopes from backend... ({e})")
 
     def load_defaults_and_build_ui(self):
         # 1) Build the tree from template
@@ -675,15 +685,38 @@ class ExperimentUI(QMainWindow):
         tab2_layout.addWidget(self.current_experiment.read_processed_graph)
         self.graph_tabs.addTab(graph_tab_2, "Read Processed")
 
+        # 2D-Sweep tab with its own variable selector
         graph_tab_3 = QWidget()
         tab3_layout = QVBoxLayout(graph_tab_3)
+        # top-left dropdown for the 2D variable
+        hdr3 = QHBoxLayout()
+        hdr3.addWidget(QLabel("Variable:"))
+        combo_2d = QComboBox()
+        # fill with the same options you had before
+        combo_2d.addItems(["x","i","q"])
+        hdr3.addWidget(combo_2d)
+        hdr3.addStretch()
+        tab3_layout.addLayout(hdr3)
+        # the actual plot widget
         tab3_layout.addWidget(self.current_experiment.sweep_graph_2D)
         self.graph_tabs.addTab(graph_tab_3, "2D Sweep")
+        # keep a reference so Worker can read its currentText()
+        self.combo_2d = combo_2d
 
-        graph_tab_4 = QWidget()
-        tab3_layout = QVBoxLayout(graph_tab_4)
-        tab3_layout.addWidget(self.current_experiment.sweep_graph_1D)
-        self.graph_tabs.addTab(graph_tab_4, "1D Sweep")
+        # 1D-Sweep tab with its own variable selector
+        if self.current_experiment.type == "Spin Echo":
+            graph_tab_4 = QWidget()
+            tab4_layout = QVBoxLayout(graph_tab_4)
+            hdr4 = QHBoxLayout()
+            hdr4.addWidget(QLabel("Variable:"))
+            combo_1d = QComboBox()
+            combo_1d.addItems(["xmean","imean","qmean"])  
+            hdr4.addWidget(combo_1d)
+            hdr4.addStretch()
+            tab4_layout.addLayout(hdr4)
+            tab4_layout.addWidget(self.current_experiment.sweep_graph_1D)
+            self.graph_tabs.addTab(graph_tab_4, "1D Sweep")
+            self.combo_1d = combo_1d
 
         # Add tabs to layout
         graph_layout.addWidget(self.graph_tabs)
@@ -901,21 +934,6 @@ class ExperimentUI(QMainWindow):
         return top_menu
 
     def change_experiment_type(self, experiment_type):
-        # # 0) Clear the old experiment's graphs:
-        # old = self.current_experiment
-        # # Clear Read Unprocessed
-        # old.read_unprocessed_graph.ax.clear()
-        # old.read_unprocessed_graph.canvas.draw()
-        # # Clear Read Processed
-        # old.read_processed_graph.ax.clear()
-        # old.read_processed_graph.canvas.draw()
-        # # Clear 2D Sweep
-        # old.sweep_graph_2D.ax.clear()
-        # old.sweep_graph_2D.canvas.draw_idle()
-        # # Clear 1D Sweep
-        # old.sweep_graph_1D.ax.clear()
-        # old.sweep_graph_1D.canvas.draw_idle()
-
         # If a sweep is in progress, stop it
         if hasattr(self, 'worker'):
             self.worker.stop_sweep()
@@ -951,7 +969,7 @@ class ExperimentUI(QMainWindow):
                 layout.addWidget(self.current_experiment.read_processed_graph)
             elif idx == 2:
                 layout.addWidget(self.current_experiment.sweep_graph_2D)
-            elif idx == 3:
+            elif idx == 3 and self.current_experiment.type == "Spin Echo":
                 layout.addWidget(self.current_experiment.sweep_graph_1D)
 
         # 4) Reset all action buttons
@@ -1154,9 +1172,21 @@ class ExperimentUI(QMainWindow):
 
             self.graph_tabs.setCurrentIndex(2)
 
-            # Spin up the worker thread
-            self.worker_thread = QThread(self)
-            self.worker = Worker(self.current_experiment, "sweep")
+            if self.current_experiment.type == "Pulse Frequency Sweep":
+                self.worker_thread = QThread(self)
+                self.worker = Worker(
+                    self.current_experiment,
+                    "sweep",
+                    combo_2d=self.combo_2d,
+                    combo_1d=self.combo_1d
+                )
+            elif self.current_experiment.type == "Spin Echo":
+                self.worker_thread = QThread(self)
+                self.worker = Worker(
+                    self.current_experiment,
+                    "sweep",
+                    combo_2d=self.combo_2d
+                )
             self.worker.moveToThread(self.worker_thread)
 
             # Connect the sweep logic & live-plot signals
