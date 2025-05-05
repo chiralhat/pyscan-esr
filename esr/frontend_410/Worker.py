@@ -314,11 +314,12 @@ class Worker(QObject):
         self.running = True
 
         print("Starting sweep in worker thread…")
-        #self.experiment.set_parameters(self.experiment.parameters)
-        print("here 2")
+        print()
         self.experiment.sweep_running = True
-        print("here 3")
+        print("self.experiment.sweep_running set to TRUE")
         # kick off the hardware sweep
+        print()
+        print("parameters of the current running sweep", self.experiment.parameters )
         print(self.experiment.parameters)
         data = {
                 "parameters": self.experiment.parameters,

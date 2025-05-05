@@ -1065,7 +1065,7 @@ class ExperimentUI(QMainWindow):
 
 
     def read_unprocessed_frontend(self):
-        # init_pyscan_experiment1) Turn the unprocessed indicator red
+        #1) Turn the unprocessed indicator red
         self.indicator_read_unprocessed.setStyleSheet(
             "background-color: red; border: 1px solid black; border-radius: 5px;"
         )
@@ -1498,33 +1498,6 @@ class QueueManager(QWidget):
             print("calling next queue item()")
             self.next_queue_item()  # Start the queue
     
-    # def start_queue(self):
-    #     """Start the queue by launching a QueueRunnerWorker in a new thread."""
-    #     if self.queue_runner and self.queue_runner.isRunning():
-    #         print("Queue is already running.")
-    #         return
-
-    #     # Create a fresh worker
-    #     self.queue_runner = QueueRunnerWorker(self)
-
-    #     # Connect core queue signals
-    #     self.queue_runner.queue_stopped.connect(self.queue_stopped_due_to_completion_or_error)
-    #     self.queue_runner.hardware_error.connect(self.handle_hardware_error)
-
-    #     # Connect worker to existing experiments
-    #     for list_widget in [self.active_queue_list, self.working_queue_list]:
-    #         for i in range(list_widget.count()):
-    #             item = list_widget.item(i)
-    #             if isinstance(item, QueuedExperiment):
-    #                 self.queue_runner.experiment_locked.connect(item.lock_experiment)
-    #                 self.queue_runner.experiment_unlocked.connect(item.unlock_experiment)
-
-    #     # Also make sure any future-added experiments are connected correctly
-
-    #     # Start
-    #     self.queue_running = True
-    #     self.queue_runner.start()
-    
     def stop_queue(self):
         """Request the queue to stop."""
         if self.queue_runner:
@@ -1535,6 +1508,7 @@ class QueueManager(QWidget):
         try:
             if self.active_queue_list.count != 0:
                 next_experiment = self.active_queue_list.takeItem(0)
+                self.current_experiment = next_experiment.experiment
                 print()
                 print(type(next_experiment))
                 print()
@@ -1542,6 +1516,7 @@ class QueueManager(QWidget):
                 next_experiment.init_experiment()
                 next_experiment.start_stop_sweep_function()
         except Exception as e:
+            print("error raised in GUI")
             print(e)
 
     def queue_stopped_due_to_completion_or_error(self):
@@ -1915,7 +1890,7 @@ class QueuedExperiment(QListWidgetItem):
             }
         """)
         print()
-        print("after we've initialized the queueed experiment", self.parameters_dict)
+        print("we updated QueedExperiment.parameters_dict", self.parameters_dict)
 
 
 
@@ -2047,10 +2022,11 @@ class QueuedExperiment(QListWidgetItem):
         Initialize the experiment hardware setup based on saved parameters.
         """
 
-        print("called queuedexperiment.init_experiment()")
-        print(self.parameters_dict["parameters"])
+        print("called queued experiment.init_experiment()")
+        print()
+        print("initializing an experiment with: ", self.parameters_dict["parameters"])
+        print()
         self.experiment.set_parameters(self.parameters_dict["parameters"])
-        #self.experiment.init_pyscan_experiment()
 
     def show_info_popup(self):
         """
@@ -2157,13 +2133,6 @@ class QueuedExperiment(QListWidgetItem):
         else:
             self.queue_manager.working_queue_list.addItem(new_item)
             self.queue_manager.working_queue_list.setItemWidget(new_item, new_item.widget)
-        # def init_experiment(self):
-        #     """
-        #     Should be called by the parent list or queue manager.
-        #     Sets up internal state and initializes hardware logic.
-        #     """
-        #     self.experiment.set_parameters(self.parameters)
-        #     #self.experiment.init_pyscan_experiment()
 
 def main():
     app = QApplication(sys.argv)

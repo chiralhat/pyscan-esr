@@ -96,10 +96,12 @@ class ExperimentType(QObject):
                 "sweep": self.sweep,
                 "experiment type": self.type
             }
-            print("about to ask server!")
+
+            print("about to send parameters to teh server")
 
             response = requests.post("http://150.209.47.102:5000/initialize_experiment", json=data)
-            print("asked server")
+            print("parameters sent to server")
+            print()
             if response.ok:
                 print("1")
                 response_data = response.json()
@@ -109,10 +111,11 @@ class ExperimentType(QObject):
                 print("4")
             else:
                 print("Error:", response.status_code, response.text)
-            print(response.json())
+            print("got this response back from the server", response.json())
             print("parameters set")
             print()
         except Exception as e:
+            print("error in set_parameters:")
             print(e)
 
     
