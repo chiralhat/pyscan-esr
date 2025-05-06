@@ -31,27 +31,22 @@ class GraphWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         
-        # Set the background to transparent and remove any borders or margins
         self.setStyleSheet("background: transparent; border: none;")
 
-        # Create the Figure and Axes safely without using pyplot
         self.figure = Figure()
         self.ax = self.figure.add_subplot(111)
         self.canvas = FigureCanvas(self.figure)
 
-        # Layout for the graphing widget
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
 
-        # Enable custom context menu
         self.canvas.setContextMenuPolicy(Qt.CustomContextMenu)
         self.canvas.customContextMenuRequested.connect(self.show_context_menu)
 
     def update_canvas_se(self, sig, task_name):
         """Clears the current plot and renders new data traces for CH1, CH2, and amplitude."""
 
-        # Flatten the lists for plotting
         time = sig.time
         i = sig.i
         q = sig.q
@@ -101,14 +96,12 @@ class GraphWidget(QWidget):
             self.copy_to_clipboard()
 
     def copy_to_clipboard(self):
-        # Save current canvas to QPixmap
         buf = io.BytesIO()
         self.figure.savefig(buf, format='png')
         buf.seek(0)
         image = QPixmap()
         image.loadFromData(buf.getvalue())
 
-        # Copy to clipboard
         QApplication.clipboard().setPixmap(image)
         print("Copied graph to clipboard.")
 
@@ -122,15 +115,13 @@ class SweepPlotWidget(QWidget):
         self.canvas = FigureCanvas(self.figure)
         self.ax = self.figure.add_subplot(111)
 
-        # --- cache artists ---
-        self.mesh = None          # for the 2D colormesh
+        self.mesh = None          
         self.colorbar = None
-        self.line, = self.ax.plot([], [], 'o-')  # for the 1D sweep
+        self.line, = self.ax.plot([], [], 'o-')  
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.canvas)
         
-        # Enable custom context menu
         self.canvas.setContextMenuPolicy(Qt.CustomContextMenu)
         self.canvas.customContextMenuRequested.connect(self.show_context_menu)
 
@@ -140,7 +131,6 @@ class SweepPlotWidget(QWidget):
         if pg is None or pg.data.size == 0:
             return
 
-        # First time: create the QuadMesh
         if self.mesh is None:
             self.mesh = self.ax.pcolormesh(
                 pg.x, pg.y, pg.data.T,
@@ -150,17 +140,14 @@ class SweepPlotWidget(QWidget):
             )
             self.colorbar = self.figure.colorbar(self.mesh, ax=self.ax)
         else:
-            # Only update the array & color scale
             self.mesh.set_array(pg.data.T.ravel())
             vmin, vmax = pg.get_data_range()
             self.mesh.set_clim(vmin, vmax)
-            # no need to recreate colorbar
 
         self.ax.set_title(pg.get_title())
         self.ax.set_xlabel(pg.get_xlabel())
         self.ax.set_ylabel(pg.get_ylabel())
 
-        # Non‐blocking redraw
         self.canvas.draw_idle()
 
     @pyqtSlot(object)
@@ -169,10 +156,8 @@ class SweepPlotWidget(QWidget):
         if pg is None or pg.data is None or pg.x is None or pg.data.size == 0:
             return
 
-        # Update the Line2D data
         self.line.set_data(pg.x, pg.data)
 
-        # Rescale axes
         self.ax.relim()
         self.ax.autoscale_view()
 
@@ -180,7 +165,6 @@ class SweepPlotWidget(QWidget):
         self.ax.set_xlabel(pg.get_xlabel())
         self.ax.set_ylabel(pg.get_ylabel())
 
-        # Non‐blocking redraw
         self.canvas.draw_idle()
 
     def show_context_menu(self, pos):
@@ -191,14 +175,12 @@ class SweepPlotWidget(QWidget):
             self.copy_to_clipboard()
 
     def copy_to_clipboard(self):
-        # Save current canvas to QPixmap
         buf = io.BytesIO()
         self.figure.savefig(buf, format='png')
         buf.seek(0)
         image = QPixmap()
         image.loadFromData(buf.getvalue())
 
-        # Copy to clipboard
         QApplication.clipboard().setPixmap(image)
         print("Copied graph to clipboard.")
  

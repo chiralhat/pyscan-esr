@@ -32,15 +32,9 @@ import numpy as np
 from time import sleep
 import pyscan as ps
 
-# class Sig:
-#     def __init__(self, **kwargs):
-#         # Allow dynamic attributes to be passed in
-#         for key, value in kwargs.items():
-#             setattr(self, key, value)
 
 def deserialize_obj(data):
     try:
-        # Return primitive types directly
         if isinstance(data, (int, float, str, bool)) or data is None:
             return data
 
@@ -173,6 +167,7 @@ def recursive_deserialize(data):
 def deserialize_sig(sig_data):
     return recursive_deserialize(sig_data)
 
+
 class Worker(QObject):
     """
     A generic worker that runs one of three tasks in a separate thread:
@@ -182,9 +177,9 @@ class Worker(QObject):
     We pass in the current_experiment and which task we want to run.
     """
 
-    finished = pyqtSignal()         # Signal emitted when the worker is completely done
-    updateStatus = pyqtSignal(str)  # Emit messages that the main thread can display
-    plot_update_signal = pyqtSignal(object)  # to pass colormesh
+    finished = pyqtSignal()         
+    updateStatus = pyqtSignal(str)  
+    plot_update_signal = pyqtSignal(object)  
     dataReady_se = pyqtSignal(object, object)
     dataReady_ps = pyqtSignal(object, object)
     live_plot_2D_update_signal = pyqtSignal(object)   
@@ -302,7 +297,7 @@ class Worker(QObject):
             print("Error when running snapshot:")
             print(e)
             print()
-            
+
         
     @pyqtSlot()
     def run_sweep(self):

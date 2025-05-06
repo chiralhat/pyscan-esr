@@ -575,43 +575,32 @@ class ExperimentUI(QMainWindow):
             }
         """)
         
-        # The graph panel
         self.right_splitter.addWidget(self.graphs_panel)
 
-        # The combined error widget
         self.error_widget = self.init_error_log_widget()
         self.right_splitter.addWidget(self.error_widget)
 
-        # Add the right splitter to the main splitter
         self.main_splitter.addWidget(self.right_splitter)
 
-        # Set stretch factors to control resizing behavior
-        self.main_splitter.setStretchFactor(0, 1)  # Settings Panel (left side)
-        self.main_splitter.setStretchFactor(1, 1)  # Right splitter (graph & error log)
-        self.main_splitter.setSizes([350, 650])  # 250px for settings, 750px for main panel
-
+        self.main_splitter.setStretchFactor(0, 1)  
+        self.main_splitter.setStretchFactor(1, 1)  
+        self.main_splitter.setSizes([350, 650])  
 
         main_layout.addWidget(self.main_splitter, 15)
 
-        # Set the layout to the central widget
         self.setCentralWidget(central_widget)
 
-        # Set up window title and default size
         self.setWindowTitle("Experiment UI")
-        self.setGeometry(100, 100, 1000, 700)  # Default window size
-        self.show()  # Show the window
+        self.setGeometry(100, 100, 1000, 700)  
+        self.show()  
          
     def init_graphs_panel(self):
         """Creates the graphs panel containing Matplotlib graphs with tabs."""
-        # Create the main container widget
         graph_section_widget = QWidget()
         graph_layout = QVBoxLayout(graph_section_widget)
-        # graph_layout.setContentsMargins(25, 10, 25, 25)
 
-        # Create a tab widget for the graphs
         self.graph_tabs = QTabWidget()
 
-        # Add tabs for each graph
         graph_tab_1 = QWidget()
         tab1_layout = QVBoxLayout(graph_tab_1)
         tab1_layout.addWidget(self.current_experiment.read_unprocessed_graph)
@@ -622,26 +611,20 @@ class ExperimentUI(QMainWindow):
         tab2_layout.addWidget(self.current_experiment.read_processed_graph)
         self.graph_tabs.addTab(graph_tab_2, "Read Processed")
 
-        # 2D-Sweep tab with its own variable selector
         graph_tab_3 = QWidget()
         tab3_layout = QVBoxLayout(graph_tab_3)
-        # top-left dropdown for the 2D variable
         hdr3 = QHBoxLayout()
         hdr3.addWidget(QLabel("Variable:"))
         combo_2d = QComboBox()
         combo_2d.currentTextChanged.connect(self.update_2d_plot)
-        # fill with the same options you had before
         combo_2d.addItems(["x","i","q"])
         hdr3.addWidget(combo_2d)
         hdr3.addStretch()
         tab3_layout.addLayout(hdr3)
-        # the actual plot widget
         tab3_layout.addWidget(self.current_experiment.sweep_graph_2D)
         self.graph_tabs.addTab(graph_tab_3, "2D Sweep")
-        # keep a reference so Worker can read its currentText()
         self.combo_2d = combo_2d
 
-        # 1D-Sweep tab with its own variable selector
         if self.current_experiment.type == "Spin Echo":
             graph_tab_4 = QWidget()
             tab4_layout = QVBoxLayout(graph_tab_4)
@@ -657,25 +640,20 @@ class ExperimentUI(QMainWindow):
             self.graph_tabs.addTab(graph_tab_4, "1D Sweep")
             self.combo_1d = combo_1d
 
-        # Add tabs to layout
         graph_layout.addWidget(self.graph_tabs)
 
-        # Create a horizontal layout for the button and label
         graph_bottom_row = QHBoxLayout()
 
-        # Save graph button
         self.save_graph_btn = QPushButton("Save Graph As...")
         self.save_graph_btn.clicked.connect(self.save_current_graph)
         graph_bottom_row.addWidget(self.save_graph_btn)
 
-        # Last saved path label
         self.last_saved_path_label = QLabel("No graph saved yet.")
         self.last_saved_path_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.last_saved_path_label.setStyleSheet("color: blue; text-decoration: underline;")
         self.last_saved_path_label.mousePressEvent = self.open_saved_graph_folder
         graph_bottom_row.addWidget(self.last_saved_path_label)
 
-        # Add the horizontal layout to the main graph layout
         graph_layout.addLayout(graph_bottom_row)
 
         return graph_section_widget
@@ -691,34 +669,25 @@ class ExperimentUI(QMainWindow):
         label.setStyleSheet("font-weight: bold;")
         vlayout.addWidget(label)
 
-        self.log_text = QTextEdit()  # Create the text edit for logs
+        self.log_text = QTextEdit()  
         self.log_text.setReadOnly(True)
         vlayout.addWidget(self.log_text)
 
         return error_widget
 
     def init_top_menu_bar(self):
-        # Create a horizontal layout for the top menu with some margins
         top_menu = QHBoxLayout()
         top_menu.setContentsMargins(5, 5, 5, 5)
         top_menu.setSpacing(5)
-        top_menu.setAlignment(Qt.AlignTop)  # Align everything at the top
+        top_menu.setAlignment(Qt.AlignTop)  
 
-        # Wrap the layout in a container widget
         top_menu_container = QWidget()
         top_menu_container.setLayout(top_menu)
 
-        # --- Experiment Type Selection ---
         exp_widget = QWidget()
         exp_layout = QVBoxLayout(exp_widget)
-        # Less space between label and dropdown
         exp_layout.setSpacing(0)
         exp_layout.setContentsMargins(0, 0, 0, 0)
-
-        # label = QLabel("Change Experiment Type")
-        # label.setStyleSheet("font-size: 10pt;")
-        # label.setToolTip("Helpful information")
-        # exp_layout.addWidget(label)
 
         exp_dropdown = QComboBox()
         exp_dropdown.addItems(list(self.experiments.keys()))
@@ -729,68 +698,28 @@ class ExperimentUI(QMainWindow):
 
         top_menu.addWidget(exp_widget)
 
-
-
-        # Add extra horizontal spacing between "Change Experiment Type" and the next section
         top_menu.addSpacing(30)
 
-        # --- Add to Queue Button ---
         add_queue_btn = QPushButton("Add to Queue")
         add_queue_btn.setMinimumHeight(40)
         add_queue_btn.setStyleSheet("font-size: 10pt; padding: 4px;")
         add_queue_btn.clicked.connect(self.add_to_queue)
         top_menu.addWidget(add_queue_btn)
 
-        # --- Experiment-Specific Buttons with Indicators ---
-        # We pass top_menu to the function that creates the experiment buttons
-        # which adds them to the same layout
         top_menu = self.init_experiment_specific_buttons(top_menu)
 
-        # Add extra horizontal spacing between the experiment buttons and the window controls
         top_menu.addSpacing(30)
-
-        # # --- Window Control Buttons ---
-        # window_controls_widget = QWidget()
-        # window_controls_layout = QHBoxLayout(window_controls_widget)
-        # window_controls_layout.setContentsMargins(0, 0, 0, 0)
-        # window_controls_layout.setSpacing(10)
-
-        # minimize_btn = QPushButton("Minimize")
-        # minimize_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
-        # minimize_btn.clicked.connect(self.showMinimized)
-
-        # fullscreen_btn = QPushButton("Toggle Full Screen")
-        # fullscreen_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
-        # fullscreen_btn.clicked.connect(self.toggle_fullscreen)
-
-        # off_btn = QPushButton("Hardware Off and Close Software")
-        # off_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
-        # off_btn.clicked.connect(self.hardware_off_frontend)
-        # off_btn.setToolTip("Helpful information")
-
-        # window_controls_layout.addWidget(minimize_btn)
-        # window_controls_layout.addWidget(fullscreen_btn)
-        # window_controls_layout.addWidget(off_btn)
-
-        # top_menu.addWidget(window_controls_widget)
 
         return top_menu_container
 
 
     def toggle_fullscreen(self):
-        # Toggle between full screen and normal window states
         if self.isFullScreen():
             self.showNormal()
         else:
             self.showFullScreen()
 
     def init_experiment_specific_buttons(self, top_menu):
-        #experiment_buttons_widget = QWidget()
-        #experiment_buttons_layout = QGridLayout(experiment_buttons_widget)
-        #experiment_buttons_layout.setContentsMargins(0, 0, 0, 0)
-        #experiment_buttons_layout.setSpacing(5)
-
-        # --- Initialize Button ---
         init_widget = QWidget()
         init_layout = QHBoxLayout(init_widget)
         init_layout.setContentsMargins(0, 0, 0, 0)
@@ -806,12 +735,9 @@ class ExperimentUI(QMainWindow):
         )
         init_layout.addWidget(self.set_parameters_and_initialize_btn)
         init_layout.addWidget(self.indicator_initialize)
-        # top_menu.addWidget(self.set_parameters_and_initialize_btn)
-        # top_menu.addWidget(self.indicator_initialize)
         top_menu.addWidget(init_widget)
 
 
-        # --- Read Unprocessed Button ---
         read_unprocessed_widget = QWidget()
         read_unprocessed_layout = QHBoxLayout(read_unprocessed_widget)
         read_unprocessed_layout.setContentsMargins(0, 0, 0, 0)
@@ -819,7 +745,7 @@ class ExperimentUI(QMainWindow):
         self.read_unprocessed_btn.setMinimumHeight(40)
         self.read_unprocessed_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.read_unprocessed_btn.clicked.connect(self.read_unprocessed_frontend)
-        self.read_unprocessed_btn.setToolTip("Helpful information") #Tool tip here!
+        self.read_unprocessed_btn.setToolTip("Helpful information")
         self.indicator_read_unprocessed = QLabel(" ")
         self.indicator_read_unprocessed.setFixedSize(10, 10)
         self.indicator_read_unprocessed.setStyleSheet(
@@ -829,7 +755,6 @@ class ExperimentUI(QMainWindow):
         read_unprocessed_layout.addWidget(self.indicator_read_unprocessed)
         top_menu.addWidget(read_unprocessed_widget)
 
-        # --- Read Processed Button ---
         read_processed_widget = QWidget()
         read_processed_layout = QHBoxLayout(read_processed_widget)
         read_processed_layout.setContentsMargins(0, 0, 0, 0)
@@ -837,7 +762,7 @@ class ExperimentUI(QMainWindow):
         self.read_processed_btn.setMinimumHeight(40)
         self.read_processed_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.read_processed_btn.clicked.connect(self.read_processed_frontend)
-        self.read_processed_btn.setToolTip("Helpful information") #Tool tip here!
+        self.read_processed_btn.setToolTip("Helpful information") 
         self.indicator_read_processed = QLabel(" ")
         self.indicator_read_processed.setFixedSize(10, 10)
         self.indicator_read_processed.setStyleSheet(
@@ -847,7 +772,6 @@ class ExperimentUI(QMainWindow):
         read_processed_layout.addWidget(self.indicator_read_processed)
         top_menu.addWidget(read_processed_widget)
 
-        # --- Start/Stop Sweep Button ---
         sweep_widget = QWidget()
         sweep_layout = QHBoxLayout(sweep_widget)
         sweep_layout.setContentsMargins(0, 0, 0, 0)
@@ -863,18 +787,14 @@ class ExperimentUI(QMainWindow):
         )
         top_menu.addWidget(self.sweep_start_stop_btn)
         top_menu.addWidget(self.indicator_sweep)
-        #experiment_buttons_layout.addWidget(sweep_widget, 2, 1)
 
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
         self.sweep_start_stop_btn.setEnabled(False)
 
-        #experiment_buttons_widget.setLayout(experiment_buttons_layout)
-        #top_menu.addWidget(experiment_buttons_widget)
         return top_menu
 
     def change_experiment_type(self, experiment_type):
-        # 0) Stop any ongoing sweep
         if hasattr(self, 'worker'):
             self.worker.stop_sweep()
             self.indicator_sweep.setStyleSheet(
@@ -884,25 +804,20 @@ class ExperimentUI(QMainWindow):
         print(f"Changing experiment type to {experiment_type}...\n")
 
         try:
-            # 1) Swap in the new experiment
             self.current_experiment = self.experiments[experiment_type]
             self.temp_parameters = {}
             self.init_parameters_from_template()
 
-            # 2) Reload settings panel
             self.settings_panel.load_settings_panel(
                 self.experiment_templates[experiment_type],
                 default_file=self.current_experiment.default_file
             )
 
-            # 3) Ensure tab structure is correct
-            # Remove "1D Sweep" tab if it exists
             for i in range(self.graph_tabs.count()):
                 if self.graph_tabs.tabText(i) == "1D Sweep":
                     self.graph_tabs.removeTab(i)
                     break
 
-            # Add "1D Sweep" tab if needed
             if self.current_experiment.type == "Spin Echo":
                 graph_tab_4 = QWidget()
                 tab4_layout = QVBoxLayout(graph_tab_4)
@@ -917,7 +832,6 @@ class ExperimentUI(QMainWindow):
                 self.graph_tabs.addTab(graph_tab_4, "1D Sweep")
                 self.combo_1d = combo_1d
 
-            # 4) Refresh tab widgets with new graphs
             for idx in range(self.graph_tabs.count()):
                 tab = self.graph_tabs.widget(idx)
                 layout = tab.layout()
@@ -925,12 +839,11 @@ class ExperimentUI(QMainWindow):
                     layout = QVBoxLayout(tab)
                     tab.setLayout(layout)
 
-                # Clear any existing widgets
                 while layout.count():
                     item = layout.takeAt(0)
                     if item.widget():
                         item.widget().setParent(None)
-                    elif item.layout():  # handles nested layouts like QHBoxLayout
+                    elif item.layout(): 
                         nested_layout = item.layout()
                         while nested_layout.count():
                             sub_item = nested_layout.takeAt(0)
@@ -938,7 +851,6 @@ class ExperimentUI(QMainWindow):
                                 sub_item.widget().setParent(None)
                         layout.removeItem(nested_layout)
 
-                # Insert the correct widget(s)
                 if idx == 0:
                     layout.addWidget(self.current_experiment.read_unprocessed_graph)
                 elif idx == 1:
@@ -966,7 +878,6 @@ class ExperimentUI(QMainWindow):
                     layout.addWidget(self.current_experiment.sweep_graph_1D)
                     self.combo_1d = combo_1d
 
-            # 5) Reset UI buttons
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
             self.sweep_start_stop_btn.setEnabled(False)
@@ -1017,11 +928,9 @@ class ExperimentUI(QMainWindow):
                         self.temp_parameters[underlying] = default
 
     def initialize_from_settings_panel(self):
-        #Button logic
         self.set_parameters_and_initialize_btn.setEnabled(False)
         self.settings_changed = False
 
-        # Update the Initialize indicator
         print("Reading and setting parameters...\n")
         self.indicator_initialize.setStyleSheet(
             "background-color: red; border: 1px solid black; border-radius: 5px;"
@@ -1046,13 +955,10 @@ class ExperimentUI(QMainWindow):
                 elif isinstance(widget, QWidget) and hasattr(widget, "composite_values"):
                     value = widget.composite_values()
                      
-                     # If the value is a list (as in composite), we need to handle individual items.
                     if isinstance(value, list):
-                        # Iterate over the composite list and check for 'gain'
                         if underlying:
                             for idx, (key, v) in enumerate(zip(underlying, value)):
                                 if key == "gain" and isinstance(v, float):
-                                    # Convert only the 'gain' value to an integer
                                     value[idx] = int(v)
                                     print(f"Converting 'gain' value {v} to integer.")
                 else:
@@ -1064,7 +970,7 @@ class ExperimentUI(QMainWindow):
                     else:
                         new_params[underlying] = value
 
-        self.current_experiment.set_parameters(new_params) #initial
+        self.current_experiment.set_parameters(new_params) 
 
         self.indicator_initialize.setStyleSheet(
             "background-color: grey; border: 1px solid black; border-radius: 5px;"
@@ -1085,12 +991,10 @@ class ExperimentUI(QMainWindow):
 
 
     def read_unprocessed_frontend(self):
-        #1) Turn the unprocessed indicator red
         self.indicator_read_unprocessed.setStyleSheet(
             "background-color: red; border: 1px solid black; border-radius: 5px;"
         )
 
-        # 2) Disable all action buttons
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
         self.sweep_start_stop_btn.setEnabled(False)
@@ -1099,35 +1003,29 @@ class ExperimentUI(QMainWindow):
 
         self.graph_tabs.setCurrentIndex(0)
 
-        # 3) Spin up the worker thread
         self.worker_thread = QThread(self)
         self.worker = Worker(self.current_experiment, "read_unprocessed")
         self.worker.moveToThread(self.worker_thread)
 
-        # 4) Hook up the worker
         self.worker_thread.started.connect(self.worker.run_snapshot)
         self.worker.updateStatus.connect(self.on_worker_status_update)
         self.worker.dataReady_se.connect(self.current_experiment.read_unprocessed_graph.update_canvas_se)
         self.worker.dataReady_ps.connect(self.current_experiment.read_unprocessed_graph.update_canvas_psweep)
 
-        # 5) Clean up and reset UI only when the thread is really done
         self.worker.finished.connect(self.worker_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker_thread.finished.connect(self.worker_thread.deleteLater)
         self.worker.finished.connect(self.reset_action_buttons)
 
-        # 6) Start!
         self.worker_thread.start()
 
 
 
     def read_processed_frontend(self):
-            # 1) Turn the processed indicator red
             self.indicator_read_processed.setStyleSheet(
                 "background-color: red; border: 1px solid black; border-radius: 5px;"
             )
 
-            # 2) Disable all action buttons
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
             self.sweep_start_stop_btn.setEnabled(False)
@@ -1136,24 +1034,20 @@ class ExperimentUI(QMainWindow):
 
             self.graph_tabs.setCurrentIndex(1)
 
-            # 3) Spin up the worker thread
             self.worker_thread = QThread(self)
             self.worker = Worker(self.current_experiment, "read_processed")
             self.worker.moveToThread(self.worker_thread)
 
-            # 4) Hook up the worker
             self.worker_thread.started.connect(self.worker.run_snapshot)
             self.worker.updateStatus.connect(self.on_worker_status_update)
             self.worker.dataReady_se.connect(self.current_experiment.read_processed_graph.update_canvas_se)
             self.worker.dataReady_ps.connect(self.current_experiment.read_processed_graph.update_canvas_psweep)
 
-            # 5) Clean up and reset UI only when the thread is really done
             self.worker.finished.connect(self.worker_thread.quit)
             self.worker.finished.connect(self.worker.deleteLater)
             self.worker_thread.finished.connect(self.worker_thread.deleteLater)
             self.worker.finished.connect(self.reset_action_buttons)
 
-            # 6) Start!
             self.worker_thread.start()
 
 
@@ -1300,19 +1194,16 @@ class ExperimentUI(QMainWindow):
 
         layout = QVBoxLayout()
 
-        # Top control buttons
         control_bar = QHBoxLayout()
         for name in ["History", "Clear", "Start/Stop"]:
             btn = QPushButton(name)
             control_bar.addWidget(btn)
         layout.addLayout(control_bar)
 
-        # Active Queue
         layout.addWidget(QLabel("Active Queue:"))
         self.active_queue_list = QListWidget()
         layout.addWidget(self.active_queue_list)
 
-        # Working Queue
         layout.addWidget(QLabel("Working Queue:"))
         self.working_queue_list = QListWidget()
         self.working_queue_list.setDragEnabled(True)
@@ -1340,14 +1231,11 @@ class ExperimentUI(QMainWindow):
         except Exception as e:
             print(e)
 
-        # Optionally update the queue’s collapsed display text
-        # self.queue_manager.set_current_running(queue_item.display_name)
-
 class QueueRunnerWorker(QThread):
-    experiment_locked = pyqtSignal(object)  # To grey out the experiment
-    experiment_unlocked = pyqtSignal(object)  # To un-grey it if an error occurs
-    queue_stopped = pyqtSignal()  # To stop the queue if needed
-    hardware_error = pyqtSignal(object, str)  # To signal hardware error details
+    experiment_locked = pyqtSignal(object)  
+    experiment_unlocked = pyqtSignal(object)  
+    queue_stopped = pyqtSignal()  
+    hardware_error = pyqtSignal(object, str) 
     
     def __init__(self, queue_manager):
         super().__init__()
@@ -1356,28 +1244,26 @@ class QueueRunnerWorker(QThread):
     
     def run(self):
         while not self.stop_requested:
-            # Get next experiment
             experiment = self.get_next_experiment()
             if not experiment:
-                self.queue_stopped.emit()  # No experiments left, stop the queue
+                self.queue_stopped.emit()  
                 return
             
-            self.experiment_locked.emit(experiment)  # Lock (grey out) the experiment
+            self.experiment_locked.emit(experiment)
             
             try:
-                # Try to initialize and run the experiment
                 self.initialize_experiment(experiment)
             except Exception as e:
-                self.hardware_error.emit(experiment, str(e))  # Catch hardware error
-                self.experiment_unlocked.emit(experiment)  # Un-grey the experiment
-                self.queue_stopped.emit()  # Stop the queue
+                self.hardware_error.emit(experiment, str(e))  
+                self.experiment_unlocked.emit(experiment)  
+                self.queue_stopped.emit()  
                 return
 
             self.mark_experiment_done(experiment)
-            self.move_to_next_experiment()  # Move to next experiment in queue
+            self.move_to_next_experiment()  
     
     def run_worker_task(self, experiment, task):
-        worker = Worker(experiment.experiment, task)  # Worker needs ExperimentType, not QueuedExperiment
+        worker = Worker(experiment.experiment, task)  
         thread = QThread()
 
         worker.moveToThread(thread)
@@ -1387,7 +1273,7 @@ class QueueRunnerWorker(QThread):
         worker.dataReady_se.connect(experiment.experiment.read_unprocessed_graph.update_canvas_se)
         worker.dataReady_ps.connect(experiment.experiment.read_unprocessed_graph.update_canvas_psweep)
 
-        worker.updateStatus.connect(self.queue_manager.parent().on_worker_status_update)  # Pipe logs nicely
+        worker.updateStatus.connect(self.queue_manager.parent().on_worker_status_update) 
         worker.finished.connect(thread.quit)
         worker.finished.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
@@ -1395,13 +1281,11 @@ class QueueRunnerWorker(QThread):
         thread.start()
     
     def get_next_experiment(self):
-        # Retrieve the next active experiment (first in the active queue)
         if self.queue_manager.active_queue_list.count() > 0:
-            return self.queue_manager.active_queue_list.item(0)  # Get first item in the list
+            return self.queue_manager.active_queue_list.item(0)  
         return None
     
     def initialize_experiment(self, experiment):
-        # Initialize the experiment hardware
         experiment.init_experiment()
 
         if experiment.has_sweep:
@@ -1414,26 +1298,22 @@ class QueueRunnerWorker(QThread):
             self.run_worker_task(experiment, task="read_processed")
     
     def mark_experiment_done(self, experiment):
-
-        # Writing to Queue History
         now = datetime.now()
 
         if not self.queue_manager.session_started:
             self.queue_manager.session_started = True
-            timestamp = now.strftime("%Y-%m-%d %H:%M:%S")  # First run: full date + time
+            timestamp = now.strftime("%Y-%m-%d %H:%M:%S")  
         else:
-            timestamp = now.strftime("%H:%M:%S")           # Later runs: only time
+            timestamp = now.strftime("%H:%M:%S")           
 
         display_name = experiment.parameters_dict.get("display_name", "Unnamed Experiment")
         save_location = experiment.parameters_dict.get("save_directory", "")
 
         self.queue_manager.history_log.append((timestamp, display_name, save_location))
 
-        # Mark experiment as done
         experiment.set_done()
     
     def move_to_next_experiment(self):
-        # Move to next experiment (remove it from the active queue)
         self.queue_manager.active_queue_list.takeItem(0)
 
 class QueueManager(QWidget):
@@ -1442,33 +1322,28 @@ class QueueManager(QWidget):
 
         self.start_stop_sweep_function = start_stop_sweep_function
 
-        # Queue attributes
-        self.queue_runner = None  # Don't create QueueRunnerWorker yet
+        self.queue_runner = None  
         self.queue_running = False
 
         self.history_log = []
         self.session_started = False
         
-        # UI Setup
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
 
-        # Collapsed Button
         self.collapsed_button = QPushButton("Currently Running: [None] ▼")
         self.collapsed_button.setMaximumHeight(40)
         self.collapsed_button.setStyleSheet("text-align: left; padding: 8px;")
         self.collapsed_button.clicked.connect(self.toggle_expand)
         self.main_layout.addWidget(self.collapsed_button)
 
-        # Expanded Frame (initially hidden)
         self.expanded_frame = QFrame()
         self.expanded_frame.setVisible(False)
         self.expanded_layout = QVBoxLayout(self.expanded_frame)
         self.expanded_layout.setContentsMargins(10, 10, 10, 10)
         self.expanded_layout.setSpacing(10)
 
-        # Active Queue Label + Control Buttons
         active_queue_bar = QHBoxLayout()
         active_label = QLabel("Active Queue:")
         active_label.setStyleSheet("font-weight: bold;")
@@ -1489,12 +1364,10 @@ class QueueManager(QWidget):
 
         self.expanded_layout.addLayout(active_queue_bar)
 
-        # Connect button signals
         self.history_button.clicked.connect(self.show_history)
         self.clear_button.clicked.connect(self.clear_queue)
         self.toggle_run_button.clicked.connect(self.start_stop_queue)
 
-        # Queues
         self.active_queue_list = QListWidget()
         self.expanded_layout.addWidget(self.active_queue_list)
 
@@ -1505,7 +1378,6 @@ class QueueManager(QWidget):
         self.working_queue_list.setDragDropMode(QListWidget.InternalMove)
         self.expanded_layout.addWidget(self.working_queue_list)
 
-        # Add expanded frame
         self.main_layout.addWidget(self.expanded_frame)
 
         self.current_running_text = "[None]"
@@ -1514,11 +1386,11 @@ class QueueManager(QWidget):
         """Handle the start/stop of the queue"""
         self.toggle_run_button_text()
         if self.queue_runner and self.queue_runner.isRunning():
-            self.stop_queue()  # Stop the queue
+            self.stop_queue()  
         else:
             self.queue_running = True
             print("Calling next queue item()")
-            self.next_queue_item()  # Start the queue
+            self.next_queue_item()  
     
     def stop_queue(self):
         """Request the queue to stop."""
@@ -1539,7 +1411,7 @@ class QueueManager(QWidget):
     def queue_stopped_due_to_completion_or_error(self):
         """Called when the queue runner stops naturally or due to error."""
         self.queue_running = False
-        self.toggle_run_button.setText("Start")  # Reset button to Start
+        self.toggle_run_button.setText("Start")  
         print("Queue has stopped.")
 
     def handle_hardware_error(self, experiment, error_message):
@@ -1570,7 +1442,6 @@ class QueueManager(QWidget):
                     padding: 8px;
                 }
             """)
-            # Optionally re-enable buttons
     
     def toggle_run_button_text(self):
         """
@@ -1639,9 +1510,8 @@ class QueueManager(QWidget):
         """
 
         if self.working_queue_list.count() == 0 and self.active_queue_list.count() == 0:
-            return  # Both queues are empty, do nothing
+            return  
 
-        # if self.working_queue_list.count() == 0 and self.active_queue_list.count() == 0:
         reply = QMessageBox.question(
             self,
             "Confirm Clear Queue",
@@ -1651,15 +1521,13 @@ class QueueManager(QWidget):
         )
 
         if reply == QMessageBox.Yes:
-            # Clear working queue
             while self.working_queue_list.count() > 0:
                 item = self.working_queue_list.takeItem(0)
                 if isinstance(item, QueuedExperiment):
                     del item.widget
                     del item.experiment
-                del item  # Make sure to delete the item too
+                del item  
 
-            # Clear active queue
             while self.active_queue_list.count() > 0:
                 item = self.active_queue_list.takeItem(0)
                 if isinstance(item, QueuedExperiment):
@@ -1680,7 +1548,6 @@ class ExperimentSetupDialog(QDialog):
 
         main_layout = QHBoxLayout(self)
 
-        # === Left Input Column ===
         left_box = QVBoxLayout()
 
         self.name_label = QLabel("Experiment Name:")
@@ -1713,7 +1580,6 @@ class ExperimentSetupDialog(QDialog):
         left_box.addWidget(self.dir_label)
         left_box.addLayout(dir_row)
 
-        # Bottom buttons
         button_row = QHBoxLayout()
         self.cancel_button = QPushButton("Cancel")
         self.ok_button = QPushButton("Okay")
@@ -1725,22 +1591,17 @@ class ExperimentSetupDialog(QDialog):
         left_box.addStretch()
         left_box.addLayout(button_row)
 
-        # === Right Scrollable Summary Panel ===
         self.settings_panel = DynamicSettingsPanel()
         self.settings_panel.load_settings_panel(EXPERIMENT_TEMPLATES[experiment_type])
 
-        # Load provided parameter values into settings panel
         self._apply_parameters_to_settings(parameters)
 
         if not self.edit_settings:
-            self.settings_panel.setDisabled(True)  # 🔥 Gray out entire right panel if not editable
+            self.settings_panel.setDisabled(True) 
 
-        # Combine into main layout
         main_layout.addLayout(left_box, 2)
         main_layout.addWidget(self.settings_panel, 3)
 
-
-        # Fill left-side fields if values provided
         if values:
             self.name_input.setText(values.get("display_name", "default name"))
             self.read_processed_checkbox.setChecked(values.get("read_processed", False))
@@ -1763,7 +1624,6 @@ class ExperimentSetupDialog(QDialog):
                 key = getattr(widget, '_underlying_key', None)
 
                 if isinstance(key, list):
-                    # Composite keys
                     layout = widget.layout()
                     for idx, subkey in enumerate(key):
                         if subkey in param_dict:
@@ -1853,14 +1713,12 @@ class QueuedExperiment(QListWidgetItem):
         self.queue_manager = queue_manager
         self.experiment_type = experiment.type
 
-        # If copying from existing parameters
         if parameters_dict:
             self.parameters_dict = parameters_dict.copy()
             self.valid = True
         else:
             initial_params = experiment.parameters.copy()
 
-            # Generate the better default display name
             default_name = self.generate_default_display_name()
 
             dialog = ExperimentSetupDialog(
@@ -1880,7 +1738,7 @@ class QueuedExperiment(QListWidgetItem):
 
             self.parameters_dict = {
                 "display_name":    values["display_name"],
-                "parameters":      updated_params,       # ← use these instead of the empty copy
+                "parameters":      updated_params,      
                 "read_processed":  values["read_processed"],
                 "read_unprocessed":values["read_unprocessed"],
                 "sweep":           values["sweep"],
@@ -1891,7 +1749,6 @@ class QueuedExperiment(QListWidgetItem):
             
             self.valid = True
 
-        # -- UI Setup --
         self.widget = QWidget()
         self.widget.setStyleSheet("""
             QWidget {
@@ -1949,7 +1806,6 @@ class QueuedExperiment(QListWidgetItem):
 
         self.widget.setLayout(self.layout)
         self.setSizeHint(self.widget.sizeHint())
-        # self.queue_manager.add_to_working_queue(self)
 
     def generate_default_display_name(self):
         """
@@ -1957,9 +1813,8 @@ class QueuedExperiment(QListWidgetItem):
         Format: Abbreviation:expXXX
         """
         type_abbr = {"Spin Echo": "SE", "Pulse Frequency Sweep": "PFS"}
-        abbr = type_abbr.get(self.experiment_type, "UNK")  # fallback abbreviation
+        abbr = type_abbr.get(self.experiment_type, "UNK") 
 
-        # Use self.experiment.parameters directly because parameters_dict not created yet
         expt_name = self.experiment.parameters.get("expt", "exp").replace(" ", "")
 
         base_name = f"{abbr}:{expt_name}"
@@ -1980,7 +1835,6 @@ class QueuedExperiment(QListWidgetItem):
             return f"{base_name}{count}"
 
     def startDrag(self):
-        # This method initiates dragging this item manually
         listwidget = self.listWidget()
         if listwidget:
             drag = listwidget.model().supportedDragActions()
@@ -1988,12 +1842,12 @@ class QueuedExperiment(QListWidgetItem):
     def lock_experiment(self, experiment):
         """Lock the experiment widget (grey out)"""
         if self == experiment:
-            self.widget.setStyleSheet("background-color: #d0d0d0;")  # Grey out the widget
+            self.widget.setStyleSheet("background-color: #d0d0d0;")  
 
     def unlock_experiment(self, experiment):
         """Unlock the experiment widget (un-grey)"""
         if self == experiment:
-            self.widget.setStyleSheet("background-color: #f9f9f9;")  # Un-grey the widget
+            self.widget.setStyleSheet("background-color: #f9f9f9;")  
 
     @property
     def has_sweep(self):
@@ -2010,7 +1864,6 @@ class QueuedExperiment(QListWidgetItem):
     def set_done(self):
         """Grey out the widget and disable all buttons after experiment finishes."""
         print("Marking experiment done...")
-        # Grey out the background
         self.widget.setStyleSheet("""
             QWidget {
                 background-color: #cccccc;
@@ -2020,7 +1873,6 @@ class QueuedExperiment(QListWidgetItem):
             }
         """)
 
-        # Disable all buttons
         for button in [self.change_queue_button, self.duplicate_button, self.delete_button, self.info_button]:
             button.setEnabled(False)
 
@@ -2042,7 +1894,6 @@ class QueuedExperiment(QListWidgetItem):
             values=self.parameters_dict
         )
         if dialog.exec_() == QDialog.Accepted:
-            # Update left side fields
             values = dialog.get_values()
             self.parameters_dict["display_name"] = values["display_name"]
             self.parameters_dict["read_processed"] = values["read_processed"]
@@ -2051,7 +1902,6 @@ class QueuedExperiment(QListWidgetItem):
             self.parameters_dict["save_graph_output"] = values["save_graph_output"]
             self.parameters_dict["save_directory"] = values["save_directory"]
 
-            # Update right side parameters
             self.parameters_dict["parameters"] = dialog.get_updated_parameters()
 
             self.label.setText(f"{self.parameters_dict['display_name']} — {self.experiment_type}")
@@ -2078,10 +1928,8 @@ class QueuedExperiment(QListWidgetItem):
         Moves this experiment to the opposite queue (working <-> active) safely.
         This duplicates the experiment and deletes the original to avoid segmentation faults.
         """
-        # Prepare a full clone of parameters
         clone_dict = self.parameters_dict.copy()
 
-        # Swap the queue type
         if clone_dict["current_queue"] == "working_queue":
             clone_dict["current_queue"] = "active_queue"
             target_queue = self.queue_manager.active_queue_list
@@ -2089,17 +1937,14 @@ class QueuedExperiment(QListWidgetItem):
             clone_dict["current_queue"] = "working_queue"
             target_queue = self.queue_manager.working_queue_list
 
-        # Create a new QueuedExperiment using the cloned parameters
         new_item = QueuedExperiment(self.start_stop_sweep_function, self.experiment, self.queue_manager, parameters_dict=clone_dict)
         
         if not new_item.valid:
             return
 
-        # Add to the target queue
         target_queue.addItem(new_item)
         target_queue.setItemWidget(new_item, new_item.widget)
 
-        # Delete the original item
         self.delete_self()
         
     def duplicate(self):
@@ -2130,7 +1975,7 @@ class QueuedExperiment(QListWidgetItem):
 
 def main():
     app = QApplication(sys.argv)
-    app.setWindowIcon(QIcon("icon.png"))  # Set global app icon
+    app.setWindowIcon(QIcon("icon.png")) 
     ex = ExperimentUI()
     ex.show()
     screen = QDesktopWidget().screenGeometry()
