@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QH
                              QFileDialog, QListWidgetItem,
                              QListWidget,QInputDialog, QAbstractItemView, QDialog, QPushButton, QTabWidget, QDesktopWidget)
                              
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize, QTimer
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -18,9 +18,11 @@ sys.path.append('../')
 from time import sleep, time
 from datetime import date, datetime
 import pickle
-#import pyvisa
-#import pyscan as ps
+import pyvisa
+import requests
+import pyscan as ps
 
+import globals
 from Worker import *
 from graphing import *
 from ExperimentType import *
@@ -32,13 +34,11 @@ tdivs = []
 for n in range(9, -1, -1):
     tdivs += [2*10**-n, 4*10**-n, 10*10**-n]#[2.5*10**-n, 5*10**-n, 10*10**-n]
 
-# scopes = {'TBS1052C': ps.Tektronix1052B,
-#           'MSO24': ps.TektronixMSO2}
+scopes = []
 
-# if not hasattr(ps, 'rm'):
-#     ps.rm = pyvisa.ResourceManager('@py')
-# res_list = ps.rm.list_resources()
-res_list = []
+if not hasattr(ps, 'rm'):
+    ps.rm = pyvisa.ResourceManager('@py')
+res_list = ps.rm.list_resources()
 
 #Global setting trees for the Pulse Frequency Sweep and Spin Echo experiment settings
 sweep_list = ['Pulse Sweep',
@@ -79,11 +79,7 @@ EXPERIMENT_TEMPLATES = {
                  "options": ['Freq Sweep', 'Field Sweep'], "default": 'Freq Sweep'},
                 {"display": "Sweep start, end, step",
                  "key": ["sweep_start", "sweep_end", "sweep_step"], #sweep_start, sweep_end, and sweep_step are all unbounded floats (contained in measure)
-                 "type": "composite", "default": [3850.0, 3950.0, 2.0]},                
-                 {"display": "2D Sweep variable", "key": "2D Sweep variable", "type": "combo",
-                 "options": ["x", "i", "q"], "default": "x"},
-                 {"display": "1D Sweep variable", "key": "1D Sweep variable", "type": "combo",
-                 "options": ["X", "I", "Q"], "default": "Q"}],
+                 "type": "composite", "default": [3850.0, 3950.0, 2.0]},                ],
             "Readout Settings": [
                 {"display": "Time Offset", "key": "h_offset", "type": "double_spin", #h_offset is a bounded float between -10000 and 10000 (contained in rfsoc)
                  "min": -10000.0, "max": 10000.0, "default": -0.125}, #CHANGED THESE VALUES FROM 0, 1000, AND 10.0
@@ -154,11 +150,7 @@ EXPERIMENT_TEMPLATES = {
                  "options": sweep_list, "default": "Hahn Echo"},
                 {"display": "Sweep start, end, step",
                  "key": ["sweep_start", "sweep_end", "sweep_step"], "type": "composite",
-                "default": [150.0, 1000.0, 50.0]},
-                {"display": "2D Sweep variable", "key": "2D Sweep variable", "type": "combo",
-                 "options": ["x", "i", "q"], "default": "x"},
-                 {"display": "1D Sweep variable", "key": "1D Sweep variable", "type": "combo",
-                 "options": ["xmean", "imean", "qmean"], "default": "xmean"}],
+                "default": [150.0, 1000.0, 50.0]},],
             "Pulse Settings": [
                 {"display": "Ch1 Delay", "key": "delay", "type": "double_spin",
                  "min": 0, "max": 652100, "default": 150.0},
@@ -502,7 +494,7 @@ class ExperimentUI(QMainWindow):
         self.settings_panel = DynamicSettingsPanel()
         self.settings_panel.settingChanged.connect(self.on_setting_changed)
 
-        self.queue_manager = QueueManager(self.toggle_start_stop_sweep_frontend, )
+        self.queue_manager = QueueManager(self.toggle_start_stop_sweep_frontend)
         self.graphs_panel = self.init_graphs_panel()
         self.error_log = self.init_error_log_widget()
         self.top_menu_bar = self.init_top_menu_bar()
@@ -675,15 +667,40 @@ class ExperimentUI(QMainWindow):
         tab2_layout.addWidget(self.current_experiment.read_processed_graph)
         self.graph_tabs.addTab(graph_tab_2, "Read Processed")
 
+        # 2D-Sweep tab with its own variable selector
         graph_tab_3 = QWidget()
         tab3_layout = QVBoxLayout(graph_tab_3)
+        # top-left dropdown for the 2D variable
+        hdr3 = QHBoxLayout()
+        hdr3.addWidget(QLabel("Variable:"))
+        combo_2d = QComboBox()
+        combo_2d.currentTextChanged.connect(self.update_2d_plot)
+        # fill with the same options you had before
+        combo_2d.addItems(["x","i","q"])
+        hdr3.addWidget(combo_2d)
+        hdr3.addStretch()
+        tab3_layout.addLayout(hdr3)
+        # the actual plot widget
         tab3_layout.addWidget(self.current_experiment.sweep_graph_2D)
         self.graph_tabs.addTab(graph_tab_3, "2D Sweep")
+        # keep a reference so Worker can read its currentText()
+        self.combo_2d = combo_2d
 
-        graph_tab_4 = QWidget()
-        tab3_layout = QVBoxLayout(graph_tab_4)
-        tab3_layout.addWidget(self.current_experiment.sweep_graph_1D)
-        self.graph_tabs.addTab(graph_tab_4, "1D Sweep")
+        # 1D-Sweep tab with its own variable selector
+        if self.current_experiment.type == "Spin Echo":
+            graph_tab_4 = QWidget()
+            tab4_layout = QVBoxLayout(graph_tab_4)
+            hdr4 = QHBoxLayout()
+            hdr4.addWidget(QLabel("Variable:"))
+            combo_1d = QComboBox()
+            combo_1d.currentTextChanged.connect(self.update_1d_plot)
+            combo_1d.addItems(["xmean","imean","qmean"])  
+            hdr4.addWidget(combo_1d)
+            hdr4.addStretch()
+            tab4_layout.addLayout(hdr4)
+            tab4_layout.addWidget(self.current_experiment.sweep_graph_1D)
+            self.graph_tabs.addTab(graph_tab_4, "1D Sweep")
+            self.combo_1d = combo_1d
 
         # Add tabs to layout
         graph_layout.addWidget(self.graph_tabs)
@@ -901,22 +918,7 @@ class ExperimentUI(QMainWindow):
         return top_menu
 
     def change_experiment_type(self, experiment_type):
-        # # 0) Clear the old experiment's graphs:
-        # old = self.current_experiment
-        # # Clear Read Unprocessed
-        # old.read_unprocessed_graph.ax.clear()
-        # old.read_unprocessed_graph.canvas.draw()
-        # # Clear Read Processed
-        # old.read_processed_graph.ax.clear()
-        # old.read_processed_graph.canvas.draw()
-        # # Clear 2D Sweep
-        # old.sweep_graph_2D.ax.clear()
-        # old.sweep_graph_2D.canvas.draw_idle()
-        # # Clear 1D Sweep
-        # old.sweep_graph_1D.ax.clear()
-        # old.sweep_graph_1D.canvas.draw_idle()
-
-        # If a sweep is in progress, stop it
+        # 0) Stop any ongoing sweep
         if hasattr(self, 'worker'):
             self.worker.stop_sweep()
             self.indicator_sweep.setStyleSheet(
@@ -925,67 +927,125 @@ class ExperimentUI(QMainWindow):
 
         print(f"Changing experiment type to {experiment_type}...\n")
 
-        # 1) Swap in the new ExperimentType
-        self.current_experiment = self.experiments[experiment_type]
-        self.temp_parameters = {}
-        self.init_parameters_from_template()
+        try:
+            # 1) Swap in the new experiment
+            self.current_experiment = self.experiments[experiment_type]
+            self.temp_parameters = {}
+            self.init_parameters_from_template()
 
-        # 2) Reload settings panel for the new experiment
-        self.settings_panel.load_settings_panel(
-            self.experiment_templates[experiment_type],
-            default_file=self.current_experiment.default_file
-        )
+            # 2) Reload settings panel
+            self.settings_panel.load_settings_panel(
+                self.experiment_templates[experiment_type],
+                default_file=self.current_experiment.default_file
+            )
 
-        # 3) Re‐wire the graph tabs to the new experiment's widgets
-        for idx in range(self.graph_tabs.count()):
-            tab = self.graph_tabs.widget(idx)
-            layout = tab.layout()
-            # remove old widget
-            if layout.count():
-                old_w = layout.takeAt(0).widget()
-                old_w.setParent(None)
-            # insert new widget
-            if idx == 0:
-                layout.addWidget(self.current_experiment.read_unprocessed_graph)
-            elif idx == 1:
-                layout.addWidget(self.current_experiment.read_processed_graph)
-            elif idx == 2:
-                layout.addWidget(self.current_experiment.sweep_graph_2D)
-            elif idx == 3:
-                layout.addWidget(self.current_experiment.sweep_graph_1D)
+            # 3) Ensure tab structure is correct
+            # Remove "1D Sweep" tab if it exists
+            for i in range(self.graph_tabs.count()):
+                if self.graph_tabs.tabText(i) == "1D Sweep":
+                    self.graph_tabs.removeTab(i)
+                    break
 
-        # 4) Reset all action buttons
-        self.read_unprocessed_btn.setEnabled(False)
-        self.read_processed_btn.setEnabled(False)
-        self.sweep_start_stop_btn.setEnabled(False)
-        self.set_parameters_and_initialize_btn.setEnabled(True)
+            # Add "1D Sweep" tab if needed
+            if self.current_experiment.type == "Spin Echo":
+                graph_tab_4 = QWidget()
+                tab4_layout = QVBoxLayout(graph_tab_4)
+                hdr4 = QHBoxLayout()
+                hdr4.addWidget(QLabel("Variable:"))
+                combo_1d = QComboBox()
+                combo_1d.addItems(["xmean", "imean", "qmean"])
+                hdr4.addWidget(combo_1d)
+                hdr4.addStretch()
+                tab4_layout.addLayout(hdr4)
+                tab4_layout.addWidget(self.current_experiment.sweep_graph_1D)
+                self.graph_tabs.addTab(graph_tab_4, "1D Sweep")
+                self.combo_1d = combo_1d
 
-        # Update the graphs in the existing tabs
-        for i in range(self.graph_tabs.count()):
-            tab_widget = self.graph_tabs.widget(i)
-            layout = tab_widget.layout()
+            # 4) Refresh tab widgets with new graphs
+            for idx in range(self.graph_tabs.count()):
+                tab = self.graph_tabs.widget(idx)
+                layout = tab.layout()
+                if not layout:
+                    layout = QVBoxLayout(tab)
+                    tab.setLayout(layout)
 
-            # Clear old graph widget in the tab
-            if layout.count() > 0:
-                old_graph = layout.itemAt(0).widget()
-                layout.removeWidget(old_graph)
-                old_graph.setParent(None)
+                # Clear any existing widgets
+                while layout.count():
+                    item = layout.takeAt(0)
+                    if item.widget():
+                        item.widget().setParent(None)
+                    elif item.layout():  # handles nested layouts like QHBoxLayout
+                        nested_layout = item.layout()
+                        while nested_layout.count():
+                            sub_item = nested_layout.takeAt(0)
+                            if sub_item.widget():
+                                sub_item.widget().setParent(None)
+                        layout.removeItem(nested_layout)
 
-            # Add the new graph widget to the tab
-            if i == 0:
-                layout.addWidget(self.current_experiment.read_unprocessed_graph)
-            elif i == 1:
-                layout.addWidget(self.current_experiment.read_processed_graph)
-            elif i == 2:
-                layout.addWidget(self.current_experiment.sweep_graph_2D)
-            elif i == 3:
-                layout.addWidget(self.current_experiment.sweep_graph_1D)
+                # Insert the correct widget(s)
+                if idx == 0:
+                    layout.addWidget(self.current_experiment.read_unprocessed_graph)
+                elif idx == 1:
+                    layout.addWidget(self.current_experiment.read_processed_graph)
+                elif idx == 2:
+                    hdr3 = QHBoxLayout()
+                    hdr3.addWidget(QLabel("Variable:"))
+                    combo_2d = QComboBox()
+                    combo_2d.currentTextChanged.connect(self.update_2d_plot)
+                    combo_2d.addItems(["x", "i", "q"])
+                    hdr3.addWidget(combo_2d)
+                    hdr3.addStretch()
+                    layout.addLayout(hdr3)
+                    layout.addWidget(self.current_experiment.sweep_graph_2D)
+                    self.combo_2d = combo_2d
+                elif self.graph_tabs.tabText(idx) == "1D Sweep":
+                    hdr4 = QHBoxLayout()
+                    hdr4.addWidget(QLabel("Variable:"))
+                    combo_1d = QComboBox()
+                    combo_1d.currentTextChanged.connect(self.update_1d_plot)
+                    combo_1d.addItems(["xmean", "imean", "qmean"])
+                    hdr4.addWidget(combo_1d)
+                    hdr4.addStretch()
+                    layout.addLayout(hdr4)
+                    layout.addWidget(self.current_experiment.sweep_graph_1D)
+                    self.combo_1d = combo_1d
 
-        # Re-disable action buttons until user clicks "Initialize"
-        self.read_unprocessed_btn.setEnabled(False)
-        self.read_processed_btn.setEnabled(False)
-        self.sweep_start_stop_btn.setEnabled(False)
-        self.set_parameters_and_initialize_btn.setEnabled(True)
+            # 5) Reset UI buttons
+            self.read_unprocessed_btn.setEnabled(False)
+            self.read_processed_btn.setEnabled(False)
+            self.sweep_start_stop_btn.setEnabled(False)
+            self.set_parameters_and_initialize_btn.setEnabled(True)
+
+        except Exception as e:
+            print(f"Error switching experiment: {e}")
+
+    def update_2d_plot(self):
+        try:
+            if self.current_experiment.expt:
+                data_name_2d = self.combo_2d.currentText()
+                print("data_name_2d", data_name_2d)
+                pg_2D = ps.PlotGenerator(
+                    expt=self.current_experiment.expt, d=2,
+                    x_name='t',
+                    y_name=self.current_experiment.parameters['y_name'],
+                    data_name=data_name_2d,
+                    transpose=1
+                )
+                self.current_experiment.sweep_graph_2D.on_live_plot_2D((pg_2D))
+        except Exception as e:
+            print(f"Error updating 2d plot: {e}")
+  
+    
+    def update_1d_plot(self):
+        if self.current_experiment.expt:
+            data_name_1d = self.combo_1d.currentText()
+            print("data_name_2d", data_name_1d)
+            pg_1D = ps.PlotGenerator(   
+                                expt=self.current_experiment.expt, d=1,
+                                x_name=self.current_experiment.parameters['y_name'],
+                                data_name=data_name_1d,
+                            )
+            self.current_experiment.sweep_graph_1D.on_live_plot_1D((pg_1D))
 
     def init_parameters_from_template(self):
         """Seed self.temp_parameters with every key from the current template."""
@@ -1065,7 +1125,7 @@ class ExperimentUI(QMainWindow):
 
 
     def read_unprocessed_frontend(self):
-        # init_pyscan_experiment1) Turn the unprocessed indicator red
+        #1) Turn the unprocessed indicator red
         self.indicator_read_unprocessed.setStyleSheet(
             "background-color: red; border: 1px solid black; border-radius: 5px;"
         )
@@ -1154,9 +1214,21 @@ class ExperimentUI(QMainWindow):
 
             self.graph_tabs.setCurrentIndex(2)
 
-            # Spin up the worker thread
-            self.worker_thread = QThread(self)
-            self.worker = Worker(self.current_experiment, "sweep")
+            if self.current_experiment.type == "Pulse Frequency Sweep":
+                self.worker_thread = QThread(self)
+                self.worker = Worker(
+                    self.current_experiment,
+                    "sweep",
+                    combo_2d=self.combo_2d,
+                )
+            elif self.current_experiment.type == "Spin Echo":
+                self.worker_thread = QThread(self)
+                self.worker = Worker(
+                    self.current_experiment,
+                    "sweep",
+                    combo_2d=self.combo_2d,
+                    combo_1d=self.combo_1d
+                )
             self.worker.moveToThread(self.worker_thread)
 
             # Connect the sweep logic & live-plot signals
@@ -1299,20 +1371,24 @@ class ExperimentUI(QMainWindow):
         self.queue_window.show()
     
     def add_to_queue(self):
-        # Create new experiment based on current type
-        new_experiment = ExperimentType(self.current_experiment.type)
-        # Optional: clone parameters if needed
-        # new_experiment.set_parameters(self.current_experiment.parameters.copy())
+        try:
+            # Create new experiment based on current type
+            new_experiment = ExperimentType(self.current_experiment.type)
+            # Optional: clone parameters if needed
+            # new_experiment.set_parameters(self.current_experiment.parameters.copy())
 
-        # Pass the full QueueManager instance
-        queue_item = QueuedExperiment(
-            experiment=new_experiment,
-            queue_manager=self.queue_manager,
-            last_used_directory=self.last_saved_graph_path
-        )
+            # Pass the full QueueManager instance
+            queue_item = QueuedExperiment(
+                start_stop_sweep_function = self.toggle_start_stop_sweep_frontend,
+                experiment=new_experiment,
+                queue_manager=self.queue_manager,
+                last_used_directory=self.last_saved_graph_path
+            )
 
-        if queue_item.valid:
-            self.queue_manager.add_to_working_queue(queue_item)
+            if queue_item.valid:
+                self.queue_manager.add_to_working_queue(queue_item)
+        except Exception as e:
+            print(e)
 
         # Optionally update the queue’s collapsed display text
         # self.queue_manager.set_current_running(queue_item.display_name)
@@ -1491,34 +1567,8 @@ class QueueManager(QWidget):
             self.stop_queue()  # Stop the queue
         else:
             self.queue_running = True
+            print("calling next queue item()")
             self.next_queue_item()  # Start the queue
-    
-    # def start_queue(self):
-    #     """Start the queue by launching a QueueRunnerWorker in a new thread."""
-    #     if self.queue_runner and self.queue_runner.isRunning():
-    #         print("Queue is already running.")
-    #         return
-
-    #     # Create a fresh worker
-    #     self.queue_runner = QueueRunnerWorker(self)
-
-    #     # Connect core queue signals
-    #     self.queue_runner.queue_stopped.connect(self.queue_stopped_due_to_completion_or_error)
-    #     self.queue_runner.hardware_error.connect(self.handle_hardware_error)
-
-    #     # Connect worker to existing experiments
-    #     for list_widget in [self.active_queue_list, self.working_queue_list]:
-    #         for i in range(list_widget.count()):
-    #             item = list_widget.item(i)
-    #             if isinstance(item, QueuedExperiment):
-    #                 self.queue_runner.experiment_locked.connect(item.lock_experiment)
-    #                 self.queue_runner.experiment_unlocked.connect(item.unlock_experiment)
-
-    #     # Also make sure any future-added experiments are connected correctly
-
-    #     # Start
-    #     self.queue_running = True
-    #     self.queue_runner.start()
     
     def stop_queue(self):
         """Request the queue to stop."""
@@ -1527,11 +1577,19 @@ class QueueManager(QWidget):
 
     def next_queue_item(self):
         "Runs the next queue item and deletes from queue when complete"
-        if self.active_queue_list.count != 0:
-            next_experiment = self.active_queue_list.takeItem(0)
-            next_experiment.init_experiment()
-            next_experiment.experiment.experiment_type.toggle_start_stop_sweep_frontend()
-            
+        try:
+            if self.active_queue_list.count != 0:
+                next_experiment = self.active_queue_list.takeItem(0)
+                self.current_experiment = next_experiment.experiment
+                print()
+                print(type(next_experiment))
+                print()
+                print(next_experiment.parameters_dict)
+                next_experiment.init_experiment()
+                next_experiment.start_stop_sweep_function()
+        except Exception as e:
+            print("error raised in GUI")
+            print(e)
 
     def queue_stopped_due_to_completion_or_error(self):
         """Called when the queue runner stops naturally or due to error."""
@@ -1843,14 +1901,16 @@ class ExperimentSetupDialog(QDialog):
             self.dir_input.setText(selected_dir)
 
 class QueuedExperiment(QListWidgetItem):
-    def __init__(self, experiment: ExperimentType, queue_manager, last_used_directory=None, parameters_dict=None):
+    def __init__(self, start_stop_sweep_function, experiment: ExperimentType, queue_manager, last_used_directory=None, parameters_dict=None):
         super().__init__()
 
+        self.start_stop_sweep_function = start_stop_sweep_function
         self.experiment = experiment
         self.queue_manager = queue_manager
         self.experiment_type = experiment.type
 
         # If copying from existing parameters
+        print("now, parameters_dict is:", parameters_dict)
         if parameters_dict:
             self.parameters_dict = parameters_dict.copy()
             self.valid = True
@@ -1871,18 +1931,24 @@ class QueuedExperiment(QListWidgetItem):
                 self.valid = False
                 return
 
+            updated_params = dialog.get_updated_parameters()
+            print("this is where we got the parameters...they are:")
+            print("updated_params:",  updated_params)
+
             values = dialog.get_values()
 
             self.parameters_dict = {
-                "display_name": values["display_name"],
-                "parameters": initial_params,
-                "read_processed": values["read_processed"],
-                "read_unprocessed": values["read_unprocessed"],
-                "sweep": values["sweep"],
+                "display_name":    values["display_name"],
+                "parameters":      updated_params,       # ← use these instead of the empty copy
+                "read_processed":  values["read_processed"],
+                "read_unprocessed":values["read_unprocessed"],
+                "sweep":           values["sweep"],
                 "save_graph_output": values["save_graph_output"],
-                "save_directory": values["save_directory"],
-                "current_queue": "working_queue"
+                "save_directory":  values["save_directory"],
+                "current_queue":   "working_queue"
             }
+            
+            print("self.parameters_dict:", self.parameters_dict)
             self.valid = True
 
         # -- UI Setup --
@@ -1895,6 +1961,8 @@ class QueuedExperiment(QListWidgetItem):
                 padding: 8px;
             }
         """)
+        print()
+        print("we updated QueedExperiment.parameters_dict", self.parameters_dict)
 
 
 
@@ -2025,8 +2093,12 @@ class QueuedExperiment(QListWidgetItem):
         """
         Initialize the experiment hardware setup based on saved parameters.
         """
+
+        print("called queued experiment.init_experiment()")
+        print()
+        print("initializing an experiment with: ", self.parameters_dict["parameters"])
+        print()
         self.experiment.set_parameters(self.parameters_dict["parameters"])
-        #self.experiment.init_pyscan_experiment()
 
     def show_info_popup(self):
         """
@@ -2077,6 +2149,8 @@ class QueuedExperiment(QListWidgetItem):
         This duplicates the experiment and deletes the original to avoid segmentation faults.
         """
         # Prepare a full clone of parameters
+        print()
+        print("Before queue move: ", self.parameters_dict)
         clone_dict = self.parameters_dict.copy()
 
         # Swap the queue type
@@ -2086,10 +2160,16 @@ class QueuedExperiment(QListWidgetItem):
         else:
             clone_dict["current_queue"] = "working_queue"
             target_queue = self.queue_manager.working_queue_list
+        
+        print()
+        print("clone dict:", clone_dict)
 
         # Create a new QueuedExperiment using the cloned parameters
-        new_item = QueuedExperiment(self.experiment, self.queue_manager, parameters_dict=clone_dict)
-
+        new_item = QueuedExperiment(self.start_stop_sweep_function, self.experiment, self.queue_manager, parameters_dict=clone_dict)
+        
+        print()
+        print("After Queue Move: ", new_item.parameters_dict)
+        
         if not new_item.valid:
             return
 
@@ -2114,7 +2194,7 @@ class QueuedExperiment(QListWidgetItem):
         clone_dict = self.parameters_dict.copy()
         clone_dict["display_name"] = new_name.strip()
 
-        new_item = QueuedExperiment(self.experiment, self.queue_manager, parameters_dict=clone_dict)
+        new_item = QueuedExperiment(self.start_stop_sweep_function, self.experiment, self.queue_manager, parameters_dict=clone_dict)
 
         if not new_item.valid:
             return
@@ -2125,13 +2205,6 @@ class QueuedExperiment(QListWidgetItem):
         else:
             self.queue_manager.working_queue_list.addItem(new_item)
             self.queue_manager.working_queue_list.setItemWidget(new_item, new_item.widget)
-        def init_experiment(self):
-            """
-            Should be called by the parent list or queue manager.
-            Sets up internal state and initializes hardware logic.
-            """
-            self.experiment.set_parameters(self.parameters)
-            #self.experiment.init_pyscan_experiment()
 
 def main():
     app = QApplication(sys.argv)

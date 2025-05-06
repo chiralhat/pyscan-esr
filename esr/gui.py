@@ -1471,6 +1471,9 @@ class QueueManager(QWidget):
         self.working_queue_list.setDragDropMode(QListWidget.InternalMove)
         self.expanded_layout.addWidget(self.working_queue_list)
 
+        self.working_queue_list.model().rowsMoved.connect(self._fix_single_item_drag)
+
+
         # Add expanded frame
         self.main_layout.addWidget(self.expanded_frame)
 
@@ -1562,6 +1565,16 @@ class QueueManager(QWidget):
             """)
             # Optionally re-enable buttons
     
+    def _fix_single_item_drag(self, *args):
+        """
+        After a drag event completes, forcibly re-set the widget for all items.
+        This fixes the bug where dragging a single item makes the widget vanish or look 'blued out'.
+        """
+        for i in range(self.working_queue_list.count()):
+            item = self.working_queue_list.item(i)
+            if isinstance(item, QueuedExperiment):
+                self.working_queue_list.setItemWidget(item, item.widget)
+
     def toggle_run_button_text(self):
         """
         Toggles the text between 'Start' and 'Stop' when the button is clicked.
@@ -1591,6 +1604,8 @@ class QueueManager(QWidget):
         print(f"Adding queued experiment: {queued_experiment.parameters_dict['display_name']} to working queue...")
         self.working_queue_list.addItem(queued_experiment)
         self.working_queue_list.setItemWidget(queued_experiment, queued_experiment.widget)
+        # if queued_experiment.valid:
+        #     self.working_queue_list.add_experiment_item(queued_experiment, queued_experiment.widget)
     
     def show_history(self):
         """""""""
@@ -1834,6 +1849,24 @@ class ExperimentSetupDialog(QDialog):
             self.save_directory = selected_dir
             self.dir_input.setText(selected_dir)
 
+# class QueueListWidget(QListWidget):
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         self._item_widgets = {}  # Store widgets here
+
+#     def add_experiment_item(self, item: QListWidgetItem, widget: QWidget):
+#         self.addItem(item)
+#         self.setItemWidget(item, widget)
+#         self._item_widgets[item] = widget  # Save for later recovery
+
+#     def dropEvent(self, event):
+#         super().dropEvent(event)
+#         # Reassign widgets after drag/drop
+#         for i in range(self.count()):
+#             item = self.item(i)
+#             if item in self._item_widgets:
+#                 self.setItemWidget(item, self._item_widgets[item])
+
 class QueuedExperiment(QListWidgetItem):
     def __init__(self, experiment: ExperimentType, queue_manager, last_used_directory=None, parameters_dict=None):
         super().__init__()
@@ -1938,6 +1971,8 @@ class QueuedExperiment(QListWidgetItem):
 
         self.widget.setLayout(self.layout)
         self.setSizeHint(self.widget.sizeHint())
+        self.setText(self.parameters_dict['display_name'])  # Helps drag preview look normal
+        self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsDragEnabled)
         # self.queue_manager.add_to_working_queue(self)
 
     def generate_default_display_name(self):
