@@ -50,6 +50,7 @@ class ExperimentType(QObject):
         
         self.parameters = {} #Settings used to configure the experiment (input).
         self.sweep = {} #Stores sweep-related objects and state (output).
+        self.expt = None
 
         #for saving the parameters you entered into the settings panel
         if self.type == "Spin Echo":

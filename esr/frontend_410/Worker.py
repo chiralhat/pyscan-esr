@@ -344,21 +344,21 @@ class Worker(QObject):
                 response = requests.get(globals.server_address + "/get_sweep_data")
                 if response.ok:
                     response_data = response.json()
-                    expt = deserialize_obj(response_data["expt"]['serialized_experiment'])
+                    self.experiment.expt = deserialize_obj(response_data["expt"]['serialized_experiment'])
                     print("deserialized expt")
                 else:
                     print("Error:", response.status_code, response.text)
                 
-                if not expt.runinfo.running:
+                if not self.experiment.expt.runinfo.running:
                     self.running = False
                     break
 
-                if expt.runinfo.measured:
+                if self.experiment.expt.runinfo.measured:
                     try:
                         data_name_2d = self.combo_2d.currentText()
                         print("data_name_2d", data_name_2d)
                         pg_2D = ps.PlotGenerator(
-                            expt=expt, d=2,
+                            expt=self.experiment.expt, d=2,
                             x_name='t',
                             y_name=self.experiment.parameters['y_name'],
                             data_name=data_name_2d,
@@ -369,7 +369,7 @@ class Worker(QObject):
                             data_name_1d = self.combo_1d.currentText()
                             print("data_name_1d", data_name_1d)
                             pg_1D = ps.PlotGenerator(
-                                expt=expt, d=1,
+                                expt=self.experiment.expt, d=1,
                                 x_name=self.experiment.parameters['y_name'],
                                 data_name=data_name_1d,
                             )
@@ -392,11 +392,11 @@ class Worker(QObject):
             print(e)
 
         #final emitting of plots when sweep is over
-        if expt.runinfo.measured:
+        if self.experiment.expt.runinfo.measured:
             try:
                 data_name_2d = self.combo_2d.currentText()
                 pg_2D = ps.PlotGenerator(
-                    expt=expt, d=2,
+                    expt=self.experiment.expt, d=2,
                     x_name='t',
                     y_name=self.experiment.parameters['y_name'],
                     data_name=data_name_2d,
@@ -405,7 +405,7 @@ class Worker(QObject):
                 if self.experiment.type == "Spin Echo":
                     data_name_1d = self.combo_1d.currentText()
                     pg_1D = ps.PlotGenerator(
-                        expt=expt, d=1,
+                        expt=self.experiment.expt, d=1,
                         x_name=self.experiment.parameters['y_name'],
                         data_name=data_name_1d,
                     )

@@ -18,6 +18,8 @@ devices = ps.ItemAttribute() #Container for hardware components (e.g., PSU, temp
 sig = ps.ItemAttribute() #Container for storing acquired signal data.
 expt = None
 sweep = None
+scopes = {'TBS1052C': ps.Tektronix1052B,
+          'MSO24': ps.TektronixMSO2}
 
 @app.route('/start', methods=['POST'])
 def start():
@@ -173,43 +175,53 @@ def run_snapshot():
 def start_sweep():
     global sweep
     global expt
-    """starts up the hardware to run a sweep and runs a sweep"""
-    # Get the data from the request
-    data = request.get_json()  # Assuming the data sent is in JSON format
-    print("Received data:", data)
-    parameters = data.get('parameters')
-    experiment_type = data.get('experiment type')
-    #sweep = data.get('sweep')
+    if expt and expt.runinfo.running:
+        print("sweep in progress, try again later")
+        return jsonify({"status": "sweep in progress, try again later"})
+    else:
+        """starts up the hardware to run a sweep and runs a sweep"""
+        # Get the data from the request
+        data = request.get_json()  # Assuming the data sent is in JSON format
+        print("Received data:", data)
+        parameters = data.get('parameters')
+        experiment_type = data.get('experiment type')
+        #sweep = data.get('sweep')
 
-    sweep_running = True
-    runinfo = sweep['runinfo']
-    expt = ps.Sweep(runinfo, devices, sweep['name'])
+        runinfo = sweep['runinfo']
+        expt = ps.Sweep(runinfo, devices, sweep['name'])
 
-    if experiment_type == "Spin Echo":  
-        if parameters['expt']=="Hahn Echo":
-            expt.echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
-        elif parameters['expt']=="CPMG":
-            expt.echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
-        elif parameters['sweep2'] and parameters['expt2']=="Hahn Echo":
-            expt.echo_delay = 2*runinfo.scan1.scan_dict['delay_sweep']*runinfo.parameters['pulses']
-        elif parameters['sweep2'] and parameters['expt2']=="CPMG":
-            expt.echo_delay = 2*runinfo.parameters['delay']*runinfo.scan1.scan_dict['cpmg_sweep']
-        else:
-            expt.echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
+        if experiment_type == "Spin Echo":  
+            if parameters['expt']=="Hahn Echo":
+                expt.echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
+            elif parameters['expt']=="CPMG":
+                expt.echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
+            elif parameters['sweep2'] and parameters['expt2']=="Hahn Echo":
+                expt.echo_delay = 2*runinfo.scan1.scan_dict['delay_sweep']*runinfo.parameters['pulses']
+            elif parameters['sweep2'] and parameters['expt2']=="CPMG":
+                expt.echo_delay = 2*runinfo.parameters['delay']*runinfo.scan1.scan_dict['cpmg_sweep']
+            else:
+                expt.echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
 
-    print(expt)
-    expt.start_time = time()
-    expt.start_thread()
-    return jsonify({"status": "sweep started"})
+        print(expt)
+        expt.start_time = time()
+        expt.start_thread()
+        return jsonify({"status": "sweep started"})
 
 @app.route('/get_sweep_data', methods=['GET'])
 def get_sweep_data():
+    global expt
+    print("returning experiment data")
     response = {
         "serialized_experiment": serialize_object(expt),
     }
     print(expt.runinfo.measured)
     return jsonify({"expt": serialize_object(response)})
 
+@app.route('/get_scopes', methods=['GET'])
+def get_scopes():
+    return jsonify(scopes)
+
+#### I THINK THIS WILL TURN OFF THE SERVER
 @app.route('/stop', methods=['POST'])
 def stop():
     global running
@@ -221,15 +233,6 @@ def stop():
 @app.route('/status', methods=['GET'])
 def status():
     return jsonify({"running": running})
-
-@app.route('/data', methods=['GET'])
-def get_data():
-    # Return dummy data for now
-    data = {
-        "time": [0, 1, 2, 3],
-        "signal": [0.1, 0.5, 0.3, 0.9]
-    }
-    return jsonify(data)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
