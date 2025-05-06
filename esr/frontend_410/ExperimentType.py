@@ -100,23 +100,15 @@ class ExperimentType(QObject):
                 "experiment type": self.type
             }
 
-            print("about to send parameters to teh server")
-
+            print("about to send parameters to the server")
             response = requests.post(globals.server_address + "/initialize_experiment", json=data)
             print("parameters sent to server")
             print()
             if response.ok:
-                print("1")
                 response_data = response.json()
-                print("2")
                 self.parameters = response_data.get('parameters')
-                print("3")
-                print("4")
             else:
                 print("Error:", response.status_code, response.text)
-            print("got this response back from the server", response.json())
-            print("parameters set")
-            print()
         except Exception as e:
             print("error in set_parameters:")
             print(e)

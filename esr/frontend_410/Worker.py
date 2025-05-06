@@ -153,11 +153,6 @@ def deserialize_obj(data):
         print(f"Error deserializing data: {e}")
         raise
 
-
-
-
-
-
 class PyscanObject:
     def __init__(self, data_dict):
         for key, value in data_dict.items():
@@ -210,142 +205,135 @@ class Worker(QObject):
         Runs the desired method on the experiment in this separate thread
         so the main GUI thread won't freeze.
         """
+        try:
+            if self.task_name == "read_processed":
+                self.updateStatus.emit("Reading processed data...\n")
 
-        if self.task_name == "read_processed":
-            print("here 1")
-            self.updateStatus.emit("Reading processed data...\n")
-            print("here 2")
+                if self.experiment.type == "Spin Echo":
+                    single = self.experiment.parameters['single']
+                    self.experiment.parameters['single'] = self.experiment.parameters['loopback']
+                    data = {
+                            "parameters": self.experiment.parameters,
+                            "experiment type": "Spin Echo Read Processed"
+                        }
 
-            if self.experiment.type == "Spin Echo":
-                print("here 3")
-                print(self.experiment.parameters)
-                single = self.experiment.parameters['single']
-                print("here 4")
-                self.experiment.parameters['single'] = self.experiment.parameters['loopback']
-                print("here 5")
-                data = {
-                        "parameters": self.experiment.parameters,
-                        "experiment type": "Spin Echo Read Processed"
-                    }
+                    print("about to ask server")
+                    try:
+                        response = requests.post(globals.server_address + "/run_snapshot", json=data)
+                    except Exception as e:
+                        self.updateStatus.emit(f"Error in connecting to server: {e}\n")
+                    print("asked server")
 
-                print("about to ask server")
-                try:
+                    if response.ok:
+                        response_data = response.json()
+                        self.experiment.sig = deserialize_obj(response_data["sig"])
+                    else:
+                        print("Error:", response.status_code, response.text)
+                    self.experiment.parameters['single'] = single
+
+                elif self.experiment.type == "Pulse Frequency Sweep":
+                    data = {
+                            "parameters": self.experiment.parameters,
+                            "experiment type": "Pulse Frequency Sweep Read Processed"
+                        }
+                    print("about to ask server")
                     response = requests.post(globals.server_address + "/run_snapshot", json=data)
-                except Exception as e:
-                    self.updateStatus.emit(f"Error in connecting to server: {e}\n")
-                print("asked server")
+                    print("asked server")
+                    if response.ok:
+                        response_data = response.json()
+                        self.experiment.sig = deserialize_obj(response_data["sig"])
+                        self.experiment.sig.x = np.array(self.experiment.sig.x)
+                    else:
+                        print("Error:", response.status_code, response.text)
+                    freq = self.experiment.parameters['freq']
+                    self.experiment.sig.freq = freq
+                self.updateStatus.emit("Done reading processed data.\n")
 
-                if response.ok:
-                    response_data = response.json()
-                    self.experiment.sig = deserialize_obj(response_data["sig"])
-                else:
-                    print("Error:", response.status_code, response.text)
-                self.experiment.parameters['single'] = single
+            elif self.task_name == "read_unprocessed":
+                self.updateStatus.emit("Reading unprocessed data...\n")
 
-            elif self.experiment.type == "Pulse Frequency Sweep":
-                data = {
-                        "parameters": self.experiment.parameters,
-                        "experiment type": "Pulse Frequency Sweep Read Processed"
-                    }
-                print("about to ask server")
-                response = requests.post(globals.server_address + "/run_snapshot", json=data)
-                print("asked server")
-                if response.ok:
-                    response_data = response.json()
-                    self.experiment.sig = deserialize_obj(response_data["sig"])
-                    self.experiment.sig.x = np.array(self.experiment.sig.x)
-                else:
-                    print("Error:", response.status_code, response.text)
-                freq = self.experiment.parameters['freq']
-                self.experiment.sig.freq = freq
-            self.updateStatus.emit("Done reading processed data.\n")
+                if self.experiment.type == "Spin Echo":
+                    single = self.experiment.parameters['single']
+                    avgs = self.experiment.parameters['soft_avgs']
+                    self.experiment.parameters['single'] = True
+                    self.experiment.parameters['soft_avgs'] = 1
+                    data = {
+                            "parameters": self.experiment.parameters,
+                            "experiment type": "Spin Echo Read Unprocessed"
+                        }
+                    print("about to ask server")
+                    response = requests.post(globals.server_address + "/run_snapshot", json=data)
+                    print("asked server")
+                    if response.ok:
+                        response_data = response.json()
+                        self.experiment.sig = deserialize_obj(response_data["sig"])
+                    else:
+                        print("Error:", response.status_code, response.text)
 
-        elif self.task_name == "read_unprocessed":
-            self.updateStatus.emit("Reading unprocessed data...\n")
+                    self.experiment.parameters['single'] = single
+                    self.experiment.parameters['soft_avgs'] = avgs
+                
+                elif self.experiment.type == "Pulse Frequency Sweep":
+                    self.experiment.parameters['single'] = True
+                    self.experiment.parameters['soft_avgs'] = 1
+                    data = {
+                            "parameters": self.experiment.parameters,
+                            "experiment type": "Pulse Frequency Sweep Read Unprocessed"
+                        }
+
+                    response = requests.post(globals.server_address + "/run_snapshot", json=data)
+                    
+                    if response.ok:
+                        response_data = response.json()
+                        self.experiment.sig = deserialize_obj(response_data["sig"])
+                    else:
+                        print("Error:", response.status_code, response.text)
+
+                self.updateStatus.emit("Done reading unprocessed data.\n")
 
             if self.experiment.type == "Spin Echo":
-                single = self.experiment.parameters['single']
-                avgs = self.experiment.parameters['soft_avgs']
-                self.experiment.parameters['single'] = True
-                self.experiment.parameters['soft_avgs'] = 1
-                print("here 1")
-                data = {
-                        "parameters": self.experiment.parameters,
-                        "experiment type": "Spin Echo Read Unprocessed"
-                    }
-                print("about to ask server")
-                response = requests.post(globals.server_address + "/run_snapshot", json=data)
-                print("asked server")
-                if response.ok:
-                    response_data = response.json()
-                    self.experiment.sig = deserialize_obj(response_data["sig"])
-                else:
-                    print("Error:", response.status_code, response.text)
-
-                self.experiment.parameters['single'] = single
-                self.experiment.parameters['soft_avgs'] = avgs
-            
+                self.dataReady_se.emit(self.experiment.sig, self.task_name)
             elif self.experiment.type == "Pulse Frequency Sweep":
-                self.experiment.parameters['single'] = True
-                self.experiment.parameters['soft_avgs'] = 1
-                data = {
-                        "parameters": self.experiment.parameters,
-                        "experiment type": "Pulse Frequency Sweep Read Unprocessed"
-                    }
+                self.dataReady_ps.emit(self.experiment.sig, self.task_name)
 
-                response = requests.post(globals.server_address + "/run_snapshot", json=data)
-                
-                if response.ok:
-                    response_data = response.json()
-                    self.experiment.sig = deserialize_obj(response_data["sig"])
-                else:
-                    print("Error:", response.status_code, response.text)
-
-            self.updateStatus.emit("Done reading unprocessed data.\n")
-
-        if self.experiment.type == "Spin Echo":
-            self.dataReady_se.emit(self.experiment.sig, self.task_name)
-        elif self.experiment.type == "Pulse Frequency Sweep":
-            self.dataReady_ps.emit(self.experiment.sig, self.task_name)
-
-        self.finished.emit()
-
+            self.finished.emit()
+        except Exception as e:
+            print()
+            print("Error when running snapshot:")
+            print(e)
+            print()
+            
         
     @pyqtSlot()
     def run_sweep(self):
-        self.updateStatus.emit("Starting sweep in worker thread…\n")
-        self.stop_requested = False
-        self.running = True
-
-        print("Starting sweep in worker thread…")
-        self.experiment.sweep_running = True
-        data = {
-                "parameters": self.experiment.parameters,
-                "experiment type": self.experiment.type,
-                "sweep": self.experiment.sweep
-            }
-        print("here 4")
-        response = requests.post(globals.server_address + "/start_sweep", json=data)
-        
-        print("here 5")
-        if response.ok:
-            self.running = True
-        else:
-            print("Error:", response.status_code, response.text)
-            return
-        print("here 6")
-
-        # locals to hold the last arrays
-        last_data_2d = None
-        last_data_1d = None
-
         try:
+            self.updateStatus.emit("Starting sweep in worker thread…\n")
+            self.stop_requested = False
+            self.running = True
+
+            print("Starting sweep in worker thread…")
+            self.experiment.sweep_running = True
+            data = {
+                    "parameters": self.experiment.parameters,
+                    "experiment type": self.experiment.type,
+                    "sweep": self.experiment.sweep
+                }
+            response = requests.post(globals.server_address + "/start_sweep", json=data)
+            if response.ok:
+                self.running = True
+            else:
+                print("Error:", response.status_code, response.text)
+                return
+
+            last_data_2d = None
+            last_data_1d = None
+
             while not self.stop_requested and self.running:
                 response = requests.get(globals.server_address + "/get_sweep_data")
                 if response.ok:
                     response_data = response.json()
                     self.experiment.expt = deserialize_obj(response_data["expt"]['serialized_experiment'])
-                    print("deserialized expt")
+                    print("Deserialized expt")
                 else:
                     print("Error:", response.status_code, response.text)
                 
@@ -354,77 +342,72 @@ class Worker(QObject):
                     break
 
                 if self.experiment.expt.runinfo.measured:
-                    try:
-                        data_name_2d = self.combo_2d.currentText()
-                        print("data_name_2d", data_name_2d)
-                        pg_2D = ps.PlotGenerator(
-                            expt=self.experiment.expt, d=2,
-                            x_name='t',
-                            y_name=self.experiment.parameters['y_name'],
-                            data_name=data_name_2d,
-                            transpose=1
-                        )
-
-                        if self.experiment.type == "Spin Echo":
-                            data_name_1d = self.combo_1d.currentText()
-                            print("data_name_1d", data_name_1d)
-                            pg_1D = ps.PlotGenerator(
-                                expt=self.experiment.expt, d=1,
-                                x_name=self.experiment.parameters['y_name'],
-                                data_name=data_name_1d,
-                            )
-
-                        if last_data_2d is None or not np.array_equal(pg_2D.data, last_data_2d):
-                            last_data_2d = pg_2D.data.copy()
-                            self.live_plot_2D_update_signal.emit(pg_2D)
-
-                        if self.experiment.type == "Spin Echo":
-                            if last_data_1d is None or not np.array_equal(pg_1D.data, last_data_1d):
-                                last_data_1d = pg_1D.data.copy()
-                                self.live_plot_1D_update_signal.emit(pg_1D)
-
-                    except Exception as e:
-                        print(e)
-                        self.updateStatus.emit(f"Error in update loop: {e}\n")
-
-                sleep(1)
-        except Exception as e:
-            print(e)
-
-        #final emitting of plots when sweep is over
-        if self.experiment.expt.runinfo.measured:
-            try:
-                data_name_2d = self.combo_2d.currentText()
-                pg_2D = ps.PlotGenerator(
-                    expt=self.experiment.expt, d=2,
-                    x_name='t',
-                    y_name=self.experiment.parameters['y_name'],
-                    data_name=data_name_2d,
-                    transpose=1
-                )
-                if self.experiment.type == "Spin Echo":
-                    data_name_1d = self.combo_1d.currentText()
-                    pg_1D = ps.PlotGenerator(
-                        expt=self.experiment.expt, d=1,
-                        x_name=self.experiment.parameters['y_name'],
-                        data_name=data_name_1d,
+                    data_name_2d = self.combo_2d.currentText()
+                    pg_2D = ps.PlotGenerator(
+                        expt=self.experiment.expt, d=2,
+                        x_name='t',
+                        y_name=self.experiment.parameters['y_name'],
+                        data_name=data_name_2d,
+                        transpose=1
                     )
 
-                self.live_plot_2D_update_signal.emit(pg_2D)
-                
-                if self.experiment.type == "Spin Echo":
-                    self.live_plot_1D_update_signal.emit(pg_1D)
+                    if self.experiment.type == "Spin Echo":
+                        data_name_1d = self.combo_1d.currentText()
+                        pg_1D = ps.PlotGenerator(
+                            expt=self.experiment.expt, d=1,
+                            x_name=self.experiment.parameters['y_name'],
+                            data_name=data_name_1d,
+                        )
 
-            except Exception as e:
-                print(e)
-                self.updateStatus.emit(f"Error final plot update: {e}\n")
+                    if last_data_2d is None or not np.array_equal(pg_2D.data, last_data_2d):
+                        last_data_2d = pg_2D.data.copy()
+                        self.live_plot_2D_update_signal.emit(pg_2D)
 
-        if self.stop_requested:
-            self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
-        else:
-            self.updateStatus.emit("Done sweeping (normal exit).\n")
+                    if self.experiment.type == "Spin Echo":
+                        if last_data_1d is None or not np.array_equal(pg_1D.data, last_data_1d):
+                            last_data_1d = pg_1D.data.copy()
+                            self.live_plot_1D_update_signal.emit(pg_1D)
+                sleep(1)
 
-        self.finished.emit()
+            #final emitting of plots when sweep is over
+            if self.experiment.expt.runinfo.measured:
+                try:
+                    data_name_2d = self.combo_2d.currentText()
+                    pg_2D = ps.PlotGenerator(
+                        expt=self.experiment.expt, d=2,
+                        x_name='t',
+                        y_name=self.experiment.parameters['y_name'],
+                        data_name=data_name_2d,
+                        transpose=1
+                    )
+                    if self.experiment.type == "Spin Echo":
+                        data_name_1d = self.combo_1d.currentText()
+                        pg_1D = ps.PlotGenerator(
+                            expt=self.experiment.expt, d=1,
+                            x_name=self.experiment.parameters['y_name'],
+                            data_name=data_name_1d,
+                        )
+
+                    self.live_plot_2D_update_signal.emit(pg_2D)
+                    
+                    if self.experiment.type == "Spin Echo":
+                        self.live_plot_1D_update_signal.emit(pg_1D)
+
+                except Exception as e:
+                    self.updateStatus.emit(f"Error final plot update: {e}\n")
+
+            if self.stop_requested:
+                self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
+            else:
+                self.updateStatus.emit("Done sweeping (normal exit).\n")
+
+            self.finished.emit()
+
+        except Exception as e:
+            print()
+            print("Error running sweep:")
+            print(e)
+            print()
 
 
     @pyqtSlot()
@@ -432,7 +415,13 @@ class Worker(QObject):
         """
         Slot to request the worker to stop. Sets a flag that can be checked in the run_sweep method, killing the thread.
         """
-        pass
-        # self.stop_requested = True
-        # if 'expt' in self.experiment.sweep:
-        #     self.experiment.sweep['expt'].runinfo.running = False
+        try:
+            pass
+            # self.stop_requested = True
+            # if 'expt' in self.experiment.sweep:
+            #     self.experiment.sweep['expt'].runinfo.running = False
+        except Exception as e:
+            print()
+            print("Error stopping sweep")
+            print(e)
+            print()

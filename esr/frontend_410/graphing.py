@@ -68,37 +68,22 @@ class GraphWidget(QWidget):
     
     def update_canvas_psweep(self, sig, task_name):
         self.ax.clear()
-        print("updating pulse sweep canvas")
+        print("Updating pulse sweep canvas")
 
         if task_name == "read_processed":
             try:
                 fit, err = ps.plot_exp_fit_norange(np.array([sig.time, sig.x]), sig.freq, 1, plt=self.ax)
-                print("1")
                 sig.fit = fit
-                print("2")
                 self.ax.plot(sig.time, sig.x, label="Signal")  # This line is crucial for legend
-                print("3")
-
                 fitstr = f'A={sig.fit[1]:.3g} V, t={sig.fit[2]:.3g} μs, Q={sig.fit[-1]:.3g}'
-                print("4")
                 freqstr = f'freq (MHz): {sig.freq}'
-                print("5")
 
-                #[ax.axvline(x=w*1e6, color='purple', ls='--') for w in win]
-                # xpt = sig.time[len(sig.time)//5]/2
-                # ypt = sig.x.max()*np.array([0.75, 0.65])
-                # self.ax.text(xpt, ypt[0], fitstr)
-                # self.ax.text(xpt, ypt[1], freqstr)
-
-                # Put the text at the center top of the graph
                 self.ax.text(0.5, 0.95, fitstr, transform=self.ax.transAxes, ha='center', va='top')  # Near the top, inside
                 self.ax.text(0.5, 0.90, freqstr, transform=self.ax.transAxes, ha='center', va='top')  # Slightly below the fitstr
             except Exception as e:
                 self.updateStatus.emit(f"Error in plotting read_processed pulse frequency sweep: {e}\n")
+        
         elif task_name == "read_unprocessed":
-            # Read unprocessed
-            print("10")
-            # Plot
             self.ax.plot(sig.time, sig.i, color='yellow', label='CH1')
             self.ax.plot(sig.time, sig.q, color='b', label='CH2')
             self.ax.plot(sig.time, sig.x, color='g', label='AMP')

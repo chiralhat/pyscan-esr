@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QH
                              QListWidget,QInputDialog, QAbstractItemView, QDialog, QPushButton, QTabWidget, QDesktopWidget)
                              
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize, QTimer
+from PyQt5.QtGui import QIcon
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -66,70 +67,61 @@ bimod_sweep_list = ['A Pulse Sweep',
 EXPERIMENT_TEMPLATES = {
     "Pulse Frequency Sweep": {
         "groups": {
-            "Main Settings": [                                             #ALL OF THESE COMMENTS REFER TO THE control_dict IN gui_setup.py
-                {"display": "Frequency", "key": "freq", "type": "double_spin", #Freq is a bounded float between 50 and 14999 (contained in rfsoc controls)
-                 "min": 50.0, "max": 14999.0, "default": 3900.0, "tool tip": "Helpful information"}, #CHANGED THESE VALUES FROM 0.1, 10.0, AND 2.4
+            "Main Settings": [                                             
+                {"display": "Frequency", "key": "freq", "type": "double_spin", 
+                 "min": 50.0, "max": 14999.0, "default": 3900.0, "tool tip": "Helpful information"},
                 {"display": "Gain", "key": "gain", "type": "spin", 
                  "min" : 0, "max" : 32500, "default": 32500, "tool tip": "Helpful information"},
-                {"display": "Avg", "key": "soft_avgs", "type": "spin", #Soft_avgs is a bounded int between 1 and 10000000 (contained in rfsoc controls)
-                 "min": 1, "max": 1000000, "default": 100, "tool tip": "Helpful information"}, #EXPLICITLY MADE THESE INTS
-                {"display": "Dir and Name", "key": ["save_dir", "file_name"], #Both save_dir and file_name are strings (contained in save controls)
+                {"display": "Avg", "key": "soft_avgs", "type": "spin",
+                 "min": 1, "max": 1000000, "default": 100, "tool tip": "Helpful information"}, 
+                {"display": "Dir and Name", "key": ["save_dir", "file_name"], 
                  "type": "composite", "default": ["", ""], "tool tip": "Helpful information"},
-                {"display": "Experiment", "key": "psexpt", "type": "combo", #expt is of ipw.Dropdown type (contained in measure)
+                {"display": "Experiment", "key": "psexpt", "type": "combo", 
                  "options": ['Freq Sweep', 'Field Sweep'], "default": 'Freq Sweep'},
                 {"display": "Sweep start, end, step",
-                 "key": ["sweep_start", "sweep_end", "sweep_step"], #sweep_start, sweep_end, and sweep_step are all unbounded floats (contained in measure)
-                 "type": "composite", "default": [3850.0, 3950.0, 2.0]},                ],
+                 "key": ["sweep_start", "sweep_end", "sweep_step"], 
+                 "type": "composite", "default": [3850.0, 3950.0, 2.0]}],
             "Readout Settings": [
-                {"display": "Time Offset", "key": "h_offset", "type": "double_spin", #h_offset is a bounded float between -10000 and 10000 (contained in rfsoc)
-                 "min": -10000.0, "max": 10000.0, "default": -0.125}, #CHANGED THESE VALUES FROM 0, 1000, AND 10.0
-                {"display": "Readout Length", "key": "readout_length", "type": "double_spin", #readout_length is a bounded float from 0 to 5 (contained in rfsoc)
-                 "min": 0.0, "max": 5.0, "default": 0.2}, #CHANGED THESE VALUES FROM 1, 1000, AND 10 ------------------- THIS ONE WAS SAVED AS AN INTEGER IN THE PICKLE FILE AND COULD HAVE BEEN A CAUSE OF THE ERROR
-                {"display": "Loopback", "key": "loopback", "type": "check", #loopback is an ipw.Checkbox (contained in rfsoc)
+                {"display": "Time Offset", "key": "h_offset", "type": "double_spin",
+                 "min": -10000.0, "max": 10000.0, "default": -0.125}, 
+                {"display": "Readout Length", "key": "readout_length", "type": "double_spin", 
+                 "min": 0.0, "max": 5.0, "default": 0.2}, 
+                {"display": "Loopback", "key": "loopback", "type": "check", 
                  "default": False}],
             "Uncommon Settings": [
-                {"display": "Repetition time", "key": "period", "type": "double_spin", #period is a bounded float from 0.1 to 2000000000 (contained in rfsoc)
-                 "min": 0.1, "max": 2000000000.0, "default": 10.0}, #EXPLICITLY MADE THESE FLOATS
-                {"display": "Ch1 90 Pulse", "key": "pulse1_1", "type": "double_spin", #pulse1_1 is a bounded float from 0 to 652100 (contained in rfsoc)
-                 "min": 0.0, "max": 652100.0, "default": 50.0}, #EXPLICITLY MADE THESE FLOATS
+                {"display": "Repetition time", "key": "period", "type": "double_spin", 
+                 "min": 0.1, "max": 2000000000.0, "default": 10.0}, 
+                {"display": "Ch1 90 Pulse", "key": "pulse1_1", "type": "double_spin", 
+                 "min": 0.0, "max": 652100.0, "default": 50.0}, 
                 {"display": "Magnetic Field, Scale, Current limit",
-                 "key": ["field", "gauss_amps", "current_limit"], #field, gauss_amps, and current_limit are all bounded floats (contained in psu) -- bounds: (0 - 2500), (0.001, 10000), (0, 10))
-                 "type": "composite", "default": [0.0, 276.0, 3.5]}, #DEFAULTS CHANGED FROM NONE, NONE, NONE ---------------- THESE WERE WRITTEN TO THE PICKLE FILE AS NONE, WHICH ALSO COULD HAVE BEEN CAUSING THE ERROR
-                {"display": "Reps", "key": "ave_reps", "type": "spin", #ave_reps is a bounded int from 1 to 1000 (contained in measure)
+                 "key": ["field", "gauss_amps", "current_limit"], 
+                 "type": "composite", "default": [0.0, 276.0, 3.5]}, 
+                {"display": "Reps", "key": "ave_reps", "type": "spin", 
                  "min": 1, "max": 1000, "default": 1},
-                {"display": "Wait Time", "key": "wait", "type": "double_spin", #wait is a bounded float from 0 to 20 (contained in measure)
+                {"display": "Wait Time", "key": "wait", "type": "double_spin", 
                  "min": 0.0, "max": 20.0, "default": 0.3},
-                {"display": "Integral only", "key": "integrate", "type": "check", #integrate is an ipw.Checkbox (contained in measure)
+                {"display": "Integral only", "key": "integrate", "type": "check", 
                  "default": False}],
             "Utility Settings": [
-                {"display": "PSU Addr", "key": "psu_address", "type": "line_edit", #psu_address is an ipw.Dropdown (contained in devices)
+                {"display": "PSU Addr", "key": "psu_address", "type": "line_edit", 
                  "default": ""},
-                {"display": "Use PSU", "key": "use_psu", "type": "check", #use_psu is an ipw.Checkbox (contained in devices)
+                {"display": "Use PSU", "key": "use_psu", "type": "check", 
                  "default": False},
-                {"display": "Use Lakeshore", "key": "use_temp", "type": "check", #use_temp is an ipw.Checkbox (contained in devices)
+                {"display": "Use Lakeshore", "key": "use_temp", "type": "check", 
                  "default": False}],
             "Never Change": [
-                # {"display": "# 180 Pulses", "key": "pulses", "type": "spin",
-                # "min": 1, "max": 256, "default": 1},
                 {"display": "Scope Address", "key": "scope_address",  "type": "combo",
                  "options": res_list, "default": "USB0::1689::261::SGVJ0001055::0::INSTR"},
                 {"display": "FPGA Address", "key": "fpga_address",  "type": "combo",
                 "options": res_list, "default": "ASRL/dev/ttyUSB4::INSTR"},
                 {"display": "Synth Address", "key": "synth_address",  "type": "combo",
                  "options": res_list, "default": "ASRL/dev/ttyACM0::INSTR"},
-                # Commenting out any setting having to do with a second sweep because we are implementing a queue
-                # also there are more settings related to this that we didn't add / comment out for the same reason
-                # {"display": "Ch2 Freq (MHz)", "key": "freq2", "type": "double_spin",
-                #  "min": 50.0, "max": 14999.0, "default": 3902.0},
-                # {"display": "Ch2 Gain", "key": "gain2", "type": "spin",
-                # "min": 0, "max": 32500, "default": 0},
                 {"display": "Phase", "key": "phase", "type": "double_spin",
                 "min": 0.0, "max": 360.0, "default": 0.0},
                 {"display": "Averaging Time (s)", "key": "sltime", "type": "double_spin",
                  "min": 0.0, "max": 20.0, "default": 0.0}
-                #freq start, stop, step might be needed here, but we could not find them
                ]
-        } #THERE IS A SETTING CALLED "subtime" THAT IS CALCULATED LATER AND ADDED TO THE END OF THE PICKLE FILE. IT IS EQUAL TO (soft_avgs * (period / 400000 * ave_reps))
+        } 
     },
     "Spin Echo": {
         "groups": {
@@ -167,12 +159,12 @@ EXPERIMENT_TEMPLATES = {
                  "options": sweep_list, "default": "Hahn Echo"},
                 {"display": "Sweep 2 start, end, step",
                  "key": ["sweep2_start", "sweep2_end", "sweep2_step"], "type": "composite",
-                 "default": [0, 0, 0]}], # Changed to integers
+                 "default": [0, 0, 0]}], 
             "Readout Settings": [
                 {"display": "Time Offset (us)", "key": "h_offset", "type": "double_spin",
                  "min": -1e5, "max": 1e5, "default": -0.025},
                 {"display": "Readout Length (us)", "key": "readout_length", "type": "double_spin",
-                 "min": 0.0, "max": 5.0, "default": 0.2}, # Changed to doubles
+                 "min": 0.0, "max": 5.0, "default": 0.2}, 
                 {"display": "Loopback", "key": "loopback", "type": "check",
                 "default": False}],
             "Uncommon Settings": [
@@ -204,12 +196,6 @@ EXPERIMENT_TEMPLATES = {
                 "options": res_list, "default": "ASRL/dev/ttyUSB4::INSTR"},
                 {"display": "Synth Address", "key": "synth_address",  "type": "combo",
                  "options": res_list, "default": "ASRL/dev/ttyACM0::INSTR"},
-                # Commenting out any setting having to do with a second sweep because we are implementing a queue
-                # also there are more settings related to this that we didn't add / comment out for the same reason
-                # {"display": "Ch2 Freq (MHz)", "key": "freq2", "type": "double_spin",
-                #  "min": 50.0, "max": 14999.0, "default": 3902.0},
-                # {"display": "Ch2 Gain", "key": "gain2", "type": "spin",
-                # "min": 0, "max": 32500, "default": 0},
                 {"display": "Phase", "key": "phase", "type": "double_spin",
                 "min": 0.0, "max": 360.0, "default": 0.0},
                 {"display": "Auto Phase Sub", "key": "phase_sub", "type": "check",
@@ -224,9 +210,6 @@ EXPERIMENT_TEMPLATES = {
                 "options": ['Phase', 'Delay', 'Both', 'None', 'Autophase'], "default": "Phase"},
                 {"display": "Averaging Time (s)", "key": "sltime", "type": "double_spin",
                  "min": 0.0, "max": 20.0, "default": 0.0}
-                # Leaving out bimod_sweep_list bc different type of experiment
-                # {"display": "Experiment", "key": "bimod_expt", "type": "combo",
-                #  "options": bimod_sweep_list, "default": ""},
                 ]      
         }
     }
@@ -249,7 +232,6 @@ class DualStream:
 
         @param text -- The text string to be written to both outputs.
         """
-        # Write to QTextEdit (UI)
         cursor = self.text_edit.textCursor()
         cursor.movePosition(cursor.End)  
         cursor.insertText(text)  
@@ -274,13 +256,11 @@ class PopUpMenu(QMessageBox):
         self.exec_()
 
 class DynamicSettingsPanel(QWidget):
-    # Declare a signal that will fire when any setting changes
     settingChanged = pyqtSignal()
 
     def __init__(self):
         super().__init__()
 
-        # 1) Create the tree
         self.settings_tree = QTreeWidget()
         self.settings_tree.setHeaderHidden(False)
         self.settings_tree.setColumnCount(2)
@@ -288,18 +268,15 @@ class DynamicSettingsPanel(QWidget):
         self.settings_tree.setColumnWidth(0, 200)
         self.settings_tree.setColumnWidth(1, 100)
 
-        # 2) Put it in a scroll area
         self.settings_scroll = QScrollArea()
         self.settings_scroll.setWidgetResizable(True)
         self.settings_scroll.setWidget(self.settings_tree)
 
-        # 3) Lay it out
         layout = QVBoxLayout(self)
         layout.addWidget(self.settings_scroll)
 
     def load_settings_panel(self, settings, default_file=None):
         """Populate settings tree from template and apply typed defaults."""
-        # Build a mapping from parameter key to expected widget type
         type_map = {}
         for group in settings.get("groups", {}).values():
             for setting in group:
@@ -311,7 +288,6 @@ class DynamicSettingsPanel(QWidget):
                 else:
                     type_map[key] = stype
 
-        # 1) Clear & build from template
         self.settings_tree.clear()
         for group_name, group_settings in settings.get("groups", {}).items():
             group_item = QTreeWidgetItem([group_name])
@@ -327,7 +303,6 @@ class DynamicSettingsPanel(QWidget):
                 label.setToolTip(setting.get("tool tip", ""))
                 self.settings_tree.setItemWidget(item, 0, label)
 
-        # 2) Load pickle defaults
         if default_file and os.path.isfile(default_file):
             try:
                 with open(default_file, 'rb') as f:
@@ -337,7 +312,6 @@ class DynamicSettingsPanel(QWidget):
         else:
             defaults = {}
 
-        # 3) Apply typed defaults
         tree = self.settings_tree
         root = tree.invisibleRootItem()
         for i in range(root.childCount()):
@@ -348,7 +322,6 @@ class DynamicSettingsPanel(QWidget):
                 key = getattr(w, '_underlying_key', None)
 
                 def apply_value(widget, raw_val, expected):
-                    # Convert and apply based on expected type
                     if isinstance(widget, QSpinBox):
                         widget.setValue(int(raw_val))
                     elif isinstance(widget, QDoubleSpinBox):
@@ -360,9 +333,7 @@ class DynamicSettingsPanel(QWidget):
                     elif isinstance(widget, QLineEdit):
                         widget.setText(str(raw_val))
 
-                # Handle composite widgets
                 if isinstance(key, list):
-                    # Composite widget holds multiple sub-widgets
                     layout = w.layout()
                     for idx, subkey in enumerate(key):
                         if subkey in defaults:
@@ -371,7 +342,6 @@ class DynamicSettingsPanel(QWidget):
                             subw = layout.itemAt(idx).widget()
                             apply_value(subw, raw, expected)
                 else:
-                    # Single widget
                     if key in defaults:
                         raw = defaults[key]
                         expected = type_map.get(key)
@@ -451,7 +421,6 @@ class DynamicSettingsPanel(QWidget):
         to emit self.settingChanged.
         """
         from PyQt5.QtWidgets import QSpinBox, QDoubleSpinBox, QLineEdit, QComboBox, QCheckBox
-        # 1) Single-value widgets
         if isinstance(widget, QSpinBox):
             widget.valueChanged.connect(self.settingChanged.emit)
         elif isinstance(widget, QDoubleSpinBox):
@@ -462,7 +431,6 @@ class DynamicSettingsPanel(QWidget):
             widget.currentIndexChanged.connect(self.settingChanged.emit)
         elif isinstance(widget, QCheckBox):
             widget.stateChanged.connect(self.settingChanged.emit)
-        # 2) Composite widgets: iterate through child sub-widgets
         elif hasattr(widget, 'layout'):
             layout = widget.layout()
             for idx in range(layout.count()):
@@ -474,29 +442,20 @@ class ExperimentUI(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.setWindowIcon(QIcon("icon.png"))  
 
-        # Setup experiments
         self.experiments = {
             "Spin Echo": ExperimentType("Spin Echo"),
             "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep")
         }
-
-        # Get the scopes from the backend
-        # self.get_scope_timer = QTimer(self)
-        # self.get_scope_timer.setInterval(5000)  # 5 seconds
-        # self.get_scope_timer.timeout.connect(self.get_scopes_from_backend)
-        # self.get_scope_timer.start()
-
-        # For button logic
         self.is_process_running = False
         self.settings_changed = False
+        self.sweep_already_ran = False
 
-        # Default experiment
         self.current_experiment = self.experiments["Spin Echo"]
         self.experiment_templates = EXPERIMENT_TEMPLATES
         self.temp_parameters = {}
 
-        # Create main UI elements
         self.settings_panel = DynamicSettingsPanel()
         self.settings_panel.settingChanged.connect(self.on_setting_changed)
 
@@ -505,19 +464,15 @@ class ExperimentUI(QMainWindow):
         self.error_log = self.init_error_log_widget()
         self.top_menu_bar = self.init_top_menu_bar()
 
-        # Build the main layout with splitters
         self.init_layout()
 
-        # Load defaults into the settings panel
         self.load_defaults_and_build_ui()
 
-        # After defaults, disable action buttons until initialization
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
         self.sweep_start_stop_btn.setEnabled(False)
         self.set_parameters_and_initialize_btn.setEnabled(True)
 
-        # Setup custom stdout/stderr stream
         dual_stream = DualStream(self.log_text)
         sys.stdout = dual_stream
         sys.stderr = dual_stream
@@ -532,13 +487,11 @@ class ExperimentUI(QMainWindow):
             data = response.json()
             global scopes
             scopes = data
-            print(scopes)
-            self.poll_timer.stop()  # Stop polling once successful
+            self.poll_timer.stop()  
         except Exception as e:
             self.label.setText(f"Unable to get scopes from backend... ({e})")
 
     def load_defaults_and_build_ui(self):
-        # 1) Build the tree from template
         template = self.experiment_templates[self.current_experiment.type]
         self.settings_panel.load_settings_panel(
             template,
@@ -552,11 +505,9 @@ class ExperimentUI(QMainWindow):
         """
         self.settings_changed = True
         if not self.is_process_running:
-            # Grey out action buttons
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
             self.sweep_start_stop_btn.setEnabled(False)
-            # Re-enable Initialize
             self.set_parameters_and_initialize_btn.setEnabled(True)
 
 
@@ -567,20 +518,13 @@ class ExperimentUI(QMainWindow):
          - A main splitter horizontally: left = settings, right = a vertical splitter
            top = graphs, bottom = error log
         """
-
-        # Make the window frameless to remove the title bar
-        #self.setWindowFlags(Qt.FramelessWindowHint)  # This removes the title bar and system buttons
-
-        # Create the central widget and main layout for the window
         central_widget = QWidget()
         main_layout = QVBoxLayout(central_widget)
 
-        # Add top menu 
         main_layout.addWidget(self.top_menu_bar, 1)
 
-        # -- main splitter (horizontal)
         self.main_splitter = QSplitter(Qt.Horizontal)
-        self.main_splitter.setHandleWidth(5)  # Increase grab area
+        self.main_splitter.setHandleWidth(5)  
         self.main_splitter.setStyleSheet("""
             QSplitter::handle {
                 background: transparent;
@@ -595,35 +539,28 @@ class ExperimentUI(QMainWindow):
             }
         """)
 
-        # Left side container for settings + queue
         left_container = QVBoxLayout()
         left_widget = QWidget()
         left_widget.setLayout(left_container)
         left_container.setContentsMargins(0, 0, 0, 0)
-        left_container.setSpacing(10)  # Small spacing between elements
+        left_container.setSpacing(10)  
 
-        # Add settings panel on top
         left_container.addWidget(self.settings_panel)
 
-        # Wrap the queue manager in a wrapper widget to enforce max height when expanded
         queue_wrapper = QWidget()
         queue_layout = QVBoxLayout(queue_wrapper)
         queue_layout.setContentsMargins(0, 0, 0, 0)
         queue_layout.setSpacing(0)
         queue_layout.addWidget(self.queue_manager)
 
-        # Set a max height for the expanded queue view (tweak as needed)
-        queue_wrapper.setMaximumHeight(350)  # You can try 250–350 depending on feel
+        queue_wrapper.setMaximumHeight(350)  
 
-        # Add to the left layout
         left_container.addWidget(queue_wrapper)
 
-        # Add left side to splitter
         self.main_splitter.addWidget(left_widget)
 
-        # Right side: a vertical splitter for graphs vs. error log
         self.right_splitter = QSplitter(Qt.Vertical)
-        self.right_splitter.setHandleWidth(5)  # Increase grab area for vertical splitter
+        self.right_splitter.setHandleWidth(5)  
         self.right_splitter.setStyleSheet("""
             QSplitter::handle {
                 background: transparent;
@@ -723,17 +660,23 @@ class ExperimentUI(QMainWindow):
         # Add tabs to layout
         graph_layout.addWidget(self.graph_tabs)
 
+        # Create a horizontal layout for the button and label
+        graph_bottom_row = QHBoxLayout()
+
         # Save graph button
         self.save_graph_btn = QPushButton("Save Graph As...")
         self.save_graph_btn.clicked.connect(self.save_current_graph)
-        graph_layout.addWidget(self.save_graph_btn)
+        graph_bottom_row.addWidget(self.save_graph_btn)
 
         # Last saved path label
         self.last_saved_path_label = QLabel("No graph saved yet.")
         self.last_saved_path_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.last_saved_path_label.setStyleSheet("color: blue; text-decoration: underline;")
         self.last_saved_path_label.mousePressEvent = self.open_saved_graph_folder
-        graph_layout.addWidget(self.last_saved_path_label)
+        graph_bottom_row.addWidget(self.last_saved_path_label)
+
+        # Add the horizontal layout to the main graph layout
+        graph_layout.addLayout(graph_bottom_row)
 
         return graph_section_widget
 
@@ -832,11 +775,7 @@ class ExperimentUI(QMainWindow):
         # top_menu.addWidget(window_controls_widget)
 
         return top_menu_container
-    
-    def on_setting_changed(self):
-        self.settings_changed = True
-        if not self.is_process_running:
-            self.set_parameters_and_initialize_btn.setEnabled(True)
+
 
     def toggle_fullscreen(self):
         # Toggle between full screen and normal window states
@@ -926,7 +865,6 @@ class ExperimentUI(QMainWindow):
         top_menu.addWidget(self.indicator_sweep)
         #experiment_buttons_layout.addWidget(sweep_widget, 2, 1)
 
-        # Disable the three buttons until "Initialize" is pressed
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
         self.sweep_start_stop_btn.setEnabled(False)
@@ -1041,7 +979,6 @@ class ExperimentUI(QMainWindow):
         try:
             if self.current_experiment.expt:
                 data_name_2d = self.combo_2d.currentText()
-                print("data_name_2d", data_name_2d)
                 pg_2D = ps.PlotGenerator(
                     expt=self.current_experiment.expt, d=2,
                     x_name='t',
@@ -1057,7 +994,6 @@ class ExperimentUI(QMainWindow):
     def update_1d_plot(self):
         if self.current_experiment.expt:
             data_name_1d = self.combo_1d.currentText()
-            print("data_name_2d", data_name_1d)
             pg_1D = ps.PlotGenerator(   
                                 expt=self.current_experiment.expt, d=1,
                                 x_name=self.current_experiment.parameters['y_name'],
@@ -1127,17 +1063,23 @@ class ExperimentUI(QMainWindow):
                             new_params[key] = v
                     else:
                         new_params[underlying] = value
-        self.current_experiment.set_parameters(new_params)
-        # Enable action buttons after initialization
-        self.read_unprocessed_btn.setEnabled(True)
-        self.read_processed_btn.setEnabled(True)
-        self.sweep_start_stop_btn.setEnabled(True)
-        print("Initialized experiment with parameters:")
-        for k, v in new_params.items():
-            print(f"   {k}: {v}")
+
+        self.current_experiment.set_parameters(new_params) #initial
+
         self.indicator_initialize.setStyleSheet(
             "background-color: grey; border: 1px solid black; border-radius: 5px;"
         )
+
+        self.sweep_already_ran = False
+
+        self.read_unprocessed_btn.setEnabled(True)
+        self.read_processed_btn.setEnabled(True)
+        self.sweep_start_stop_btn.setEnabled(True)
+
+        print("Initialized experiment with parameters:")
+        for k, v in new_params.items():
+            print(f"   {k}: {v}")
+
         print("\n")
         print("Select an action. \n")
 
@@ -1149,9 +1091,9 @@ class ExperimentUI(QMainWindow):
         )
 
         # 2) Disable all action buttons
-        self.read_unprocessed_btn .setEnabled(False)
-        self.read_processed_btn   .setEnabled(False)
-        self.sweep_start_stop_btn .setEnabled(False)
+        self.read_unprocessed_btn.setEnabled(False)
+        self.read_processed_btn.setEnabled(False)
+        self.sweep_start_stop_btn.setEnabled(False)
         self.set_parameters_and_initialize_btn.setEnabled(False)
         self.is_process_running = True
 
@@ -1186,9 +1128,9 @@ class ExperimentUI(QMainWindow):
             )
 
             # 2) Disable all action buttons
-            self.read_unprocessed_btn .setEnabled(False)
-            self.read_processed_btn   .setEnabled(False)
-            self.sweep_start_stop_btn .setEnabled(False)
+            self.read_unprocessed_btn.setEnabled(False)
+            self.read_processed_btn.setEnabled(False)
+            self.sweep_start_stop_btn.setEnabled(False)
             self.set_parameters_and_initialize_btn.setEnabled(False)
             self.is_process_running = True
 
@@ -1216,15 +1158,12 @@ class ExperimentUI(QMainWindow):
 
 
     def toggle_start_stop_sweep_frontend(self):
-        # If we're not currently sweeping, start:
         if self.sweep_start_stop_btn.text() == "Start Sweep":
-            # Disable all action buttons
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
             self.set_parameters_and_initialize_btn.setEnabled(False)
             self.is_process_running = True
 
-            # Turn the sweep indicator red and flip the button text
             self.indicator_sweep.setStyleSheet(
                 "background-color: red; border: 1px solid black; border-radius: 5px;"
             )
@@ -1249,7 +1188,6 @@ class ExperimentUI(QMainWindow):
                 )
             self.worker.moveToThread(self.worker_thread)
 
-            # Connect the sweep logic & live-plot signals
             self.worker_thread.started.connect(self.worker.run_sweep)
             self.worker.live_plot_2D_update_signal.connect(
                 self.current_experiment.sweep_graph_2D.on_live_plot_2D
@@ -1259,50 +1197,55 @@ class ExperimentUI(QMainWindow):
             )
             self.worker.updateStatus.connect(self.on_worker_status_update)
 
-            # Clean up thread on finish
             self.worker.finished.connect(self.worker_thread.quit)
             self.worker.finished.connect(self.worker.deleteLater)
             self.worker_thread.finished.connect(self.worker_thread.deleteLater)
 
-            # ← NEW: reset UI only when sweep really finishes
-            self.worker.finished.connect(self.reset_action_buttons)
-            #self.worker.finished.connect(self.queue_manager.next_queue_item)
+            self.worker.finished.connect(self.on_finished_sweep)
 
-            # Kick it off
             self.worker_thread.start()
 
         else:
-            # If the button read "Stop Sweep", request the worker to halt
             if hasattr(self, 'worker'):
                 print("Stopping sweep…")
                 self.worker.stop_sweep()
                 print("Stop requested.")
+                self.on_finished_sweep()
+    
+    def on_finished_sweep(self):
+        try:
+            self.sweep_already_ran = True
+            self.reset_action_buttons()
+        except Exception as e:
+            print(e)
 
     def reset_action_buttons(self):
-        """Re-enable all action buttons and turn all three indicators back to grey."""
-        # 1) Re-enable the buttons
-        self.read_unprocessed_btn .setEnabled(True)
-        self.read_processed_btn   .setEnabled(True)
-        self.sweep_start_stop_btn .setEnabled(True)
+        """Re-enable all action buttons except for sweep and turn all three indicators back to grey."""
+        self.read_unprocessed_btn.setEnabled(True)
+        self.read_processed_btn.setEnabled(True)
         self.set_parameters_and_initialize_btn.setEnabled(True)
-
-        # 2) Turn the three task-indicators back to grey
         for indicator in (
             self.indicator_read_unprocessed,
             self.indicator_read_processed,
-            self.indicator_sweep
         ):
             indicator.setStyleSheet(
                 "background-color: grey; border: 1px solid black; border-radius: 5px;"
             )
+        if self.sweep_already_ran == False:
+            self.sweep_start_stop_btn.setEnabled(True)
+            self.indicator_sweep.setStyleSheet(
+                    "background-color: grey; border: 1px solid black; border-radius: 5px;"
+                )
+            self.sweep_start_stop_btn.setText("Start Sweep")
 
-        # 3) Reset sweep button text (in case it was “Stop Sweep”)
-        self.sweep_start_stop_btn.setText("Start Sweep")
-
-        # 4) Clear the “busy” flag
+        else:
+            self.sweep_start_stop_btn.setEnabled(False)
+            self.indicator_sweep.setStyleSheet(
+                    "background-color: grey; border: 1px solid black; border-radius: 5px;"
+                )
+            self.sweep_start_stop_btn.setText("Start Sweep")
+        
         self.is_process_running = False
-
-
 
 
     def hardware_off_frontend(self):
@@ -1320,14 +1263,7 @@ class ExperimentUI(QMainWindow):
         """
         print(message) 
    
-            
-    # def save_current_graph(self):
-    #     options = QFileDialog.Options()
-    #     file_path, _ = QFileDialog.getSaveFileName(self, "Save Graph As", "", "PNG Files (*.png);;All Files (*)", options=options)
-    #     if file_path:
-    #         self.current_experiment.graph.figure.savefig(file_path)
-    #         self.last_saved_graph_path = file_path
-    #         self.last_saved_path_label.setText(f"Last saved to: {file_path}")
+
     def save_current_graph(self):
         """Saves the graph from the currently selected tab."""
         current_index = self.graph_tabs.currentIndex()
@@ -1341,7 +1277,7 @@ class ExperimentUI(QMainWindow):
         elif current_index == 3:
             fig = self.current_experiment.sweep_graph_1D.figure
         else:
-            return  # Unexpected index, do nothing
+            return  
 
         options = QFileDialog.Options()
         file_path, _ = QFileDialog.getSaveFileName(
@@ -1390,12 +1326,8 @@ class ExperimentUI(QMainWindow):
     
     def add_to_queue(self):
         try:
-            # Create new experiment based on current type
             new_experiment = ExperimentType(self.current_experiment.type)
-            # Optional: clone parameters if needed
-            # new_experiment.set_parameters(self.current_experiment.parameters.copy())
 
-            # Pass the full QueueManager instance
             queue_item = QueuedExperiment(
                 start_stop_sweep_function = self.toggle_start_stop_sweep_frontend,
                 experiment=new_experiment,
@@ -1585,7 +1517,7 @@ class QueueManager(QWidget):
             self.stop_queue()  # Stop the queue
         else:
             self.queue_running = True
-            print("calling next queue item()")
+            print("Calling next queue item()")
             self.next_queue_item()  # Start the queue
     
     def stop_queue(self):
@@ -1599,14 +1531,9 @@ class QueueManager(QWidget):
             if self.active_queue_list.count != 0:
                 next_experiment = self.active_queue_list.takeItem(0)
                 self.current_experiment = next_experiment.experiment
-                print()
-                print(type(next_experiment))
-                print()
-                print(next_experiment.parameters_dict)
                 next_experiment.init_experiment()
                 next_experiment.start_stop_sweep_function()
         except Exception as e:
-            print("error raised in GUI")
             print(e)
 
     def queue_stopped_due_to_completion_or_error(self):
@@ -1631,7 +1558,6 @@ class QueueManager(QWidget):
                     padding: 8px;
                 }
             """)
-            # Optionally disable buttons here too
 
     def unlock_experiment(self, experiment):
         """Un-grey an experiment item."""
@@ -1928,7 +1854,6 @@ class QueuedExperiment(QListWidgetItem):
         self.experiment_type = experiment.type
 
         # If copying from existing parameters
-        print("now, parameters_dict is:", parameters_dict)
         if parameters_dict:
             self.parameters_dict = parameters_dict.copy()
             self.valid = True
@@ -1950,8 +1875,6 @@ class QueuedExperiment(QListWidgetItem):
                 return
 
             updated_params = dialog.get_updated_parameters()
-            print("this is where we got the parameters...they are:")
-            print("updated_params:",  updated_params)
 
             values = dialog.get_values()
 
@@ -1966,7 +1889,6 @@ class QueuedExperiment(QListWidgetItem):
                 "current_queue":   "working_queue"
             }
             
-            print("self.parameters_dict:", self.parameters_dict)
             self.valid = True
 
         # -- UI Setup --
@@ -1979,11 +1901,6 @@ class QueuedExperiment(QListWidgetItem):
                 padding: 8px;
             }
         """)
-        print()
-        print("we updated QueedExperiment.parameters_dict", self.parameters_dict)
-
-
-
         self.layout = QVBoxLayout(self.widget)
         self.layout.setContentsMargins(4, 4, 4, 4)
 
@@ -2111,11 +2028,6 @@ class QueuedExperiment(QListWidgetItem):
         """
         Initialize the experiment hardware setup based on saved parameters.
         """
-
-        print("called queued experiment.init_experiment()")
-        print()
-        print("initializing an experiment with: ", self.parameters_dict["parameters"])
-        print()
         self.experiment.set_parameters(self.parameters_dict["parameters"])
 
     def show_info_popup(self):
@@ -2167,8 +2079,6 @@ class QueuedExperiment(QListWidgetItem):
         This duplicates the experiment and deletes the original to avoid segmentation faults.
         """
         # Prepare a full clone of parameters
-        print()
-        print("Before queue move: ", self.parameters_dict)
         clone_dict = self.parameters_dict.copy()
 
         # Swap the queue type
@@ -2178,15 +2088,9 @@ class QueuedExperiment(QListWidgetItem):
         else:
             clone_dict["current_queue"] = "working_queue"
             target_queue = self.queue_manager.working_queue_list
-        
-        print()
-        print("clone dict:", clone_dict)
 
         # Create a new QueuedExperiment using the cloned parameters
         new_item = QueuedExperiment(self.start_stop_sweep_function, self.experiment, self.queue_manager, parameters_dict=clone_dict)
-        
-        print()
-        print("After Queue Move: ", new_item.parameters_dict)
         
         if not new_item.valid:
             return
@@ -2226,12 +2130,14 @@ class QueuedExperiment(QListWidgetItem):
 
 def main():
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon("icon.png"))  # Set global app icon
     ex = ExperimentUI()
     ex.show()
     screen = QDesktopWidget().screenGeometry()
     screen_width = screen.width()
     screen_height = screen.height()
     ex.setGeometry(0, 0, int(screen_width), int(screen_height))
+    ex.setWindowIcon(QIcon("icon.png"))
     sys.exit(app.exec_())
     
 if __name__ == "__main__":
