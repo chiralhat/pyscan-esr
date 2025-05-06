@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 import spinecho_scripts
 import pulsesweep_scripts
 import pyscan as ps
@@ -210,12 +210,16 @@ def start_sweep():
 @app.route('/get_sweep_data', methods=['GET'])
 def get_sweep_data():
     global expt
-    print("returning experiment data")
-    response = {
-        "serialized_experiment": serialize_object(expt),
-    }
-    print(expt.runinfo.measured)
-    return jsonify({"expt": serialize_object(response)})
+    try:
+        print("returning experiment data")
+        response = {
+            "serialized_experiment": serialize_object(expt),
+        }
+        print(expt.runinfo.measured)
+        return jsonify({"expt": serialize_object(response)})
+    except Exception as e:
+        print("Error in get_sweep_data:", e)
+        return make_response(jsonify({"error": serialize_object(e)}), 500)
 
 @app.route('/get_scopes', methods=['GET'])
 def get_scopes():
@@ -235,4 +239,4 @@ def status():
     return jsonify({"running": running})
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000)
