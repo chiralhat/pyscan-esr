@@ -45,8 +45,8 @@ def read(sig, config, soc, output, fig):
     """
     config['single'] = True
     config['soft_avgs'] = 1
-    prog = CPMGProgram(soc, config)
-    measure_phase(prog, soc, sig)
+    #prog = CPMGProgram(soc, config)
+    measure_phase(config, soc, sig)
     
     for ax in fig.axes:
         ax.remove()
@@ -87,8 +87,8 @@ def single_shot(sig, config, soc, output, fig):
     None.
 
     """
-    prog = CPMGProgram(soc, config)
-    measure_decay(prog, soc, sig)
+    #prog = CPMGProgram(soc, config)
+    measure_decay(config, soc, sig)
     freq = config['freq']
     
     for ax in fig.axes:
@@ -102,7 +102,7 @@ def single_shot(sig, config, soc, output, fig):
     ax.set_xlabel('Time (μs)')
     ax.set_ylabel('Signal (a.u.)')
     #[ax.axvline(x=w*1e6, color='purple', ls='--') for w in win]
-    xpt = sig.time[len(sig.time)//5]/2
+    xpt = sig.time[len(sig.time)//5]
     ypt = sig.x.max()*np.array([0.75, 0.65])
     ax.text(xpt, ypt[0], fitstr)
     ax.text(xpt, ypt[1], freqstr)
@@ -112,6 +112,7 @@ def single_shot(sig, config, soc, output, fig):
         
 
 def init_experiment(devices, parameters, sweep, soc):
+    parameters['single'] = True
     parameters['pulses'] = 0
     parameters['pulse1_2'] = parameters['pulse1_1']
     parameters['pi2_phase'] = 0
