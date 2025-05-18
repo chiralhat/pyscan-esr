@@ -29,6 +29,9 @@ python gui.py
 3. Update gui/generate_default_display_name() in the queue to abbreviate name of new experiment
 4. If adding new types of graphs, add them in graphing.py and adjust update_graph_signal calls in gui/toggle_start_stop_sweep_frontend() to point to these new functions
 5. Update Worker/run_snapshot() to add any additional settings
+
+#### How to add tooltips:
+Add the key of the setting to the TOOLTIPS dictionary and the tooltip as the value
    
 #### Notes
 - There are two different pyscan folders, one in the frontend and one in the backend. The frontend version has all imports relating to the hardware commented out.
