@@ -1,6 +1,6 @@
 from rfsoc2 import *
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 from time import sleep, time
 from scipy.fft import rfft, rfftfreq
 import numpy as np

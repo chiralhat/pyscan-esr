@@ -5,7 +5,7 @@ import pyscan as ps
 from time import sleep, time
 
 import sys, os
-sys.path.append('../')
+sys.path.append('../../')
 from rfsoc2 import *
 
 app = Flask(__name__)

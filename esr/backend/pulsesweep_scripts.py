@@ -18,7 +18,7 @@ Dependencies:
 
 from rfsoc2 import *
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 import spinecho_scripts as ses
 import pyscan as ps
 import numpy as np
