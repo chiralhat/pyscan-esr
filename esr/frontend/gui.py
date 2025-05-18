@@ -1,251 +1,616 @@
 import matplotlib
-matplotlib.use('Qt5Agg')  # Must be done before importing pyplot!
+
+matplotlib.use("Qt5Agg")  # Must be done before importing pyplot!
 # Do not move the above from the top of the file
-from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QGridLayout, QPushButton,
-                             QSplitter, QScrollArea, QLabel, QFrame, QComboBox, 
-                             QCheckBox, QSpinBox, QDoubleSpinBox, QTreeWidget, QTreeWidgetItem, 
-                             QMessageBox, QTextEdit, QLineEdit, 
-                             QFileDialog, QListWidgetItem,
-                             QListWidget,QInputDialog, QAbstractItemView, QDialog, QPushButton, QTabWidget, QDesktopWidget)
-                             
+from PyQt5.QtWidgets import (
+    QApplication,
+    QWidget,
+    QMainWindow,
+    QVBoxLayout,
+    QHBoxLayout,
+    QGridLayout,
+    QPushButton,
+    QSplitter,
+    QScrollArea,
+    QLabel,
+    QFrame,
+    QComboBox,
+    QCheckBox,
+    QSpinBox,
+    QDoubleSpinBox,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QMessageBox,
+    QTextEdit,
+    QLineEdit,
+    QFileDialog,
+    QListWidgetItem,
+    QListWidget,
+    QInputDialog,
+    QAbstractItemView,
+    QDialog,
+    QPushButton,
+    QTabWidget,
+    QDesktopWidget,
+)
+
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize, QTimer
 from PyQt5.QtGui import QIcon
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import sys, os
-sys.path.append('../')
-from rfsoc2 import *
+
+sys.path.append("../")
 from time import sleep, time
 from datetime import date, datetime
 import pickle
 import pyvisa
 import requests
-import pyscan as ps
+import pyscan_non_soc_version as ps
 
 import globals
 from Worker import *
 from graphing import *
 from ExperimentType import *
 
-lstyle = {'description_width': 'initial'}
+lstyle = {"description_width": "initial"}
 aves = [1, 4, 16, 64, 128, 256]
 voltage_limits = [0.002, 10]
 tdivs = []
 for n in range(9, -1, -1):
-    tdivs += [2*10**-n, 4*10**-n, 10*10**-n]#[2.5*10**-n, 5*10**-n, 10*10**-n]
+    tdivs += [2 * 10**-n, 4 * 10**-n, 10 * 10**-n]  # [2.5*10**-n, 5*10**-n, 10*10**-n]
 
 scopes = []
 
-if not hasattr(ps, 'rm'):
-    ps.rm = pyvisa.ResourceManager('@py')
+if not hasattr(ps, "rm"):
+    ps.rm = pyvisa.ResourceManager("@py")
 res_list = ps.rm.list_resources()
 
-#Global setting trees for the Pulse Frequency Sweep and Spin Echo experiment settings
-sweep_list = ['Pulse Sweep',
-              'Phase Sweep',
-              'Rabi',
-              'Inversion Sweep',
-              'Period Sweep',
-              'Hahn Echo',
-              'EDFS',
-              'Freq Sweep',
-              'CPMG']
+# Global setting trees for the Pulse Frequency Sweep and Spin Echo experiment settings
+sweep_list = [
+    "Pulse Sweep",
+    "Phase Sweep",
+    "Rabi",
+    "Inversion Sweep",
+    "Period Sweep",
+    "Hahn Echo",
+    "EDFS",
+    "Freq Sweep",
+    "CPMG",
+]
 
-bimod_sweep_list = ['A Pulse Sweep',
-              'B Pulse Sweep',
-              'Both Pulse Sweep',
-              'B Rabi',
-              'Period Sweep',
-              'Hahn Echo',
-              'EDFS',
-              'A Freq Sweep',
-              'B Freq Sweep',
-              'Both Freq Sweep',
-              'DEER']
+bimod_sweep_list = [
+    "A Pulse Sweep",
+    "B Pulse Sweep",
+    "Both Pulse Sweep",
+    "B Rabi",
+    "Period Sweep",
+    "Hahn Echo",
+    "EDFS",
+    "A Freq Sweep",
+    "B Freq Sweep",
+    "Both Freq Sweep",
+    "DEER",
+]
 
 EXPERIMENT_TEMPLATES = {
     "Pulse Frequency Sweep": {
         "groups": {
-            "Main Settings": [                                             
-                {"display": "Frequency", "key": "freq", "type": "double_spin", 
-                 "min": 50.0, "max": 14999.0, "default": 3900.0, "tool tip": "Helpful information"},
-                {"display": "Gain", "key": "gain", "type": "spin", 
-                 "min" : 0, "max" : 32500, "default": 32500, "tool tip": "Helpful information"},
-                {"display": "Avg", "key": "soft_avgs", "type": "spin",
-                 "min": 1, "max": 1000000, "default": 100, "tool tip": "Helpful information"}, 
-                {"display": "Dir and Name", "key": ["save_dir", "file_name"], 
-                 "type": "composite", "default": ["", ""], "tool tip": "Helpful information"},
-                {"display": "Experiment", "key": "psexpt", "type": "combo", 
-                 "options": ['Freq Sweep', 'Field Sweep'], "default": 'Freq Sweep'},
-                {"display": "Sweep start, end, step",
-                 "key": ["sweep_start", "sweep_end", "sweep_step"], 
-                 "type": "composite", "default": [3850.0, 3950.0, 2.0]}],
+            "Main Settings": [
+                {
+                    "display": "Frequency",
+                    "key": "freq",
+                    "type": "double_spin",
+                    "min": 50.0,
+                    "max": 14999.0,
+                    "default": 3900.0,
+                    "tool tip": "Helpful information",
+                },
+                {
+                    "display": "Gain",
+                    "key": "gain",
+                    "type": "spin",
+                    "min": 0,
+                    "max": 32500,
+                    "default": 32500,
+                    "tool tip": "Helpful information",
+                },
+                {
+                    "display": "Avg",
+                    "key": "soft_avgs",
+                    "type": "spin",
+                    "min": 1,
+                    "max": 1000000,
+                    "default": 100,
+                    "tool tip": "Helpful information",
+                },
+                {
+                    "display": "Dir and Name",
+                    "key": ["save_dir", "file_name"],
+                    "type": "composite",
+                    "default": ["", ""],
+                    "tool tip": "Helpful information",
+                },
+                {
+                    "display": "Experiment",
+                    "key": "psexpt",
+                    "type": "combo",
+                    "options": ["Freq Sweep", "Field Sweep"],
+                    "default": "Freq Sweep",
+                },
+                {
+                    "display": "Sweep start, end, step",
+                    "key": ["sweep_start", "sweep_end", "sweep_step"],
+                    "type": "composite",
+                    "default": [3850.0, 3950.0, 2.0],
+                },
+            ],
             "Readout Settings": [
-                {"display": "Time Offset", "key": "h_offset", "type": "double_spin",
-                 "min": -10000.0, "max": 10000.0, "default": -0.125}, 
-                {"display": "Readout Length", "key": "readout_length", "type": "double_spin", 
-                 "min": 0.0, "max": 5.0, "default": 0.2}, 
-                {"display": "Loopback", "key": "loopback", "type": "check", 
-                 "default": False}],
+                {
+                    "display": "Time Offset",
+                    "key": "h_offset",
+                    "type": "double_spin",
+                    "min": -10000.0,
+                    "max": 10000.0,
+                    "default": -0.125,
+                },
+                {
+                    "display": "Readout Length",
+                    "key": "readout_length",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 5.0,
+                    "default": 0.2,
+                },
+                {
+                    "display": "Loopback",
+                    "key": "loopback",
+                    "type": "check",
+                    "default": False,
+                },
+            ],
             "Uncommon Settings": [
-                {"display": "Repetition time", "key": "period", "type": "double_spin", 
-                 "min": 0.1, "max": 2000000000.0, "default": 10.0}, 
-                {"display": "Ch1 90 Pulse", "key": "pulse1_1", "type": "double_spin", 
-                 "min": 0.0, "max": 652100.0, "default": 50.0}, 
-                {"display": "Magnetic Field, Scale, Current limit",
-                 "key": ["field", "gauss_amps", "current_limit"], 
-                 "type": "composite", "default": [0.0, 276.0, 3.5]}, 
-                {"display": "Reps", "key": "ave_reps", "type": "spin", 
-                 "min": 1, "max": 1000, "default": 1},
-                {"display": "Wait Time", "key": "wait", "type": "double_spin", 
-                 "min": 0.0, "max": 20.0, "default": 0.3},
-                {"display": "Integral only", "key": "integrate", "type": "check", 
-                 "default": False}],
+                {
+                    "display": "Repetition time",
+                    "key": "period",
+                    "type": "double_spin",
+                    "min": 0.1,
+                    "max": 2000000000.0,
+                    "default": 10.0,
+                },
+                {
+                    "display": "Ch1 90 Pulse",
+                    "key": "pulse1_1",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 652100.0,
+                    "default": 50.0,
+                },
+                {
+                    "display": "Magnetic Field, Scale, Current limit",
+                    "key": ["field", "gauss_amps", "current_limit"],
+                    "type": "composite",
+                    "default": [0.0, 276.0, 3.5],
+                },
+                {
+                    "display": "Reps",
+                    "key": "ave_reps",
+                    "type": "spin",
+                    "min": 1,
+                    "max": 1000,
+                    "default": 1,
+                },
+                {
+                    "display": "Wait Time",
+                    "key": "wait",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 20.0,
+                    "default": 0.3,
+                },
+                {
+                    "display": "Integral only",
+                    "key": "integrate",
+                    "type": "check",
+                    "default": False,
+                },
+            ],
             "Utility Settings": [
-                {"display": "PSU Addr", "key": "psu_address", "type": "line_edit", 
-                 "default": ""},
-                {"display": "Use PSU", "key": "use_psu", "type": "check", 
-                 "default": False},
-                {"display": "Use Lakeshore", "key": "use_temp", "type": "check", 
-                 "default": False}],
+                {
+                    "display": "PSU Addr",
+                    "key": "psu_address",
+                    "type": "line_edit",
+                    "default": "",
+                },
+                {
+                    "display": "Use PSU",
+                    "key": "use_psu",
+                    "type": "check",
+                    "default": False,
+                },
+                {
+                    "display": "Use Lakeshore",
+                    "key": "use_temp",
+                    "type": "check",
+                    "default": False,
+                },
+            ],
             "Never Change": [
-                {"display": "Scope Address", "key": "scope_address",  "type": "combo",
-                 "options": res_list, "default": "USB0::1689::261::SGVJ0001055::0::INSTR"},
-                {"display": "FPGA Address", "key": "fpga_address",  "type": "combo",
-                "options": res_list, "default": "ASRL/dev/ttyUSB4::INSTR"},
-                {"display": "Synth Address", "key": "synth_address",  "type": "combo",
-                 "options": res_list, "default": "ASRL/dev/ttyACM0::INSTR"},
-                {"display": "Phase", "key": "phase", "type": "double_spin",
-                "min": 0.0, "max": 360.0, "default": 0.0},
-                {"display": "Averaging Time (s)", "key": "sltime", "type": "double_spin",
-                 "min": 0.0, "max": 20.0, "default": 0.0}
-               ]
-        } 
+                {
+                    "display": "Scope Address",
+                    "key": "scope_address",
+                    "type": "combo",
+                    "options": res_list,
+                    "default": "USB0::1689::261::SGVJ0001055::0::INSTR",
+                },
+                {
+                    "display": "FPGA Address",
+                    "key": "fpga_address",
+                    "type": "combo",
+                    "options": res_list,
+                    "default": "ASRL/dev/ttyUSB4::INSTR",
+                },
+                {
+                    "display": "Synth Address",
+                    "key": "synth_address",
+                    "type": "combo",
+                    "options": res_list,
+                    "default": "ASRL/dev/ttyACM0::INSTR",
+                },
+                {
+                    "display": "Phase",
+                    "key": "phase",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 360.0,
+                    "default": 0.0,
+                },
+                {
+                    "display": "Averaging Time (s)",
+                    "key": "sltime",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 20.0,
+                    "default": 0.0,
+                },
+            ],
+        }
     },
     "Spin Echo": {
         "groups": {
             "Main Settings": [
-                {"display": "Ch1 Freq", "key": "freq", "type": "double_spin", 
-                 "min" : 50.0, "max" : 14999.0, "default": 3902.0, "tool tip": "Helpful information"},
-                {"display": "Gain", "key": "gain", "type": "spin", 
-                 "min" : 0, "max" : 32500, "default": 32500, "tool tip": "Helpful information"},
-                {"display": "Repetition time", "key": "period", "type": "double_spin", 
-                 "min": 0.1, "max": 2000000000.0, "default": 200.0, "tool tip": "Helpful information"}, #CHANGED THESE FROM 0.0, 100.0, AND 10.0
-                {"display": "Ave", "key": "soft_avgs", "type": "spin",
-                 "min": 1, "max": 10000000, "default": 100}, 
-                {"display": "Dir and Name", "key": ["save_dir", "file_name"], "type": "composite",
-                 "default": ["", ""]}, 
-                {"display": "Reps", "key": "ave_reps", "type": "spin",
-                 "min": 1, "max": 1000, "default": 1},
-                {"display": "Experiment", "key": "expt", "type": "combo",
-                 "options": sweep_list, "default": "Hahn Echo"},
-                {"display": "Sweep start, end, step",
-                 "key": ["sweep_start", "sweep_end", "sweep_step"], "type": "composite",
-                "default": [150.0, 1000.0, 50.0]},],
+                {
+                    "display": "Ch1 Freq",
+                    "key": "freq",
+                    "type": "double_spin",
+                    "min": 50.0,
+                    "max": 14999.0,
+                    "default": 3902.0,
+                    "tool tip": "Helpful information",
+                },
+                {
+                    "display": "Gain",
+                    "key": "gain",
+                    "type": "spin",
+                    "min": 0,
+                    "max": 32500,
+                    "default": 32500,
+                    "tool tip": "Helpful information",
+                },
+                {
+                    "display": "Repetition time",
+                    "key": "period",
+                    "type": "double_spin",
+                    "min": 0.1,
+                    "max": 2000000000.0,
+                    "default": 200.0,
+                    "tool tip": "Helpful information",
+                },  
+                {
+                    "display": "Ave",
+                    "key": "soft_avgs",
+                    "type": "spin",
+                    "min": 1,
+                    "max": 10000000,
+                    "default": 100,
+                },
+                {
+                    "display": "Dir and Name",
+                    "key": ["save_dir", "file_name"],
+                    "type": "composite",
+                    "default": ["", ""],
+                },
+                {
+                    "display": "Reps",
+                    "key": "ave_reps",
+                    "type": "spin",
+                    "min": 1,
+                    "max": 1000,
+                    "default": 1,
+                },
+                {
+                    "display": "Experiment",
+                    "key": "expt",
+                    "type": "combo",
+                    "options": sweep_list,
+                    "default": "Hahn Echo",
+                },
+                {
+                    "display": "Sweep start, end, step",
+                    "key": ["sweep_start", "sweep_end", "sweep_step"],
+                    "type": "composite",
+                    "default": [150.0, 1000.0, 50.0],
+                },
+            ],
             "Pulse Settings": [
-                {"display": "Ch1 Delay", "key": "delay", "type": "double_spin",
-                 "min": 0, "max": 652100, "default": 150.0},
-                {"display": "90 Pulse", "key": "pulse1_1", "type": "double_spin",
-                "min": 0, "max": 652100, "default": 50.0},
-                {"display": "Nut. Delay (ns)", "key": "nutation_delay", "type": "double_spin",
-                "min": 0, "max": 655360, "default": 5000.0},
-                {"display": "Nut. Pulse Width", "key": "nutation_length", "type": "double_spin",
-                "min": 0, "max": 655360, "default": 0.0}],
+                {
+                    "display": "Ch1 Delay",
+                    "key": "delay",
+                    "type": "double_spin",
+                    "min": 0,
+                    "max": 652100,
+                    "default": 150.0,
+                },
+                {
+                    "display": "90 Pulse",
+                    "key": "pulse1_1",
+                    "type": "double_spin",
+                    "min": 0,
+                    "max": 652100,
+                    "default": 50.0,
+                },
+                {
+                    "display": "Nut. Delay (ns)",
+                    "key": "nutation_delay",
+                    "type": "double_spin",
+                    "min": 0,
+                    "max": 655360,
+                    "default": 5000.0,
+                },
+                {
+                    "display": "Nut. Pulse Width",
+                    "key": "nutation_length",
+                    "type": "double_spin",
+                    "min": 0,
+                    "max": 655360,
+                    "default": 0.0,
+                },
+            ],
             "Second Sweep Settings": [
-                {"display": "Second sweep?", "key": "sweep2", "type": "check",
-                 "default": False},
-                {"display": "Experiment 2", "key": "expt2", "type": "combo",
-                 "options": sweep_list, "default": "Hahn Echo"},
-                {"display": "Sweep 2 start, end, step",
-                 "key": ["sweep2_start", "sweep2_end", "sweep2_step"], "type": "composite",
-                 "default": [0, 0, 0]}], 
+                {
+                    "display": "Second sweep?",
+                    "key": "sweep2",
+                    "type": "check",
+                    "default": False,
+                },
+                {
+                    "display": "Experiment 2",
+                    "key": "expt2",
+                    "type": "combo",
+                    "options": sweep_list,
+                    "default": "Hahn Echo",
+                },
+                {
+                    "display": "Sweep 2 start, end, step",
+                    "key": ["sweep2_start", "sweep2_end", "sweep2_step"],
+                    "type": "composite",
+                    "default": [0, 0, 0],
+                },
+            ],
             "Readout Settings": [
-                {"display": "Time Offset (us)", "key": "h_offset", "type": "double_spin",
-                 "min": -1e5, "max": 1e5, "default": -0.025},
-                {"display": "Readout Length (us)", "key": "readout_length", "type": "double_spin",
-                 "min": 0.0, "max": 5.0, "default": 0.2}, 
-                {"display": "Loopback", "key": "loopback", "type": "check",
-                "default": False}],
+                {
+                    "display": "Time Offset (us)",
+                    "key": "h_offset",
+                    "type": "double_spin",
+                    "min": -1e5,
+                    "max": 1e5,
+                    "default": -0.025,
+                },
+                {
+                    "display": "Readout Length (us)",
+                    "key": "readout_length",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 5.0,
+                    "default": 0.2,
+                },
+                {
+                    "display": "Loopback",
+                    "key": "loopback",
+                    "type": "check",
+                    "default": False,
+                },
+            ],
             "Uncommon Settings": [
-                {"display": "Ch1 180 Pulse Mult", "key": "mult1", "type": "double_spin",
-                 "min": 0, "max": 652100, "default": 1.0},
-                {"display": "Magnetic Field (G)", "key": "field", "type": "double_spin",
-                "min": 0.0, "max": 0.0, "default": 2500.0},
-                {"display": "Magnet Scale (G/A)", "key": "gauss_amps", "type": "double_spin",
-                "min": 0.001, "max": 1000.0, "default": 270.0},
-                {"display": "Current limit (A)", "key": "current_limit", "type": "double_spin",
-                "min": 0.0, "max": 10.0, "default": 3.5},
-                {"display": "Wait Time (s)", "key": "wait", "type": "double_spin",
-                 "min": 0.0, "max": 20.0, "default": 0.2},
-                {"display": "Integral only", "key": "integrate", "type": "check",
-                 "default": False}],
+                {
+                    "display": "Ch1 180 Pulse Mult",
+                    "key": "mult1",
+                    "type": "double_spin",
+                    "min": 0,
+                    "max": 652100,
+                    "default": 1.0,
+                },
+                {
+                    "display": "Magnetic Field (G)",
+                    "key": "field",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 0.0,
+                    "default": 2500.0,
+                },
+                {
+                    "display": "Magnet Scale (G/A)",
+                    "key": "gauss_amps",
+                    "type": "double_spin",
+                    "min": 0.001,
+                    "max": 1000.0,
+                    "default": 270.0,
+                },
+                {
+                    "display": "Current limit (A)",
+                    "key": "current_limit",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 10.0,
+                    "default": 3.5,
+                },
+                {
+                    "display": "Wait Time (s)",
+                    "key": "wait",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 20.0,
+                    "default": 0.2,
+                },
+                {
+                    "display": "Integral only",
+                    "key": "integrate",
+                    "type": "check",
+                    "default": False,
+                },
+            ],
             "Utility Settings": [
-                {"display": "PSU Addr", "key": "psu_address", "type": "line_edit",
-                 "default": ""},
-                {"display": "Use PSU? (no magnet if not)", "key": "use_psu", "type": "check",
-                 "default": False},
-                {"display": "Use Lakeshore?", "key": "use_temp", "type": "check",
-                 "default": False}],
+                {
+                    "display": "PSU Addr",
+                    "key": "psu_address",
+                    "type": "line_edit",
+                    "default": "",
+                },
+                {
+                    "display": "Use PSU? (no magnet if not)",
+                    "key": "use_psu",
+                    "type": "check",
+                    "default": False,
+                },
+                {
+                    "display": "Use Lakeshore?",
+                    "key": "use_temp",
+                    "type": "check",
+                    "default": False,
+                },
+            ],
             "Never Change": [
-                {"display": "# 180 Pulses", "key": "pulses", "type": "spin",
-                "min": 1, "max": 256, "default": 1},
-                {"display": "Scope Address", "key": "scope_address",  "type": "combo",
-                 "options": res_list, "default": "USB0::1689::261::SGVJ0001055::0::INSTR"},
-                {"display": "FPGA Address", "key": "fpga_address",  "type": "combo",
-                "options": res_list, "default": "ASRL/dev/ttyUSB4::INSTR"},
-                {"display": "Synth Address", "key": "synth_address",  "type": "combo",
-                 "options": res_list, "default": "ASRL/dev/ttyACM0::INSTR"},
-                {"display": "Phase", "key": "phase", "type": "double_spin",
-                "min": 0.0, "max": 360.0, "default": 0.0},
-                {"display": "Auto Phase Sub", "key": "phase_sub", "type": "check",
-                "default": False},
-                {"display": "Field Start (G)", "key": "field_start", "type": "double_spin",
-                "min": 0.0, "max": 2500.0, "default": 0.0},
-                {"display": "Field End (G)", "key": "field_end", "type": "double_spin",
-                "min": 0.0, "max": 2500.0, "default": 50.0},
-                {"display": "Field Step (G)", "key": "field_step", "type": "double_spin",
-                "min": 0.01, "max": 2500.0, "default": 1.5},
-                {"display": "Sub Method", "key": "subtract", "type": "combo",
-                "options": ['Phase', 'Delay', 'Both', 'None', 'Autophase'], "default": "Phase"},
-                {"display": "Averaging Time (s)", "key": "sltime", "type": "double_spin",
-                 "min": 0.0, "max": 20.0, "default": 0.0}
-                ]      
+                {
+                    "display": "# 180 Pulses",
+                    "key": "pulses",
+                    "type": "spin",
+                    "min": 1,
+                    "max": 256,
+                    "default": 1,
+                },
+                {
+                    "display": "Scope Address",
+                    "key": "scope_address",
+                    "type": "combo",
+                    "options": res_list,
+                    "default": "USB0::1689::261::SGVJ0001055::0::INSTR",
+                },
+                {
+                    "display": "FPGA Address",
+                    "key": "fpga_address",
+                    "type": "combo",
+                    "options": res_list,
+                    "default": "ASRL/dev/ttyUSB4::INSTR",
+                },
+                {
+                    "display": "Synth Address",
+                    "key": "synth_address",
+                    "type": "combo",
+                    "options": res_list,
+                    "default": "ASRL/dev/ttyACM0::INSTR",
+                },
+                {
+                    "display": "Phase",
+                    "key": "phase",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 360.0,
+                    "default": 0.0,
+                },
+                {
+                    "display": "Auto Phase Sub",
+                    "key": "phase_sub",
+                    "type": "check",
+                    "default": False,
+                },
+                {
+                    "display": "Field Start (G)",
+                    "key": "field_start",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 2500.0,
+                    "default": 0.0,
+                },
+                {
+                    "display": "Field End (G)",
+                    "key": "field_end",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 2500.0,
+                    "default": 50.0,
+                },
+                {
+                    "display": "Field Step (G)",
+                    "key": "field_step",
+                    "type": "double_spin",
+                    "min": 0.01,
+                    "max": 2500.0,
+                    "default": 1.5,
+                },
+                {
+                    "display": "Sub Method",
+                    "key": "subtract",
+                    "type": "combo",
+                    "options": ["Phase", "Delay", "Both", "None", "Autophase"],
+                    "default": "Phase",
+                },
+                {
+                    "display": "Averaging Time (s)",
+                    "key": "sltime",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    "max": 20.0,
+                    "default": 0.0,
+                },
+            ],
         }
-    }
+    },
 }
 
+TOOLTIPS = {"freq": "freq tooltip", "gain": "gain tooltip", "soft_avgs": "soft avgs tooltip"}
+
+
 class DualStream:
-    """ A custom stream handler that writes output to both the terminal and a QTextEdit widget.
-    This class is used to capture and display stdout/stderr in a PyQt GUI application,
-    while also preserving terminal output. """
+    """Redirects stdout/stderr to both the terminal and a QTextEdit in the GUI.
+    Useful for showing print/debug output inside the application window.
+    """
 
     def __init__(self, text_edit):
+        # Initializes with the target QTextEdit and preserves access to the terminal
         self.text_edit = text_edit
-        self.terminal = sys.__stdout__  
+        self.terminal = sys.__stdout__
 
     def write(self, text):
-        """ Writes the provided text to both the QTextEdit widget and the terminal.
-        This method is used to mirror standard output (or error) to a GUI text display
-        while still maintaining the original terminal output. It ensures that text is
-        appended at the end of the QTextEdit and that the view auto-scrolls to show the latest entry.
+        # Appends text to both the QTextEdit log view and the system stdout
 
-        @param text -- The text string to be written to both outputs.
-        """
         cursor = self.text_edit.textCursor()
-        cursor.movePosition(cursor.End)  
-        cursor.insertText(text)  
-        self.text_edit.setTextCursor(cursor) 
-        self.text_edit.ensureCursorVisible() 
+        cursor.movePosition(cursor.End)
+        cursor.insertText(text)
+        self.text_edit.setTextCursor(cursor)
+        self.text_edit.ensureCursorVisible()
 
-        self.terminal.write(text)  
-        self.terminal.flush()  
-
-    def flush(self):
+        self.terminal.write(text)
         self.terminal.flush()
 
+    def flush(self):
+        # Flushes the terminal stream (used by some buffered outputs)
+        self.terminal.flush()
+
+
 class PopUpMenu(QMessageBox):
-    """ Basic pop-up menu """
+    """Basic pop-up menu"""
+
     def __init__(self, title="Notification", message="This is a pop-up message"):
         super().__init__()
         self.setWindowTitle(title)
@@ -254,6 +619,7 @@ class PopUpMenu(QMessageBox):
 
     def show_popup(self):
         self.exec_()
+
 
 class DynamicSettingsPanel(QWidget):
     settingChanged = pyqtSignal()
@@ -264,7 +630,7 @@ class DynamicSettingsPanel(QWidget):
         self.settings_tree = QTreeWidget()
         self.settings_tree.setHeaderHidden(False)
         self.settings_tree.setColumnCount(2)
-        self.settings_tree.setHeaderLabels(["Setting","Value"])
+        self.settings_tree.setHeaderLabels(["Setting", "Value"])
         self.settings_tree.setColumnWidth(0, 200)
         self.settings_tree.setColumnWidth(1, 100)
 
@@ -300,12 +666,12 @@ class DynamicSettingsPanel(QWidget):
                 widget._underlying_key = setting.get("key")
                 self.settings_tree.setItemWidget(item, 1, widget)
                 label = QLabel(setting.get("display", "N/A"))
-                label.setToolTip(setting.get("tool tip", ""))
+                label.setToolTip(TOOLTIPS.get("key", ""))
                 self.settings_tree.setItemWidget(item, 0, label)
 
         if default_file and os.path.isfile(default_file):
             try:
-                with open(default_file, 'rb') as f:
+                with open(default_file, "rb") as f:
                     defaults = pickle.load(f)
             except Exception:
                 defaults = {}
@@ -319,7 +685,7 @@ class DynamicSettingsPanel(QWidget):
             for j in range(grp.childCount()):
                 item = grp.child(j)
                 w = tree.itemWidget(item, 1)
-                key = getattr(w, '_underlying_key', None)
+                key = getattr(w, "_underlying_key", None)
 
                 def apply_value(widget, raw_val, expected):
                     if isinstance(widget, QSpinBox):
@@ -349,19 +715,20 @@ class DynamicSettingsPanel(QWidget):
 
     def create_setting_widget(self, setting):
         """Creates and returns an input widget based on the setting's type definition.
-           This method interprets the 'type' field of a setting dictionary and constructs the
-           appropriate Qt input widget (e.g., QSpinBox, QDoubleSpinBox, QLineEdit, etc.).
-           It also handles composite widgets composed of multiple input fields.
+        This method interprets the 'type' field of a setting dictionary and constructs the
+        appropriate Qt input widget (e.g., QSpinBox, QDoubleSpinBox, QLineEdit, etc.).
+        It also handles composite widgets composed of multiple input fields.
 
-           @param setting -- A dictionary describing a single setting. Expected keys include:
-                                - 'type': Type of widget to create (e.g., 'spin', 'double_spin', 'line_edit', 'combo', 'check', 'composite')
-                                - 'default': Default value(s) for the widget
-                                - 'min', 'max': Numeric bounds (for spin types)
-                                - 'options': List of string options (for combo boxes)
-                                - 'key': Underlying key(s) to associate with this widget
+        @param setting -- A dictionary describing a single setting. Expected keys include:
+                             - 'type': Type of widget to create (e.g., 'spin', 'double_spin', 'line_edit', 'combo', 'check', 'composite')
+                             - 'default': Default value(s) for the widget
+                             - 'min', 'max': Numeric bounds (for spin types)
+                             - 'options': List of string options (for combo boxes)
+                             - 'key': Underlying key(s) to associate with this widget
 
 
-            @return A QWidget-based input element appropriate for the setting. For composite widgets, a QWidget containing a layout of sub-widgets is returned."""
+         @return A QWidget-based input element appropriate for the setting. For composite widgets, a QWidget containing a layout of sub-widgets is returned.
+        """
         stype = setting.get("type")
         widget = None
         if stype == "spin":
@@ -399,6 +766,7 @@ class DynamicSettingsPanel(QWidget):
                     line = QLineEdit()
                     line.setText(str(val) if val is not None else "")
                     layout.addWidget(line)
+
             def composite_values():
                 values = []
                 for idx in range(layout.count()):
@@ -408,6 +776,7 @@ class DynamicSettingsPanel(QWidget):
                     elif isinstance(sub_widget, QLineEdit):
                         values.append(sub_widget.text())
                 return values
+
             widget.composite_values = composite_values
         else:
             widget = QLabel("N/A")
@@ -420,7 +789,14 @@ class DynamicSettingsPanel(QWidget):
         Connects the appropriate Qt signal on `widget` (or its children, for composites)
         to emit self.settingChanged.
         """
-        from PyQt5.QtWidgets import QSpinBox, QDoubleSpinBox, QLineEdit, QComboBox, QCheckBox
+        from PyQt5.QtWidgets import (
+            QSpinBox,
+            QDoubleSpinBox,
+            QLineEdit,
+            QComboBox,
+            QCheckBox,
+        )
+
         if isinstance(widget, QSpinBox):
             widget.valueChanged.connect(self.settingChanged.emit)
         elif isinstance(widget, QDoubleSpinBox):
@@ -431,22 +807,23 @@ class DynamicSettingsPanel(QWidget):
             widget.currentIndexChanged.connect(self.settingChanged.emit)
         elif isinstance(widget, QCheckBox):
             widget.stateChanged.connect(self.settingChanged.emit)
-        elif hasattr(widget, 'layout'):
+        elif hasattr(widget, "layout"):
             layout = widget.layout()
             for idx in range(layout.count()):
                 subw = layout.itemAt(idx).widget()
                 self._connect_setting_signals(subw)
 
+
 class ExperimentUI(QMainWindow):
-    """ Main UI Class """
+    """Main UI Class"""
 
     def __init__(self):
         super().__init__()
-        self.setWindowIcon(QIcon("icon.png"))  
+        self.setWindowIcon(QIcon("icon.png"))
 
         self.experiments = {
             "Spin Echo": ExperimentType("Spin Echo"),
-            "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep")
+            "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep"),
         }
         self.is_process_running = False
         self.settings_changed = False
@@ -482,22 +859,23 @@ class ExperimentUI(QMainWindow):
 
     def get_scopes_from_backend(self):
         try:
-            response = requests.get(globals.server_address + "/get_scopes", json=data, timeout=2)
+            response = requests.get(
+                globals.server_address + "/get_scopes", json=data, timeout=2
+            )
             response.raise_for_status()
             data = response.json()
             global scopes
             scopes = data
-            self.poll_timer.stop()  
+            self.poll_timer.stop()
         except Exception as e:
             self.label.setText(f"Unable to get scopes from backend... ({e})")
 
     def load_defaults_and_build_ui(self):
         template = self.experiment_templates[self.current_experiment.type]
         self.settings_panel.load_settings_panel(
-            template,
-            default_file=self.current_experiment.default_file
+            template, default_file=self.current_experiment.default_file
         )
-        
+
     def on_setting_changed(self):
         """
         Called whenever any setting widget is edited.
@@ -509,7 +887,6 @@ class ExperimentUI(QMainWindow):
             self.read_processed_btn.setEnabled(False)
             self.sweep_start_stop_btn.setEnabled(False)
             self.set_parameters_and_initialize_btn.setEnabled(True)
-
 
     def init_layout(self):
         """
@@ -524,8 +901,9 @@ class ExperimentUI(QMainWindow):
         main_layout.addWidget(self.top_menu_bar, 1)
 
         self.main_splitter = QSplitter(Qt.Horizontal)
-        self.main_splitter.setHandleWidth(5)  
-        self.main_splitter.setStyleSheet("""
+        self.main_splitter.setHandleWidth(5)
+        self.main_splitter.setStyleSheet(
+            """
             QSplitter::handle {
                 background: transparent;
             }
@@ -537,13 +915,14 @@ class ExperimentUI(QMainWindow):
                 padding-top: 4px; padding-bottom: 4px;
                 background-color: darkgray;
             }
-        """)
+        """
+        )
 
         left_container = QVBoxLayout()
         left_widget = QWidget()
         left_widget.setLayout(left_container)
         left_container.setContentsMargins(0, 0, 0, 0)
-        left_container.setSpacing(10)  
+        left_container.setSpacing(10)
 
         left_container.addWidget(self.settings_panel)
 
@@ -553,15 +932,16 @@ class ExperimentUI(QMainWindow):
         queue_layout.setSpacing(0)
         queue_layout.addWidget(self.queue_manager)
 
-        queue_wrapper.setMaximumHeight(350)  
+        queue_wrapper.setMaximumHeight(350)
 
         left_container.addWidget(queue_wrapper)
 
         self.main_splitter.addWidget(left_widget)
 
         self.right_splitter = QSplitter(Qt.Vertical)
-        self.right_splitter.setHandleWidth(5)  
-        self.right_splitter.setStyleSheet("""
+        self.right_splitter.setHandleWidth(5)
+        self.right_splitter.setStyleSheet(
+            """
             QSplitter::handle {
                 background: transparent;
             }
@@ -573,8 +953,9 @@ class ExperimentUI(QMainWindow):
                 padding-top: 4px; padding-bottom: 4px;
                 background-color: darkgray;
             }
-        """)
-        
+        """
+        )
+
         self.right_splitter.addWidget(self.graphs_panel)
 
         self.error_widget = self.init_error_log_widget()
@@ -582,18 +963,18 @@ class ExperimentUI(QMainWindow):
 
         self.main_splitter.addWidget(self.right_splitter)
 
-        self.main_splitter.setStretchFactor(0, 1)  
-        self.main_splitter.setStretchFactor(1, 1)  
-        self.main_splitter.setSizes([350, 650])  
+        self.main_splitter.setStretchFactor(0, 1)
+        self.main_splitter.setStretchFactor(1, 1)
+        self.main_splitter.setSizes([350, 650])
 
         main_layout.addWidget(self.main_splitter, 15)
 
         self.setCentralWidget(central_widget)
 
         self.setWindowTitle("Experiment UI")
-        self.setGeometry(100, 100, 1000, 700)  
-        self.show()  
-         
+        self.setGeometry(100, 100, 1000, 700)
+        self.show()
+
     def init_graphs_panel(self):
         """Creates the graphs panel containing Matplotlib graphs with tabs."""
         graph_section_widget = QWidget()
@@ -617,7 +998,7 @@ class ExperimentUI(QMainWindow):
         hdr3.addWidget(QLabel("Variable:"))
         combo_2d = QComboBox()
         combo_2d.currentTextChanged.connect(self.update_2d_plot)
-        combo_2d.addItems(["x","i","q"])
+        combo_2d.addItems(["x", "i", "q"])
         hdr3.addWidget(combo_2d)
         hdr3.addStretch()
         tab3_layout.addLayout(hdr3)
@@ -632,7 +1013,7 @@ class ExperimentUI(QMainWindow):
             hdr4.addWidget(QLabel("Variable:"))
             combo_1d = QComboBox()
             combo_1d.currentTextChanged.connect(self.update_1d_plot)
-            combo_1d.addItems(["xmean","imean","qmean"])  
+            combo_1d.addItems(["xmean", "imean", "qmean"])
             hdr4.addWidget(combo_1d)
             hdr4.addStretch()
             tab4_layout.addLayout(hdr4)
@@ -650,7 +1031,9 @@ class ExperimentUI(QMainWindow):
 
         self.last_saved_path_label = QLabel("No graph saved yet.")
         self.last_saved_path_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.last_saved_path_label.setStyleSheet("color: blue; text-decoration: underline;")
+        self.last_saved_path_label.setStyleSheet(
+            "color: blue; text-decoration: underline;"
+        )
         self.last_saved_path_label.mousePressEvent = self.open_saved_graph_folder
         graph_bottom_row.addWidget(self.last_saved_path_label)
 
@@ -669,7 +1052,7 @@ class ExperimentUI(QMainWindow):
         label.setStyleSheet("font-weight: bold;")
         vlayout.addWidget(label)
 
-        self.log_text = QTextEdit()  
+        self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
         vlayout.addWidget(self.log_text)
 
@@ -679,7 +1062,7 @@ class ExperimentUI(QMainWindow):
         top_menu = QHBoxLayout()
         top_menu.setContentsMargins(5, 5, 5, 5)
         top_menu.setSpacing(5)
-        top_menu.setAlignment(Qt.AlignTop)  
+        top_menu.setAlignment(Qt.AlignTop)
 
         top_menu_container = QWidget()
         top_menu_container.setLayout(top_menu)
@@ -712,7 +1095,6 @@ class ExperimentUI(QMainWindow):
 
         return top_menu_container
 
-
     def toggle_fullscreen(self):
         if self.isFullScreen():
             self.showNormal()
@@ -725,9 +1107,15 @@ class ExperimentUI(QMainWindow):
         init_layout.setContentsMargins(0, 0, 0, 0)
         self.set_parameters_and_initialize_btn = QPushButton("Initialize")
         self.set_parameters_and_initialize_btn.setMinimumHeight(40)
-        self.set_parameters_and_initialize_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
-        self.set_parameters_and_initialize_btn.clicked.connect(self.initialize_from_settings_panel)
-        self.set_parameters_and_initialize_btn.setToolTip("Helpful information") #Tool tip here!
+        self.set_parameters_and_initialize_btn.setStyleSheet(
+            "font-size: 10pt; padding: 2px 4px;"
+        )
+        self.set_parameters_and_initialize_btn.clicked.connect(
+            self.initialize_from_settings_panel
+        )
+        self.set_parameters_and_initialize_btn.setToolTip(
+            "Helpful information"
+        )  # Tool tip here!
         self.indicator_initialize = QLabel(" ")
         self.indicator_initialize.setFixedSize(10, 10)
         self.indicator_initialize.setStyleSheet(
@@ -736,7 +1124,6 @@ class ExperimentUI(QMainWindow):
         init_layout.addWidget(self.set_parameters_and_initialize_btn)
         init_layout.addWidget(self.indicator_initialize)
         top_menu.addWidget(init_widget)
-
 
         read_unprocessed_widget = QWidget()
         read_unprocessed_layout = QHBoxLayout(read_unprocessed_widget)
@@ -762,7 +1149,7 @@ class ExperimentUI(QMainWindow):
         self.read_processed_btn.setMinimumHeight(40)
         self.read_processed_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.read_processed_btn.clicked.connect(self.read_processed_frontend)
-        self.read_processed_btn.setToolTip("Helpful information") 
+        self.read_processed_btn.setToolTip("Helpful information")
         self.indicator_read_processed = QLabel(" ")
         self.indicator_read_processed.setFixedSize(10, 10)
         self.indicator_read_processed.setStyleSheet(
@@ -779,7 +1166,7 @@ class ExperimentUI(QMainWindow):
         self.sweep_start_stop_btn.setMinimumHeight(40)
         self.sweep_start_stop_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend)
-        self.sweep_start_stop_btn.setToolTip("Helpful information") #Tool tip here!
+        self.sweep_start_stop_btn.setToolTip("Helpful information")  # Tool tip here!
         self.indicator_sweep = QLabel(" ")
         self.indicator_sweep.setFixedSize(10, 10)
         self.indicator_sweep.setStyleSheet(
@@ -795,7 +1182,7 @@ class ExperimentUI(QMainWindow):
         return top_menu
 
     def change_experiment_type(self, experiment_type):
-        if hasattr(self, 'worker'):
+        if hasattr(self, "worker"):
             self.worker.stop_sweep()
             self.indicator_sweep.setStyleSheet(
                 "background-color: grey; border: 1px solid black; border-radius: 5px;"
@@ -810,7 +1197,7 @@ class ExperimentUI(QMainWindow):
 
             self.settings_panel.load_settings_panel(
                 self.experiment_templates[experiment_type],
-                default_file=self.current_experiment.default_file
+                default_file=self.current_experiment.default_file,
             )
 
             for i in range(self.graph_tabs.count()):
@@ -843,7 +1230,7 @@ class ExperimentUI(QMainWindow):
                     item = layout.takeAt(0)
                     if item.widget():
                         item.widget().setParent(None)
-                    elif item.layout(): 
+                    elif item.layout():
                         nested_layout = item.layout()
                         while nested_layout.count():
                             sub_item = nested_layout.takeAt(0)
@@ -891,36 +1278,41 @@ class ExperimentUI(QMainWindow):
             if self.current_experiment.expt:
                 data_name_2d = self.combo_2d.currentText()
                 pg_2D = ps.PlotGenerator(
-                    expt=self.current_experiment.expt, d=2,
-                    x_name='t',
-                    y_name=self.current_experiment.parameters['y_name'],
+                    expt=self.current_experiment.expt,
+                    d=2,
+                    x_name="t",
+                    y_name=self.current_experiment.parameters["y_name"],
                     data_name=data_name_2d,
-                    transpose=1
+                    transpose=1,
                 )
                 self.current_experiment.sweep_graph_2D.on_live_plot_2D((pg_2D))
         except Exception as e:
             print(f"Error updating 2d plot: {e}")
-  
-    
+
     def update_1d_plot(self):
         if self.current_experiment.expt:
             data_name_1d = self.combo_1d.currentText()
-            pg_1D = ps.PlotGenerator(   
-                                expt=self.current_experiment.expt, d=1,
-                                x_name=self.current_experiment.parameters['y_name'],
-                                data_name=data_name_1d,
-                            )
+            pg_1D = ps.PlotGenerator(
+                expt=self.current_experiment.expt,
+                d=1,
+                x_name=self.current_experiment.parameters["y_name"],
+                data_name=data_name_1d,
+            )
             self.current_experiment.sweep_graph_1D.on_live_plot_1D((pg_1D))
 
     def init_parameters_from_template(self):
         """Seed self.temp_parameters with every key from the current template."""
-        template = self.experiment_templates.get(self.current_experiment.type, {"groups": {}})
+        template = self.experiment_templates.get(
+            self.current_experiment.type, {"groups": {}}
+        )
         for group in template["groups"].values():
             for setting in group:
                 underlying = setting.get("key")
                 default = setting.get("default", "")
                 if isinstance(underlying, list):
-                    for key, d in zip(underlying, default if isinstance(default, list) else []):
+                    for key, d in zip(
+                        underlying, default if isinstance(default, list) else []
+                    ):
                         if key not in self.temp_parameters:
                             self.temp_parameters[key] = d
                 else:
@@ -952,9 +1344,11 @@ class ExperimentUI(QMainWindow):
                     value = widget.currentText()
                 elif isinstance(widget, QCheckBox):
                     value = widget.isChecked()
-                elif isinstance(widget, QWidget) and hasattr(widget, "composite_values"):
+                elif isinstance(widget, QWidget) and hasattr(
+                    widget, "composite_values"
+                ):
                     value = widget.composite_values()
-                     
+
                     if isinstance(value, list):
                         if underlying:
                             for idx, (key, v) in enumerate(zip(underlying, value)):
@@ -970,7 +1364,7 @@ class ExperimentUI(QMainWindow):
                     else:
                         new_params[underlying] = value
 
-        self.current_experiment.set_parameters(new_params) 
+        self.current_experiment.set_parameters(new_params)
 
         self.indicator_initialize.setStyleSheet(
             "background-color: grey; border: 1px solid black; border-radius: 5px;"
@@ -988,7 +1382,6 @@ class ExperimentUI(QMainWindow):
 
         print("\n")
         print("Select an action. \n")
-
 
     def read_unprocessed_frontend(self):
         self.indicator_read_unprocessed.setStyleSheet(
@@ -1009,8 +1402,12 @@ class ExperimentUI(QMainWindow):
 
         self.worker_thread.started.connect(self.worker.run_snapshot)
         self.worker.updateStatus.connect(self.on_worker_status_update)
-        self.worker.dataReady_se.connect(self.current_experiment.read_unprocessed_graph.update_canvas_se)
-        self.worker.dataReady_ps.connect(self.current_experiment.read_unprocessed_graph.update_canvas_psweep)
+        self.worker.dataReady_se.connect(
+            self.current_experiment.read_unprocessed_graph.update_canvas_se
+        )
+        self.worker.dataReady_ps.connect(
+            self.current_experiment.read_unprocessed_graph.update_canvas_psweep
+        )
 
         self.worker.finished.connect(self.worker_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
@@ -1019,37 +1416,38 @@ class ExperimentUI(QMainWindow):
 
         self.worker_thread.start()
 
-
-
     def read_processed_frontend(self):
-            self.indicator_read_processed.setStyleSheet(
-                "background-color: red; border: 1px solid black; border-radius: 5px;"
-            )
+        self.indicator_read_processed.setStyleSheet(
+            "background-color: red; border: 1px solid black; border-radius: 5px;"
+        )
 
-            self.read_unprocessed_btn.setEnabled(False)
-            self.read_processed_btn.setEnabled(False)
-            self.sweep_start_stop_btn.setEnabled(False)
-            self.set_parameters_and_initialize_btn.setEnabled(False)
-            self.is_process_running = True
+        self.read_unprocessed_btn.setEnabled(False)
+        self.read_processed_btn.setEnabled(False)
+        self.sweep_start_stop_btn.setEnabled(False)
+        self.set_parameters_and_initialize_btn.setEnabled(False)
+        self.is_process_running = True
 
-            self.graph_tabs.setCurrentIndex(1)
+        self.graph_tabs.setCurrentIndex(1)
 
-            self.worker_thread = QThread(self)
-            self.worker = Worker(self.current_experiment, "read_processed")
-            self.worker.moveToThread(self.worker_thread)
+        self.worker_thread = QThread(self)
+        self.worker = Worker(self.current_experiment, "read_processed")
+        self.worker.moveToThread(self.worker_thread)
 
-            self.worker_thread.started.connect(self.worker.run_snapshot)
-            self.worker.updateStatus.connect(self.on_worker_status_update)
-            self.worker.dataReady_se.connect(self.current_experiment.read_processed_graph.update_canvas_se)
-            self.worker.dataReady_ps.connect(self.current_experiment.read_processed_graph.update_canvas_psweep)
+        self.worker_thread.started.connect(self.worker.run_snapshot)
+        self.worker.updateStatus.connect(self.on_worker_status_update)
+        self.worker.dataReady_se.connect(
+            self.current_experiment.read_processed_graph.update_canvas_se
+        )
+        self.worker.dataReady_ps.connect(
+            self.current_experiment.read_processed_graph.update_canvas_psweep
+        )
 
-            self.worker.finished.connect(self.worker_thread.quit)
-            self.worker.finished.connect(self.worker.deleteLater)
-            self.worker_thread.finished.connect(self.worker_thread.deleteLater)
-            self.worker.finished.connect(self.reset_action_buttons)
+        self.worker.finished.connect(self.worker_thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+        self.worker.finished.connect(self.reset_action_buttons)
 
-            self.worker_thread.start()
-
+        self.worker_thread.start()
 
     def toggle_start_stop_sweep_frontend(self):
         if self.sweep_start_stop_btn.text() == "Start Sweep":
@@ -1078,7 +1476,7 @@ class ExperimentUI(QMainWindow):
                     self.current_experiment,
                     "sweep",
                     combo_2d=self.combo_2d,
-                    combo_1d=self.combo_1d
+                    combo_1d=self.combo_1d,
                 )
             self.worker.moveToThread(self.worker_thread)
 
@@ -1100,12 +1498,12 @@ class ExperimentUI(QMainWindow):
             self.worker_thread.start()
 
         else:
-            if hasattr(self, 'worker'):
+            if hasattr(self, "worker"):
                 print("Stopping sweep…")
                 self.worker.stop_sweep()
                 print("Stop requested.")
                 self.on_finished_sweep()
-    
+
     def on_finished_sweep(self):
         try:
             self.sweep_already_ran = True
@@ -1128,19 +1526,18 @@ class ExperimentUI(QMainWindow):
         if self.sweep_already_ran == False:
             self.sweep_start_stop_btn.setEnabled(True)
             self.indicator_sweep.setStyleSheet(
-                    "background-color: grey; border: 1px solid black; border-radius: 5px;"
-                )
+                "background-color: grey; border: 1px solid black; border-radius: 5px;"
+            )
             self.sweep_start_stop_btn.setText("Start Sweep")
 
         else:
             self.sweep_start_stop_btn.setEnabled(False)
             self.indicator_sweep.setStyleSheet(
-                    "background-color: grey; border: 1px solid black; border-radius: 5px;"
-                )
+                "background-color: grey; border: 1px solid black; border-radius: 5px;"
+            )
             self.sweep_start_stop_btn.setText("Start Sweep")
-        
-        self.is_process_running = False
 
+        self.is_process_running = False
 
     def hardware_off_frontend(self):
         """calls a backend function that turns off the harware for the experiment"""
@@ -1155,8 +1552,7 @@ class ExperimentUI(QMainWindow):
         This slot receives status messages from the worker thread
         and can display them in the log area or console.
         """
-        print(message) 
-   
+        print(message)
 
     def save_current_graph(self):
         """Saves the graph from the currently selected tab."""
@@ -1171,11 +1567,15 @@ class ExperimentUI(QMainWindow):
         elif current_index == 3:
             fig = self.current_experiment.sweep_graph_1D.figure
         else:
-            return  
+            return
 
         options = QFileDialog.Options()
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Graph As...", "", "PNG Files (*.png);;PDF Files (*.pdf);;All Files (*)", options=options
+            self,
+            "Save Graph As...",
+            "",
+            "PNG Files (*.png);;PDF Files (*.pdf);;All Files (*)",
+            options=options,
         )
 
         if file_path:
@@ -1185,7 +1585,9 @@ class ExperimentUI(QMainWindow):
     def open_saved_graph_folder(self, event):
         if self.last_saved_graph_path:
             folder = os.path.dirname(self.last_saved_graph_path)
-            os.system(f'open "{folder}"')  # 'xdg-open' for Linux. Use `open` for macOS, or `start` for Windows.
+            os.system(
+                f'open "{folder}"'
+            )  # 'xdg-open' for Linux. Use `open` for macOS, or `start` for Windows.
 
     def expand_queue_panel(self):
         self.queue_window = QWidget()
@@ -1214,16 +1616,16 @@ class ExperimentUI(QMainWindow):
 
         self.queue_window.setLayout(layout)
         self.queue_window.show()
-    
+
     def add_to_queue(self):
         try:
             new_experiment = ExperimentType(self.current_experiment.type)
 
             queue_item = QueuedExperiment(
-                start_stop_sweep_function = self.toggle_start_stop_sweep_frontend,
+                start_stop_sweep_function=self.toggle_start_stop_sweep_frontend,
                 experiment=new_experiment,
                 queue_manager=self.queue_manager,
-                last_used_directory=self.last_saved_graph_path
+                last_used_directory=self.last_saved_graph_path,
             )
 
             if queue_item.valid:
@@ -1231,60 +1633,65 @@ class ExperimentUI(QMainWindow):
         except Exception as e:
             print(e)
 
+
 class QueueRunnerWorker(QThread):
-    experiment_locked = pyqtSignal(object)  
-    experiment_unlocked = pyqtSignal(object)  
-    queue_stopped = pyqtSignal()  
-    hardware_error = pyqtSignal(object, str) 
-    
+    experiment_locked = pyqtSignal(object)
+    experiment_unlocked = pyqtSignal(object)
+    queue_stopped = pyqtSignal()
+    hardware_error = pyqtSignal(object, str)
+
     def __init__(self, queue_manager):
         super().__init__()
         self.queue_manager = queue_manager
         self.stop_requested = False
-    
+
     def run(self):
         while not self.stop_requested:
             experiment = self.get_next_experiment()
             if not experiment:
-                self.queue_stopped.emit()  
+                self.queue_stopped.emit()
                 return
-            
+
             self.experiment_locked.emit(experiment)
-            
+
             try:
                 self.initialize_experiment(experiment)
             except Exception as e:
-                self.hardware_error.emit(experiment, str(e))  
-                self.experiment_unlocked.emit(experiment)  
-                self.queue_stopped.emit()  
+                self.hardware_error.emit(experiment, str(e))
+                self.experiment_unlocked.emit(experiment)
+                self.queue_stopped.emit()
                 return
 
             self.mark_experiment_done(experiment)
-            self.move_to_next_experiment()  
-    
+            self.move_to_next_experiment()
+
     def run_worker_task(self, experiment, task):
-        worker = Worker(experiment.experiment, task)  
+        worker = Worker(experiment.experiment, task)
         thread = QThread()
 
         worker.moveToThread(thread)
 
         thread.started.connect(worker.run_snapshot)
 
-        worker.dataReady_se.connect(experiment.experiment.read_unprocessed_graph.update_canvas_se)
-        worker.dataReady_ps.connect(experiment.experiment.read_unprocessed_graph.update_canvas_psweep)
+        worker.dataReady_se.connect(
+            experiment.experiment.read_unprocessed_graph.update_canvas_se
+        )
+        worker.dataReady_ps.connect(
+            experiment.experiment.read_unprocessed_graph.update_canvas_psweep
+        )
 
-        worker.updateStatus.connect(self.queue_manager.parent().on_worker_status_update) 
+        worker.updateStatus.connect(self.queue_manager.parent().on_worker_status_update)
         worker.finished.connect(thread.quit)
         worker.finished.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
 
         thread.start()
-    
+
     def get_next_experiment(self):
         if self.queue_manager.active_queue_list.count() > 0:
-            return self.queue_manager.active_queue_list.item(0)  
+            return self.queue_manager.active_queue_list.item(0)
         return None
-    
+
     def initialize_experiment(self, experiment):
         experiment.init_experiment()
 
@@ -1296,25 +1703,28 @@ class QueueRunnerWorker(QThread):
 
         if experiment.has_read_processed:
             self.run_worker_task(experiment, task="read_processed")
-    
+
     def mark_experiment_done(self, experiment):
         now = datetime.now()
 
         if not self.queue_manager.session_started:
             self.queue_manager.session_started = True
-            timestamp = now.strftime("%Y-%m-%d %H:%M:%S")  
+            timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
         else:
-            timestamp = now.strftime("%H:%M:%S")           
+            timestamp = now.strftime("%H:%M:%S")
 
-        display_name = experiment.parameters_dict.get("display_name", "Unnamed Experiment")
+        display_name = experiment.parameters_dict.get(
+            "display_name", "Unnamed Experiment"
+        )
         save_location = experiment.parameters_dict.get("save_directory", "")
 
         self.queue_manager.history_log.append((timestamp, display_name, save_location))
 
         experiment.set_done()
-    
+
     def move_to_next_experiment(self):
         self.queue_manager.active_queue_list.takeItem(0)
+
 
 class QueueManager(QWidget):
     def __init__(self, start_stop_sweep_function=None, parent=None):
@@ -1322,12 +1732,12 @@ class QueueManager(QWidget):
 
         self.start_stop_sweep_function = start_stop_sweep_function
 
-        self.queue_runner = None  
+        self.queue_runner = None
         self.queue_running = False
 
         self.history_log = []
         self.session_started = False
-        
+
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
@@ -1386,12 +1796,12 @@ class QueueManager(QWidget):
         """Handle the start/stop of the queue"""
         self.toggle_run_button_text()
         if self.queue_runner and self.queue_runner.isRunning():
-            self.stop_queue()  
+            self.stop_queue()
         else:
             self.queue_running = True
             print("Calling next queue item()")
-            self.next_queue_item()  
-    
+            self.next_queue_item()
+
     def stop_queue(self):
         """Request the queue to stop."""
         if self.queue_runner:
@@ -1411,38 +1821,44 @@ class QueueManager(QWidget):
     def queue_stopped_due_to_completion_or_error(self):
         """Called when the queue runner stops naturally or due to error."""
         self.queue_running = False
-        self.toggle_run_button.setText("Start")  
+        self.toggle_run_button.setText("Start")
         print("Queue has stopped.")
 
     def handle_hardware_error(self, experiment, error_message):
         """Handle hardware error by printing/logging."""
-        print(f"Hardware error detected in experiment: {experiment.parameters_dict.get('display_name', 'Unknown')}")
+        print(
+            f"Hardware error detected in experiment: {experiment.parameters_dict.get('display_name', 'Unknown')}"
+        )
         print(f"Error: {error_message}")
 
     def lock_experiment(self, experiment):
         """Grey out an experiment item."""
         if isinstance(experiment, QueuedExperiment):
-            experiment.widget.setStyleSheet("""
+            experiment.widget.setStyleSheet(
+                """
                 QWidget {
                     background-color: #cccccc;
                     border: 2px solid #888;
                     border-radius: 6px;
                     padding: 8px;
                 }
-            """)
+            """
+            )
 
     def unlock_experiment(self, experiment):
         """Un-grey an experiment item."""
         if isinstance(experiment, QueuedExperiment):
-            experiment.widget.setStyleSheet("""
+            experiment.widget.setStyleSheet(
+                """
                 QWidget {
                     background-color: #f9f9f9;
                     border: 2px solid #888;
                     border-radius: 6px;
                     padding: 8px;
                 }
-            """)
-    
+            """
+            )
+
     def toggle_run_button_text(self):
         """
         Toggles the text between 'Start' and 'Stop' when the button is clicked.
@@ -1458,7 +1874,9 @@ class QueueManager(QWidget):
         is_visible = self.expanded_frame.isVisible()
         self.expanded_frame.setVisible(not is_visible)
         arrow = "▲" if not is_visible else "▼"
-        self.collapsed_button.setText(f"Currently Running: {self.current_running_text} {arrow}")
+        self.collapsed_button.setText(
+            f"Currently Running: {self.current_running_text} {arrow}"
+        )
 
     def set_current_running(self, text):
         self.current_running_text = text
@@ -1469,16 +1887,22 @@ class QueueManager(QWidget):
         self.active_queue_list.addItem(widget_item)
 
     def add_to_working_queue(self, queued_experiment):
-        print(f"Adding queued experiment: {queued_experiment.parameters_dict['display_name']} to working queue...")
+        print(
+            f"Adding queued experiment: {queued_experiment.parameters_dict['display_name']} to working queue..."
+        )
         self.working_queue_list.addItem(queued_experiment)
-        self.working_queue_list.setItemWidget(queued_experiment, queued_experiment.widget)
-    
+        self.working_queue_list.setItemWidget(
+            queued_experiment, queued_experiment.widget
+        )
+
     def show_history(self):
-        """""""""
+        """""" """
         Creates a new panel that shows Queue history in a scrollable pop-up
         """
         if not self.history_log:
-            QMessageBox.information(self, "History", "No experiments have been run yet.")
+            QMessageBox.information(
+                self, "History", "No experiments have been run yet."
+            )
             return
 
         dialog = QDialog(self)
@@ -1492,9 +1916,11 @@ class QueueManager(QWidget):
 
         log_entries = []
         for timestamp, name, location in self.history_log:
-            log_entries.append(f"{timestamp}\nExperiment: {name}\nSaved to: {location}\n\n")
+            log_entries.append(
+                f"{timestamp}\nExperiment: {name}\nSaved to: {location}\n\n"
+            )
 
-        history_text.setText(''.join(log_entries))
+        history_text.setText("".join(log_entries))
 
         layout.addWidget(history_text)
 
@@ -1510,14 +1936,14 @@ class QueueManager(QWidget):
         """
 
         if self.working_queue_list.count() == 0 and self.active_queue_list.count() == 0:
-            return  
+            return
 
         reply = QMessageBox.question(
             self,
             "Confirm Clear Queue",
             "Are you sure you want to clear the queue? Experiments will be lost forever.",
             QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
+            QMessageBox.No,
         )
 
         if reply == QMessageBox.Yes:
@@ -1526,7 +1952,7 @@ class QueueManager(QWidget):
                 if isinstance(item, QueuedExperiment):
                     del item.widget
                     del item.experiment
-                del item  
+                del item
 
             while self.active_queue_list.count() > 0:
                 item = self.active_queue_list.takeItem(0)
@@ -1535,8 +1961,17 @@ class QueueManager(QWidget):
                     del item.experiment
                 del item
 
+
 class ExperimentSetupDialog(QDialog):
-    def __init__(self, experiment_type, parameters, last_used_directory=None, edit_settings=False, parent=None, values=None):
+    def __init__(
+        self,
+        experiment_type,
+        parameters,
+        last_used_directory=None,
+        edit_settings=False,
+        parent=None,
+        values=None,
+    ):
         super().__init__(parent)
         self.setWindowTitle("Configure Queued Experiment")
         self.setMinimumSize(600, 400)
@@ -1597,7 +2032,7 @@ class ExperimentSetupDialog(QDialog):
         self._apply_parameters_to_settings(parameters)
 
         if not self.edit_settings:
-            self.settings_panel.setDisabled(True) 
+            self.settings_panel.setDisabled(True)
 
         main_layout.addLayout(left_box, 2)
         main_layout.addWidget(self.settings_panel, 3)
@@ -1605,7 +2040,9 @@ class ExperimentSetupDialog(QDialog):
         if values:
             self.name_input.setText(values.get("display_name", "default name"))
             self.read_processed_checkbox.setChecked(values.get("read_processed", False))
-            self.read_unprocessed_checkbox.setChecked(values.get("read_unprocessed", False))
+            self.read_unprocessed_checkbox.setChecked(
+                values.get("read_unprocessed", False)
+            )
             self.sweep_checkbox.setChecked(values.get("sweep", False))
             self.save_checkbox.setChecked(values.get("save_graph_output", True))
             self.dir_input.setText(values.get("save_directory", self.save_directory))
@@ -1621,7 +2058,7 @@ class ExperimentSetupDialog(QDialog):
             for j in range(grp.childCount()):
                 item = grp.child(j)
                 widget = tree.itemWidget(item, 1)
-                key = getattr(widget, '_underlying_key', None)
+                key = getattr(widget, "_underlying_key", None)
 
                 if isinstance(key, list):
                     layout = widget.layout()
@@ -1661,7 +2098,7 @@ class ExperimentSetupDialog(QDialog):
             for j in range(grp.childCount()):
                 item = grp.child(j)
                 widget = tree.itemWidget(item, 1)
-                key = getattr(widget, '_underlying_key', None)
+                key = getattr(widget, "_underlying_key", None)
 
                 if isinstance(key, list):
                     layout = widget.layout()
@@ -1695,17 +2132,27 @@ class ExperimentSetupDialog(QDialog):
             "read_unprocessed": self.read_unprocessed_checkbox.isChecked(),
             "sweep": self.sweep_checkbox.isChecked(),
             "save_graph_output": self.save_checkbox.isChecked(),
-            "save_directory": self.dir_input.text().strip()
+            "save_directory": self.dir_input.text().strip(),
         }
-    
+
     def choose_directory(self):
-        selected_dir = QFileDialog.getExistingDirectory(self, "Select Save Directory", self.save_directory)
+        selected_dir = QFileDialog.getExistingDirectory(
+            self, "Select Save Directory", self.save_directory
+        )
         if selected_dir:
             self.save_directory = selected_dir
             self.dir_input.setText(selected_dir)
 
+
 class QueuedExperiment(QListWidgetItem):
-    def __init__(self, start_stop_sweep_function, experiment: ExperimentType, queue_manager, last_used_directory=None, parameters_dict=None):
+    def __init__(
+        self,
+        start_stop_sweep_function,
+        experiment: ExperimentType,
+        queue_manager,
+        last_used_directory=None,
+        parameters_dict=None,
+    ):
         super().__init__()
 
         self.start_stop_sweep_function = start_stop_sweep_function
@@ -1725,7 +2172,7 @@ class QueuedExperiment(QListWidgetItem):
                 self.experiment_type,
                 initial_params,
                 last_used_directory or os.getcwd(),
-                values={"display_name": default_name}
+                values={"display_name": default_name},
             )
 
             if dialog.exec_() == QDialog.Rejected:
@@ -1737,27 +2184,29 @@ class QueuedExperiment(QListWidgetItem):
             values = dialog.get_values()
 
             self.parameters_dict = {
-                "display_name":    values["display_name"],
-                "parameters":      updated_params,      
-                "read_processed":  values["read_processed"],
-                "read_unprocessed":values["read_unprocessed"],
-                "sweep":           values["sweep"],
+                "display_name": values["display_name"],
+                "parameters": updated_params,
+                "read_processed": values["read_processed"],
+                "read_unprocessed": values["read_unprocessed"],
+                "sweep": values["sweep"],
                 "save_graph_output": values["save_graph_output"],
-                "save_directory":  values["save_directory"],
-                "current_queue":   "working_queue"
+                "save_directory": values["save_directory"],
+                "current_queue": "working_queue",
             }
-            
+
             self.valid = True
 
         self.widget = QWidget()
-        self.widget.setStyleSheet("""
+        self.widget.setStyleSheet(
+            """
             QWidget {
                 background-color: #f9f9f9;
                 border: 2px solid #888;
                 border-radius: 6px;
                 padding: 8px;
             }
-        """)
+        """
+        )
         self.layout = QVBoxLayout(self.widget)
         self.layout.setContentsMargins(4, 4, 4, 4)
 
@@ -1783,9 +2232,15 @@ class QueuedExperiment(QListWidgetItem):
         row_layout.addWidget(self.delete_button)
         row_layout.addWidget(self.info_button)
 
-        for btn in [self.change_queue_button, self.duplicate_button, self.delete_button, self.info_button]:
+        for btn in [
+            self.change_queue_button,
+            self.duplicate_button,
+            self.delete_button,
+            self.info_button,
+        ]:
             btn.setFixedSize(button_size)
-            btn.setStyleSheet("""
+            btn.setStyleSheet(
+                """
                 QPushButton {
                     padding: 2px;
                     border: 1px solid #aaa;
@@ -1795,7 +2250,8 @@ class QueuedExperiment(QListWidgetItem):
                 QPushButton:hover {
                     background-color: #d0d0d0;
                 }
-            """)
+            """
+            )
 
         self.delete_button.clicked.connect(self.delete_self)
         self.info_button.clicked.connect(self.show_info_popup)
@@ -1813,7 +2269,7 @@ class QueuedExperiment(QListWidgetItem):
         Format: Abbreviation:expXXX
         """
         type_abbr = {"Spin Echo": "SE", "Pulse Frequency Sweep": "PFS"}
-        abbr = type_abbr.get(self.experiment_type, "UNK") 
+        abbr = type_abbr.get(self.experiment_type, "UNK")
 
         expt_name = self.experiment.parameters.get("expt", "exp").replace(" ", "")
 
@@ -1821,7 +2277,10 @@ class QueuedExperiment(QListWidgetItem):
 
         count = 0
 
-        for list_widget in [self.queue_manager.active_queue_list, self.queue_manager.working_queue_list]:
+        for list_widget in [
+            self.queue_manager.active_queue_list,
+            self.queue_manager.working_queue_list,
+        ]:
             for i in range(list_widget.count()):
                 item = list_widget.item(i)
                 if isinstance(item, QueuedExperiment):
@@ -1842,12 +2301,12 @@ class QueuedExperiment(QListWidgetItem):
     def lock_experiment(self, experiment):
         """Lock the experiment widget (grey out)"""
         if self == experiment:
-            self.widget.setStyleSheet("background-color: #d0d0d0;")  
+            self.widget.setStyleSheet("background-color: #d0d0d0;")
 
     def unlock_experiment(self, experiment):
         """Unlock the experiment widget (un-grey)"""
         if self == experiment:
-            self.widget.setStyleSheet("background-color: #f9f9f9;")  
+            self.widget.setStyleSheet("background-color: #f9f9f9;")
 
     @property
     def has_sweep(self):
@@ -1864,16 +2323,23 @@ class QueuedExperiment(QListWidgetItem):
     def set_done(self):
         """Grey out the widget and disable all buttons after experiment finishes."""
         print("Marking experiment done...")
-        self.widget.setStyleSheet("""
+        self.widget.setStyleSheet(
+            """
             QWidget {
                 background-color: #cccccc;
                 border: 2px solid #444;
                 border-radius: 6px;
                 padding: 8px;
             }
-        """)
+        """
+        )
 
-        for button in [self.change_queue_button, self.duplicate_button, self.delete_button, self.info_button]:
+        for button in [
+            self.change_queue_button,
+            self.duplicate_button,
+            self.delete_button,
+            self.info_button,
+        ]:
             button.setEnabled(False)
 
     def init_experiment(self):
@@ -1891,7 +2357,7 @@ class QueuedExperiment(QListWidgetItem):
             self.parameters_dict["parameters"].copy(),
             last_used_directory=self.parameters_dict["save_directory"],
             edit_settings=True,
-            values=self.parameters_dict
+            values=self.parameters_dict,
         )
         if dialog.exec_() == QDialog.Accepted:
             values = dialog.get_values()
@@ -1904,7 +2370,9 @@ class QueuedExperiment(QListWidgetItem):
 
             self.parameters_dict["parameters"] = dialog.get_updated_parameters()
 
-            self.label.setText(f"{self.parameters_dict['display_name']} — {self.experiment_type}")
+            self.label.setText(
+                f"{self.parameters_dict['display_name']} — {self.experiment_type}"
+            )
 
     def delete_self(self):
         """
@@ -1937,8 +2405,13 @@ class QueuedExperiment(QListWidgetItem):
             clone_dict["current_queue"] = "working_queue"
             target_queue = self.queue_manager.working_queue_list
 
-        new_item = QueuedExperiment(self.start_stop_sweep_function, self.experiment, self.queue_manager, parameters_dict=clone_dict)
-        
+        new_item = QueuedExperiment(
+            self.start_stop_sweep_function,
+            self.experiment,
+            self.queue_manager,
+            parameters_dict=clone_dict,
+        )
+
         if not new_item.valid:
             return
 
@@ -1946,14 +2419,17 @@ class QueuedExperiment(QListWidgetItem):
         target_queue.setItemWidget(new_item, new_item.widget)
 
         self.delete_self()
-        
+
     def duplicate(self):
         """
         Duplicates this experiment in the same queue with a new name.
         """
         new_name, ok = QInputDialog.getText(
-            self.widget, "Duplicate Experiment", "Enter a name for the duplicated experiment:",
-            QLineEdit.Normal, self.parameters_dict["display_name"] + " (Copy)"
+            self.widget,
+            "Duplicate Experiment",
+            "Enter a name for the duplicated experiment:",
+            QLineEdit.Normal,
+            self.parameters_dict["display_name"] + " (Copy)",
         )
         if not ok or not new_name.strip():
             return
@@ -1961,21 +2437,31 @@ class QueuedExperiment(QListWidgetItem):
         clone_dict = self.parameters_dict.copy()
         clone_dict["display_name"] = new_name.strip()
 
-        new_item = QueuedExperiment(self.start_stop_sweep_function, self.experiment, self.queue_manager, parameters_dict=clone_dict)
+        new_item = QueuedExperiment(
+            self.start_stop_sweep_function,
+            self.experiment,
+            self.queue_manager,
+            parameters_dict=clone_dict,
+        )
 
         if not new_item.valid:
             return
 
         if self.parameters_dict["current_queue"] == "active_queue":
             self.queue_manager.active_queue_list.addItem(new_item)
-            self.queue_manager.active_queue_list.setItemWidget(new_item, new_item.widget)
+            self.queue_manager.active_queue_list.setItemWidget(
+                new_item, new_item.widget
+            )
         else:
             self.queue_manager.working_queue_list.addItem(new_item)
-            self.queue_manager.working_queue_list.setItemWidget(new_item, new_item.widget)
+            self.queue_manager.working_queue_list.setItemWidget(
+                new_item, new_item.widget
+            )
+
 
 def main():
     app = QApplication(sys.argv)
-    app.setWindowIcon(QIcon("icon.png")) 
+    app.setWindowIcon(QIcon("icon.png"))
     ex = ExperimentUI()
     ex.show()
     screen = QDesktopWidget().screenGeometry()
@@ -1984,6 +2470,7 @@ def main():
     ex.setGeometry(0, 0, int(screen_width), int(screen_height))
     ex.setWindowIcon(QIcon("icon.png"))
     sys.exit(app.exec_())
-    
+
+
 if __name__ == "__main__":
     main()
