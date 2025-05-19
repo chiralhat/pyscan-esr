@@ -2222,10 +2222,16 @@ class ExperimentSetupDialog(QDialog):
         parent=None,
         values=None,
     ):
-        """Initializes a new queued experiment.
+        """
+        A configuration dialog for queued experiments.
 
-        If parameters_dict is not provided, shows a dialog to configure settings and metadata.
-        Builds the associated QWidget display used inside the queue list.
+        This dialog allows the user to:
+        - Name the experiment
+        - Select which tasks (read processed, read unprocessed, sweep) to run
+        - Choose whether to save the resulting graph and where to save it
+        - (Optionally) edit the experiment settings panel on the right
+
+        Used when adding a new experiment to the queue or editing an existing one.
         """
         super().__init__(parent)
         self.setWindowTitle("Configure Queued Experiment")
@@ -2238,6 +2244,7 @@ class ExperimentSetupDialog(QDialog):
 
         main_layout = QHBoxLayout(self)
 
+        # --- LEFT PANEL: Name, checkboxes, directory, buttons ---
         left_box = QVBoxLayout()
 
         self.name_label = QLabel("Experiment Name:")
@@ -2247,6 +2254,7 @@ class ExperimentSetupDialog(QDialog):
         left_box.addWidget(self.name_label)
         left_box.addWidget(self.name_input)
 
+        # Checkboxes for task selection
         self.read_processed_checkbox = QCheckBox("Read Processed")
         left_box.addWidget(self.read_processed_checkbox)
         self.read_unprocessed_checkbox = QCheckBox("Read Unprocessed")
@@ -2257,6 +2265,7 @@ class ExperimentSetupDialog(QDialog):
         self.save_checkbox = QCheckBox("Save graph output")
         left_box.addWidget(self.save_checkbox)
 
+        # Directory selector
         self.dir_label = QLabel("Save to:")
         self.dir_input = QLineEdit()
         self.dir_input.setText(self.save_directory)
@@ -2270,6 +2279,7 @@ class ExperimentSetupDialog(QDialog):
         left_box.addWidget(self.dir_label)
         left_box.addLayout(dir_row)
 
+        # OK / Cancel buttons
         button_row = QHBoxLayout()
         self.cancel_button = QPushButton("Cancel")
         self.ok_button = QPushButton("Okay")
@@ -2281,6 +2291,7 @@ class ExperimentSetupDialog(QDialog):
         left_box.addStretch()
         left_box.addLayout(button_row)
 
+        # --- RIGHT PANEL: Settings tree view ---
         self.settings_panel = DynamicSettingsPanel()
         self.settings_panel.load_settings_panel(EXPERIMENT_TEMPLATES[experiment_type])
 
@@ -2289,9 +2300,11 @@ class ExperimentSetupDialog(QDialog):
         if not self.edit_settings:
             self.settings_panel.setDisabled(True)
 
+        # Assemble layout
         main_layout.addLayout(left_box, 2)
         main_layout.addWidget(self.settings_panel, 3)
 
+        # Pre-fill left panel values if provided
         if values:
             self.name_input.setText(values.get("display_name", "default name"))
             self.read_processed_checkbox.setChecked(values.get("read_processed", False))
@@ -2304,17 +2317,25 @@ class ExperimentSetupDialog(QDialog):
 
     def _apply_parameters_to_settings(self, param_dict):
         """
-        Fill the right-side settings panel with current experiment parameters.
+        Populate the right-side settings panel widgets with values from a saved parameters dictionary.
+
+        This is used to initialize the settings UI with stored values when editing or reviewing a queued experiment.
+
+        @param param_dict -- A dictionary of parameter keys and values used to pre-fill widgets.
         """
         tree = self.settings_panel.settings_tree
         root = tree.invisibleRootItem()
+        # Loop through each group in the settings tree
         for i in range(root.childCount()):
+
+            # Loop through each setting item in the group    
             grp = root.child(i)
             for j in range(grp.childCount()):
                 item = grp.child(j)
                 widget = tree.itemWidget(item, 1)
                 key = getattr(widget, "_underlying_key", None)
 
+                # Handle composite settings (e.g., multiple spin boxes)
                 if isinstance(key, list):
                     layout = widget.layout()
                     for idx, subkey in enumerate(key):
@@ -2322,20 +2343,38 @@ class ExperimentSetupDialog(QDialog):
                             val = param_dict[subkey]
                             sub_widget = layout.itemAt(idx).widget()
                             self._apply_value_to_widget(sub_widget, val)
+
+                # Handle single-key settings
                 else:
                     if key in param_dict:
                         val = param_dict[key]
                         self._apply_value_to_widget(widget, val)
 
     def _apply_value_to_widget(self, widget, value):
+        """
+        Apply a given value to a corresponding Qt input widget in the settings panel.
+
+        This is a helper method used during parameter loading to set the UI state
+        based on previously saved experiment settings.
+
+        @param widget -- The Qt widget instance (e.g., QSpinBox, QCheckBox) to populate.
+        @param value -- The value to apply to the widget.
+        """
+        # Handle numeric inputs
         if isinstance(widget, QSpinBox):
             widget.setValue(int(value))
         elif isinstance(widget, QDoubleSpinBox):
             widget.setValue(float(value))
+
+        # Handle boolean input
         elif isinstance(widget, QCheckBox):
             widget.setChecked(bool(value))
+
+        # Handle string input
         elif isinstance(widget, QLineEdit):
             widget.setText(str(value))
+
+        # Handle dropdown input
         elif isinstance(widget, QComboBox):
             idx = widget.findText(str(value))
             if idx != -1:
@@ -2343,43 +2382,77 @@ class ExperimentSetupDialog(QDialog):
 
     def get_updated_parameters(self):
         """
-        Read all settings from the settings panel and return as a dictionary.
+        Collect the current values from the settings panel and return them as a dictionary.
+
+        This function is used when the user confirms the dialog, ensuring that all modified
+        parameter values are extracted from their widgets for use in queue setup or execution.
+
+        @return dict -- A dictionary mapping parameter keys to their current values.
         """
         updated_params = {}
         tree = self.settings_panel.settings_tree
         root = tree.invisibleRootItem()
+
+        # Traverse each group in the settings tree    
         for i in range(root.childCount()):
             grp = root.child(i)
+            
+            # Traverse each setting item within the group    
             for j in range(grp.childCount()):
                 item = grp.child(j)
                 widget = tree.itemWidget(item, 1)
                 key = getattr(widget, "_underlying_key", None)
 
+                # Handle multi-key composite widgets (e.g., sweep start/end/step)
                 if isinstance(key, list):
                     layout = widget.layout()
                     for idx, subkey in enumerate(key):
                         sub_widget = layout.itemAt(idx).widget()
                         updated_params[subkey] = self._get_widget_value(sub_widget)
+                
+                # Handle standard single-key widgets
                 else:
                     if key:
                         updated_params[key] = self._get_widget_value(widget)
         return updated_params
 
     def _get_widget_value(self, widget):
+        """
+        Retrieve the current value from a given Qt input widget.
+
+        This helper is used to extract values from the settings panel during parameter gathering.
+
+        @param widget -- The widget to read from (QSpinBox, QLineEdit, etc.)
+        @return The value currently set in the widget.
+        """
+        # Numeric inputs
         if isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
             return widget.value()
+    
+        # Boolean input
         elif isinstance(widget, QCheckBox):
             return widget.isChecked()
+        
+        # Text input
         elif isinstance(widget, QLineEdit):
             return widget.text()
+        
+        # Dropdown selector
         elif isinstance(widget, QComboBox):
             return widget.currentText()
+        
+        # Fallback for unknown widget types
         else:
             return None
 
     def get_values(self):
         """
-        Return the left side values (not the right panel parameters).
+        Retrieve the metadata values from the left side of the dialog.
+
+        This includes experiment name, which actions to perform (read/sweep),
+        save preferences, and output directory — separate from the right-side parameter tree.
+
+        @return dict -- Dictionary of UI selections related to queue and file saving.
         """
         return {
             "display_name": self.name_input.text().strip(),
@@ -2391,15 +2464,30 @@ class ExperimentSetupDialog(QDialog):
         }
 
     def choose_directory(self):
+        """
+        Open a folder selection dialog and update the directory input field.
+
+        This is used to let the user choose where graph output files should be saved.
+        """
         selected_dir = QFileDialog.getExistingDirectory(
             self, "Select Save Directory", self.save_directory
         )
+    
+        # If a directory was selected, update both internal state and UI
         if selected_dir:
             self.save_directory = selected_dir
             self.dir_input.setText(selected_dir)
 
 
 class QueuedExperiment(QListWidgetItem):
+    """
+    Represents a single experiment in the working or active queue.
+
+    Stores experiment configuration, user preferences, and metadata.
+    Includes a QWidget-based visual representation with action buttons
+    for editing, duplicating, moving, or deleting the experiment.
+    """ 
+
     def __init__(
         self,
         start_stop_sweep_function,
@@ -2415,10 +2503,12 @@ class QueuedExperiment(QListWidgetItem):
         self.queue_manager = queue_manager
         self.experiment_type = experiment.type
 
+        # --- Initialize parameters from dictionary or user dialog ---
         if parameters_dict:
             self.parameters_dict = parameters_dict.copy()
             self.valid = True
         else:
+            # If no pre-defined dictionary, prompt user for config
             initial_params = experiment.parameters.copy()
 
             default_name = self.generate_default_display_name()
@@ -2451,6 +2541,7 @@ class QueuedExperiment(QListWidgetItem):
 
             self.valid = True
 
+        # --- Build visual queue item widget ---
         self.widget = QWidget()
         self.widget.setStyleSheet(
             """
@@ -2468,17 +2559,20 @@ class QueuedExperiment(QListWidgetItem):
         row_layout = QHBoxLayout()
         row_layout.setSpacing(8)
 
+        # Display name label
         self.label = QLabel(f"{self.parameters_dict['display_name']}")
         self.label.setStyleSheet("font-weight: bold;")
         row_layout.addWidget(self.label)
         row_layout.addStretch()
 
+        # Action buttons: Move / Copy / Delete / Edit
         button_size = QSize(48, 24)
         self.change_queue_button = QPushButton("Move")
         self.duplicate_button = QPushButton("Copy")
         self.delete_button = QPushButton("Delete")
         self.info_button = QPushButton("Edit")
 
+        # Hide edit button in the active queue
         if self.parameters_dict.get("current_queue") == "active_queue":
             self.info_button.hide()
 
@@ -2487,6 +2581,7 @@ class QueuedExperiment(QListWidgetItem):
         row_layout.addWidget(self.delete_button)
         row_layout.addWidget(self.info_button)
 
+        # Style and connect buttons
         for btn in [
             self.change_queue_button,
             self.duplicate_button,

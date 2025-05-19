@@ -3,6 +3,7 @@ import spinecho_scripts
 import pulsesweep_scripts
 import pyscan as ps
 from time import sleep, time
+import numpy as np
 
 import sys, os
 
@@ -128,8 +129,6 @@ def serialize_object(obj, max_depth=5, _depth=0):
 
     # Handle common serializable NumPy-like containers
     try:
-        import numpy as np
-
         if isinstance(obj, np.ndarray):
             return obj.tolist()
     except ImportError:

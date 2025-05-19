@@ -32,16 +32,20 @@ class GraphWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        # Set transparent background and no border
         self.setStyleSheet("background: transparent; border: none;")
 
+        # Create a Matplotlib figure and embed it into a PyQt5 widget
         self.figure = Figure()
         self.ax = self.figure.add_subplot(111)
         self.canvas = FigureCanvas(self.figure)
 
+        # Add canvas to vertical layout
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
 
+        # Enable right-click context menu for graph saving
         self.canvas.setContextMenuPolicy(Qt.CustomContextMenu)
         self.canvas.customContextMenuRequested.connect(self.show_context_menu)
 
@@ -68,6 +72,7 @@ class GraphWidget(QWidget):
 
         if task_name == "read_processed":
             try:
+                # Fit and plot expected signal model
                 fit, err = ps.plot_exp_fit_norange(
                     np.array([sig.time, sig.x]), sig.freq, 1, plt=self.ax
                 )
@@ -75,6 +80,7 @@ class GraphWidget(QWidget):
                 self.ax.plot(
                     sig.time, sig.x, label="Signal"
                 )  # This line is crucial for legend
+                # Display fit parameters on plot
                 fitstr = (
                     f"A={sig.fit[1]:.3g} V, t={sig.fit[2]:.3g} μs, Q={sig.fit[-1]:.3g}"
                 )
@@ -102,6 +108,7 @@ class GraphWidget(QWidget):
                 )
 
         elif task_name == "read_unprocessed":
+            # Plot raw signal components
             self.ax.plot(sig.time, sig.i, color="yellow", label="CH1")
             self.ax.plot(sig.time, sig.q, color="b", label="CH2")
             self.ax.plot(sig.time, sig.x, color="g", label="AMP")
@@ -134,17 +141,21 @@ class SweepPlotWidget(QWidget):
         super().__init__(parent)
         self.setStyleSheet("background: transparent; border: none;")
 
+        # Create figure, canvas, and axes
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
         self.ax = self.figure.add_subplot(111)
 
+        # Placeholder plot elements
         self.mesh = None
         self.colorbar = None
         (self.line,) = self.ax.plot([], [], "o-")
 
+        # Add canvas to layout
         layout = QVBoxLayout(self)
         layout.addWidget(self.canvas)
 
+        # Enable context menu
         self.canvas.setContextMenuPolicy(Qt.CustomContextMenu)
         self.canvas.customContextMenuRequested.connect(self.show_context_menu)
 
@@ -155,6 +166,7 @@ class SweepPlotWidget(QWidget):
             return
 
         if self.mesh is None:
+            # Initial draw of the pcolormesh
             self.mesh = self.ax.pcolormesh(
                 pg.x,
                 pg.y,
@@ -165,10 +177,12 @@ class SweepPlotWidget(QWidget):
             )
             self.colorbar = self.figure.colorbar(self.mesh, ax=self.ax)
         else:
+            # Update existing mesh with new data
             self.mesh.set_array(pg.data.T.ravel())
             vmin, vmax = pg.get_data_range()
             self.mesh.set_clim(vmin, vmax)
 
+        # Update plot labels and title
         self.ax.set_title(pg.get_title())
         self.ax.set_xlabel(pg.get_xlabel())
         self.ax.set_ylabel(pg.get_ylabel())
@@ -183,9 +197,11 @@ class SweepPlotWidget(QWidget):
 
         self.line.set_data(pg.x, pg.data)
 
+        # Rescale axes to fit new data
         self.ax.relim()
         self.ax.autoscale_view()
 
+        # Set labels and title
         self.ax.set_title(pg.get_title())
         self.ax.set_xlabel(pg.get_xlabel())
         self.ax.set_ylabel(pg.get_ylabel())

@@ -37,26 +37,31 @@ class ExperimentType(QObject):
     including setting parameters, initializing hardware, running sweeps, and reading results.
     """
 
+    # Signal emitted when data is ready to be plotted (used to notify GUI)
     plot_update_signal = pyqtSignal()
 
     def __init__(self, exp_type):
         super().__init__()
-        self.type = exp_type
+        self.type = exp_type # Experiment type string
 
+        # Parameter dictionaries to be populated by the UI or script
         self.parameters = {}
         self.sweep = {}
-        self.expt = None
+        self.expt = None # Handle during sweep
 
+        # Default parameter files for different experiment types
         if self.type == "Spin Echo":
             self.default_file = "se_defaults.pkl"
         elif self.type == "Pulse Frequency Sweep":
             self.default_file = "ps_defaults.pkl"
 
+        # Initialize graphs for processed and unprocessed reads and sweeps
         self.read_unprocessed_graph = GraphWidget()
         self.read_processed_graph = GraphWidget()
         self.sweep_graph_2D = SweepPlotWidget()
         self.sweep_graph_1D = SweepPlotWidget()
 
+        # Placeholder for a reference to the GUI
         self.spinecho_gui = None
 
     def set_parameters(self, parameters):
@@ -70,6 +75,7 @@ class ExperimentType(QObject):
         self.parameters = parameters
 
         try:
+            # Determine number of repetitions and period for timing calculations
             if "ave_reps" in self.parameters.keys():
                 reps = self.parameters["ave_reps"]
             else:
@@ -78,14 +84,21 @@ class ExperimentType(QObject):
                 period = self.parameters["period"]
             else:
                 period = 500
+            
+            # Compute subtime for each acquisition
             tmult = period / 1e6 * 4 * reps
             self.parameters["subtime"] = self.parameters["soft_avgs"] * tmult
+
+            # Build output file name with today's date
             datestr = date.today().strftime("%y%m%d")
             fname = datestr + str(self.parameters["file_name"]) + "_"
             self.parameters["outfile"] = str(Path(self.parameters["save_dir"]) / fname)
 
+            # Save default parameters locally
             with open(self.default_file, "wb") as f:
                 pickle.dump(self.parameters, f)
+
+            # Package data to send to server for initialization
             data = {
                 "parameters": self.parameters,
                 "sweep": self.sweep,
@@ -98,6 +111,7 @@ class ExperimentType(QObject):
             )
             print("parameters sent to server")
             print()
+            # Update parameters based on server response
             if response.ok:
                 response_data = response.json()
                 self.parameters = response_data.get("parameters")
@@ -111,7 +125,10 @@ class ExperimentType(QObject):
         """
         turns off the hardware
         """
+        # Stop experiment loop
         if "expt" in self.sweep.keys():
             self.sweep["expt"].runinfo.running = False
+        
+        # Turn off power supply unit if enabled
         if self.parameters["use_psu"]:
             self.devices.psu.output = False

@@ -231,17 +231,21 @@ class Worker(QObject):
             if self.task_name == "read_processed":
                 self.updateStatus.emit("Reading processed data...\n")
 
+                # Prepare data and handle specific experiment types
                 if self.experiment.type == "Spin Echo":
+                    # Change parameters for read
                     single = self.experiment.parameters["single"]
                     self.experiment.parameters["single"] = self.experiment.parameters[
                         "loopback"
                     ]
+                    
                     data = {
                         "parameters": self.experiment.parameters,
                         "experiment type": "Spin Echo Read Processed",
                     }
 
                     print("about to ask server")
+                    # Send request to server
                     try:
                         response = requests.post(
                             globals.server_address + "/run_snapshot", json=data
@@ -250,6 +254,7 @@ class Worker(QObject):
                         self.updateStatus.emit(f"Error in connecting to server: {e}\n")
                     print("asked server")
 
+                    # Handle server response
                     if response.ok:
                         response_data = response.json()
                         self.experiment.sig = deserialize_obj(response_data["sig"])
@@ -263,10 +268,12 @@ class Worker(QObject):
                         "experiment type": "Pulse Frequency Sweep Read Processed",
                     }
                     print("about to ask server")
+                    # Send request to server
                     response = requests.post(
                         globals.server_address + "/run_snapshot", json=data
                     )
                     print("asked server")
+                    # Handle server response
                     if response.ok:
                         response_data = response.json()
                         self.experiment.sig = deserialize_obj(response_data["sig"])
@@ -323,6 +330,7 @@ class Worker(QObject):
 
                 self.updateStatus.emit("Done reading unprocessed data.\n")
 
+            # Emit signals based on experiment type for plotting
             if self.experiment.type == "Spin Echo":
                 self.dataReady_se.emit(self.experiment.sig, self.task_name)
             elif self.experiment.type == "Pulse Frequency Sweep":
@@ -343,6 +351,7 @@ class Worker(QObject):
             self.running = True
 
             print("Starting sweep in worker thread…")
+            # Initiate sweep on the server
             self.experiment.sweep_running = True
             data = {
                 "parameters": self.experiment.parameters,
@@ -359,6 +368,7 @@ class Worker(QObject):
             last_data_2d = None
             last_data_1d = None
 
+            # Continuously fetch data until sweep stops or is requested to stop
             while not self.stop_requested and self.running:
                 response = requests.get(globals.server_address + "/get_sweep_data")
                 if response.ok:
@@ -373,7 +383,8 @@ class Worker(QObject):
                 if not self.experiment.expt.runinfo.running:
                     self.running = False
                     break
-
+                
+                # Generate and emit updated plots
                 if self.experiment.expt.runinfo.measured:
                     data_name_2d = self.combo_2d.currentText()
                     pg_2D = ps.PlotGenerator(
@@ -437,6 +448,7 @@ class Worker(QObject):
                 except Exception as e:
                     self.updateStatus.emit(f"Error final plot update: {e}\n")
 
+            # Final status update
             if self.stop_requested:
                 self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
             else:
