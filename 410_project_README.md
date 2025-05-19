@@ -1,6 +1,11 @@
 # Overview
 Software for electron spin resonance experiments
 
+To build the app run:
+```
+pyinstaller --onefile --windowed --app_icon=icon.ico gui.py
+```
+
 ## Frontend
 A pyQt app
 #### How to run:
