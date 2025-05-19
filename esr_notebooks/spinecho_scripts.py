@@ -174,7 +174,9 @@ def setup_measure_function(soc, integrate):
                 pass
             else:
                 expt.elapsed_time = expt.current_time-expt.start_time
-            
+                if runinfo.parameters['turn_off'] and runinfo.parameters['use_psu']:
+                    devices.psu.field = 0
+                    devices.psu.output = False
         return d
 
     return measure_echo

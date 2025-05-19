@@ -74,7 +74,7 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
                             'psu_address': ipw.Dropdown(options=res_list,
                                                           description='PSU Addr'),
                             'use_psu': ipw.Checkbox(layout=wwid, description='Use PSU? (No magnet if not)'),
-                            'use_temp': ipw.Checkbox(layout=wwid, description='Use Lakeshore?')},
+                           'use_temp': ipw.Checkbox(layout=wwid, description='Use Lakeshore?')},
                 'rfsoc': {'freq': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
                                                        description='Ch1 Freq (MHz)'),
                           'freq2': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
@@ -319,13 +319,8 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
                 
             inst = ps.ItemAttribute()
             if not hasattr(devices, 'psu') and parameters['use_psu']:
-                if parameters.get('psu_address'):
-                    waddr = parameters['psu_address'].split('ASRL')[-1].split('::')[0]
-                    devices.psu = ps.GPD3303S(waddr)
-                    waddr = parameters['psu_address'].split('ASRL')[-1].split('::')[0]
-                    devices.psu = ps.GPD3303S(waddr)
-                else:
-                    print("PSU address is not set.")
+                waddr = parameters['psu_address'].split('ASRL')[-1].split('::')[0]
+                devices.psu = ps.GPD3303S(waddr)
             if not hasattr(devices, 'ls335') and parameters['use_temp']:
                 devices.ls335 = ps.Lakeshore335()
                 ttemp = devices.ls335.get_temp()

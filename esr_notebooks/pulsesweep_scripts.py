@@ -21,6 +21,11 @@ def decay_freq_sweep(expt):
     if 'ls335' in devices.keys():
         d.temp = devices.ls335.get_temp()
     
+    if runinfo._indicies[0]==(runinfo._dims[0]-1):
+        if runinfo.parameters['turn_off']:
+            devices.synth.power_off()
+            devices.psu.output = False
+    
     return d
 
 
@@ -35,6 +40,11 @@ def decay_freq_sweep_onoff(expt):
     expt.t = d.time
     if 'ls335' in devices.keys():
         d.temp = devices.ls335.get_temp()
+
+    if runinfo._indicies[0]==(runinfo._dims[0]-1):
+        if runinfo.parameters['turn_off']:
+            devices.synth.power_off()
+            devices.psu.output = False
     
     return d
 
@@ -57,6 +67,13 @@ def setup_measure_function(soc, function):
         expt.t = d.time
 
         d.current_time = time()
+
+        if runinfo._indicies[0]==(runinfo._dims[0]-1):
+            if runinfo.parameters['turn_off']:
+                soc.reset_gens()
+                if runinfo.parameters['use_psu']:
+                    devices.psu.field = 0
+                    devices.psu.output = False
 
         return d
     
@@ -94,6 +111,3 @@ def setup_experiment(parameters, devices, sweep, soc):
 
     sweep['name'] = parameters['outfile']+fname
     sweep['runinfo'] = runinfo
-
-
-
