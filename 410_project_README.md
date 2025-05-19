@@ -1,7 +1,8 @@
 # Overview
-
+Software for electron spin resonance experiments
 
 ## Frontend
+A pyQt app
 #### How to run:
 ```
 cd esr/frontend
@@ -37,6 +38,7 @@ Add the key of the setting to the TOOLTIPS dictionary and the tooltip as the val
 - There are two different pyscan folders, one in the frontend and one in the backend. The frontend version has all imports relating to the hardware commented out.
 
 ## Backend
+A flask server
 #### How to run:
 ```
 cd esr/backend
