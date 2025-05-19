@@ -2615,18 +2615,25 @@ class QueuedExperiment(QListWidgetItem):
 
     def generate_default_display_name(self):
         """
-        Generates a unique default display name for the queued experiment.
-        Format: Abbreviation:expXXX
+        Generate a unique default name for the experiment based on its type and sweep name.
+
+        Format:
+            - For Spin Echo:   SE:HahnEcho
+            - For Pulse Sweep: PFS:FreqSweep
+            - Appends a numeric suffix if duplicates already exist in the queues
+
+        @return str -- A unique display name string.
         """
+        # Map experiment type to abbreviation
         type_abbr = {"Spin Echo": "SE", "Pulse Frequency Sweep": "PFS"}
         abbr = type_abbr.get(self.experiment_type, "UNK")
 
+        # Extract and sanitize the sweep name
         expt_name = self.experiment.parameters.get("expt", "exp").replace(" ", "")
-
         base_name = f"{abbr}:{expt_name}"
 
+        # Check for duplicates in both queues
         count = 0
-
         for list_widget in [
             self.queue_manager.active_queue_list,
             self.queue_manager.working_queue_list,
@@ -2637,42 +2644,78 @@ class QueuedExperiment(QListWidgetItem):
                     other_name = item.parameters_dict.get("display_name", "")
                     if other_name.startswith(base_name):
                         count += 1
-
+        # Append suffix if necessary
         if count == 0:
             return base_name
         else:
             return f"{base_name}{count}"
 
     def startDrag(self):
+        """
+        Placeholder method for enabling drag behavior in the QListWidget.
+
+        This is intended to support reordering or moving queue items,
+        but the drag action itself is currently delegated to the QListWidget internals.
+        """
         listwidget = self.listWidget()
         if listwidget:
-            drag = listwidget.model().supportedDragActions()
+            drag = listwidget.model().supportedDragActions()  # No-op placeholder
 
     def lock_experiment(self, experiment):
-        """Lock the experiment widget (grey out)"""
+        """
+        Visually disables (greys out) the experiment widget in the queue UI.
+
+        Called when a queued experiment is running, to prevent editing or interaction.
+        """
         if self == experiment:
             self.widget.setStyleSheet("background-color: #d0d0d0;")
 
     def unlock_experiment(self, experiment):
-        """Unlock the experiment widget (un-grey)"""
+        """
+        Re-enables (un-greys) the experiment widget, restoring its normal appearance.
+
+        Typically called after an experiment finishes or is aborted early.
+        """
         if self == experiment:
             self.widget.setStyleSheet("background-color: #f9f9f9;")
 
     @property
     def has_sweep(self):
+        """
+        Check whether the user has enabled the 'Sweep' option for this experiment.
+
+        @return bool -- True if sweep is selected, False otherwise.
+        """
         return self.parameters_dict.get("sweep", False)
 
     @property
     def has_read_unprocessed(self):
+        """
+        Check whether the user has enabled 'Read Unprocessed' for this experiment.
+
+        @return bool -- True if read unprocessed is selected, False otherwise.
+        """
         return self.parameters_dict.get("read_unprocessed", False)
 
     @property
     def has_read_processed(self):
+        """
+        Check whether the user has enabled 'Read Processed' for this experiment.
+
+        @return bool -- True if read processed is selected, False otherwise.
+        """
         return self.parameters_dict.get("read_processed", False)
 
     def set_done(self):
-        """Grey out the widget and disable all buttons after experiment finishes."""
+        """
+        Mark this experiment as completed in the UI.
+
+        Visually greys out the widget and disables all action buttons to prevent further editing.
+        Called after the experiment has successfully run in the queue.
+        """
         print("Marking experiment done...")
+
+        # Grey out the entire widget
         self.widget.setStyleSheet(
             """
             QWidget {
@@ -2684,6 +2727,7 @@ class QueuedExperiment(QListWidgetItem):
         """
         )
 
+        # Disable all action buttons
         for button in [
             self.change_queue_button,
             self.duplicate_button,
@@ -2694,13 +2738,19 @@ class QueuedExperiment(QListWidgetItem):
 
     def init_experiment(self):
         """
-        Initialize the experiment hardware setup based on saved parameters.
+        Load saved parameters into the experiment and reinitialize its state.
+
+        Called before running the experiment to ensure it reflects the most
+        recent user-defined settings from the queue entry.
         """
         self.experiment.set_parameters(self.parameters_dict["parameters"])
 
     def show_info_popup(self):
         """
-        Allows the user to review and optionally edit the saved settings.
+        Open a dialog allowing the user to review or edit this experiment's settings.
+
+        This allows modification of both the left-hand metadata (name, sweep options, etc.)
+        and the right-hand settings panel. Updates the queue entry upon confirmation.
         """
         dialog = ExperimentSetupDialog(
             self.experiment_type,
@@ -2710,6 +2760,7 @@ class QueuedExperiment(QListWidgetItem):
             values=self.parameters_dict,
         )
         if dialog.exec_() == QDialog.Accepted:
+            # Update internal state from dialog
             values = dialog.get_values()
             self.parameters_dict["display_name"] = values["display_name"]
             self.parameters_dict["read_processed"] = values["read_processed"]
@@ -2717,16 +2768,19 @@ class QueuedExperiment(QListWidgetItem):
             self.parameters_dict["sweep"] = values["sweep"]
             self.parameters_dict["save_graph_output"] = values["save_graph_output"]
             self.parameters_dict["save_directory"] = values["save_directory"]
-
             self.parameters_dict["parameters"] = dialog.get_updated_parameters()
 
+            # Update label text
             self.label.setText(
                 f"{self.parameters_dict['display_name']} — {self.experiment_type}"
             )
 
     def delete_self(self):
         """
-        Removes this item from the QListWidget and deletes its resources.
+        Remove this experiment from the queue and clean up associated resources.
+
+        This deletes the experiment from either the working or active queue,
+        depending on its current location. Frees memory used by the widget and experiment.
         """
         if self.parameters_dict["current_queue"] == "working_queue":
             row = self.queue_manager.working_queue_list.row(self)
@@ -2743,11 +2797,14 @@ class QueuedExperiment(QListWidgetItem):
 
     def move_queues(self):
         """
-        Moves this experiment to the opposite queue (working <-> active) safely.
-        This duplicates the experiment and deletes the original to avoid segmentation faults.
+        Move this experiment between the working and active queues.
+
+        Internally duplicates the experiment in the new queue and deletes the original.
+        This avoids PyQt ownership issues (e.g., segfaults from reparenting widgets).
         """
         clone_dict = self.parameters_dict.copy()
 
+        # Flip the target queue and label   
         if clone_dict["current_queue"] == "working_queue":
             clone_dict["current_queue"] = "active_queue"
             target_queue = self.queue_manager.active_queue_list
@@ -2755,6 +2812,7 @@ class QueuedExperiment(QListWidgetItem):
             clone_dict["current_queue"] = "working_queue"
             target_queue = self.queue_manager.working_queue_list
 
+        # Create a new instance with the same config but new queue context
         new_item = QueuedExperiment(
             self.start_stop_sweep_function,
             self.experiment,
@@ -2765,6 +2823,7 @@ class QueuedExperiment(QListWidgetItem):
         if not new_item.valid:
             return
 
+        # Add to target queue and remove original
         target_queue.addItem(new_item)
         target_queue.setItemWidget(new_item, new_item.widget)
 
@@ -2772,7 +2831,10 @@ class QueuedExperiment(QListWidgetItem):
 
     def duplicate(self):
         """
-        Duplicates this experiment in the same queue with a new name.
+        Create a copy of this experiment in the same queue with a new display name.
+
+        Prompts the user for a name for the duplicated experiment.
+        Copies all parameter settings and metadata.
         """
         new_name, ok = QInputDialog.getText(
             self.widget,
@@ -2784,6 +2846,7 @@ class QueuedExperiment(QListWidgetItem):
         if not ok or not new_name.strip():
             return
 
+        # Clone experiment settings and assign new display name
         clone_dict = self.parameters_dict.copy()
         clone_dict["display_name"] = new_name.strip()
 
@@ -2797,6 +2860,7 @@ class QueuedExperiment(QListWidgetItem):
         if not new_item.valid:
             return
 
+        # Insert into appropriate queue and attach its widget
         if self.parameters_dict["current_queue"] == "active_queue":
             self.queue_manager.active_queue_list.addItem(new_item)
             self.queue_manager.active_queue_list.setItemWidget(
