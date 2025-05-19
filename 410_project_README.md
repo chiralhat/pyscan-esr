@@ -1,13 +1,13 @@
 # Overview
 Software for electron spin resonance experiments
 
-To build the app run:
+## Frontend
+A pyQt app
+
+To build the fontend app run:
 ```
 pyinstaller --onefile --windowed --app_icon=icon.ico gui.py
 ```
-
-## Frontend
-A pyQt app
 #### How to run:
 ```
 cd esr/frontend
