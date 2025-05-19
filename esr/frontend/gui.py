@@ -1,3 +1,18 @@
+"""
+gui.py
+
+This is the main GUI module built using PyQt5. It defines the graphical interface for configuring,
+running, and visualizing Spin Echo and Pulse Frequency Sweep experiments. The GUI includes dynamic
+settings panels, live graphing tabs, queue-based experiment automation, and threaded background
+execution to keep the interface responsive.
+
+Key Interactions:
+- Uses `ExperimentType` to manage backend logic for each experiment type.
+- Uses `Worker` to execute read and sweep tasks in separate threads.
+- Embeds `GraphWidget` and `SweepPlotWidget` from `graphing.py` for live plotting.
+- Communicates with a Flask-based backend (see `server.py`) to control hardware and collect data.
+"""
+
 import matplotlib
 
 matplotlib.use("Qt5Agg")  # Must be done before importing pyplot!

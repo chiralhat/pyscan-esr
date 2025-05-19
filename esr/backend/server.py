@@ -1,3 +1,22 @@
+"""
+server.py
+
+A Flask backend server that interfaces with RFSoC hardware to perform real experiments.
+Handles setup, measurement, and sweep execution for Spin Echo and Pulse Frequency Sweep.
+
+Key Endpoints:
+- `/initialize_experiment`: Initializes hardware and parameters based on client input.
+- `/run_snapshot`: Runs a single read measurement.
+- `/start_sweep`: Begins a full parameter sweep.
+- `/get_sweep_data`: Returns experiment state for GUI visualization.
+
+Key Interactions:
+- Used by `ExperimentType.py` and `Worker.py` for experiment control.
+- Delegates to `spinecho_scripts.py` or `pulsesweep_scripts.py` depending on experiment type.
+- Uses `rfsoc2.py` to interact with Qick RFSoC hardware.
+"""
+
+
 from flask import Flask, request, jsonify, make_response
 import spinecho_scripts
 import pulsesweep_scripts

@@ -1,19 +1,17 @@
 """
 pulsesweep_scripts.py
 
-This module sets up the hardware and measurement logic for Pulse Frequency Sweep experiments.
+Defines how Pulse Frequency Sweep experiments are configured and executed.
+Sets up sweep ranges and measurement routines to evaluate signal decay across frequencies or fields.
 
-Key responsibilities:
-- Define how the experiment should update parameters (e.g., sweeping frequency)
-- Configure the sweep range and looping behavior for frequency or field sweeps
-- Set up measurement functions that capture decay signals at each sweep point
-- Connect with the RFSoC board (via `rfsoc2`) and scope hardware for data acquisition
-- Update experiment objects with time series signal data and optional temperature readings
+Key Responsibilities:
+- Configure frequency/field sweep loops.
+- Link `RunInfo` with appropriate pulse generation and readout logic.
+- Return time-domain signal data and optional temperature readings.
 
-Dependencies:
-- pyscan.py for Scan and Sweep utilities
-- spinecho_scripts for signal processing functions (like Fourier transforms)
-- rfsoc2.py for RFSoC interaction
+Key Interactions:
+- Called by `server.py` for Pulse Sweep experiment setup.
+- Uses `rfsoc2.py` to communicate with RFSoC and acquire signal data.
 """
 
 from rfsoc2 import *

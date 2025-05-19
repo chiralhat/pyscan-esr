@@ -1,3 +1,20 @@
+"""
+spinecho_scripts.py
+
+Defines hardware control logic and measurement procedures for Spin Echo experiments.
+Handles sweep configuration, signal fitting, and experiment setup routines.
+
+Key Responsibilities:
+- Generate appropriate pulse sequences and phase shifts.
+- Create and configure `RunInfo` and `Sweep` objects for PyScan.
+- Perform signal integration and Fourier analysis.
+
+Key Interactions:
+- Called by `server.py` to initialize Spin Echo experiments.
+- Uses `rfsoc2.py` for RFSoC pulse generation and signal acquisition.
+"""
+
+
 from rfsoc2 import *
 import sys
 

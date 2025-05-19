@@ -1,13 +1,15 @@
 """
 graphing.py
 
-This module defines custom QWidget-based classes for live scientific plotting in the experiment GUI:
-- GraphWidget: For real-time line plots of signal data (I/Q/Amplitude traces).
-- SweepPlotWidget: For real-time 2D color plots and 1D sweep plots during experiment sweeps.
+Provides PyQt5-compatible graphing widgets used for real-time visualization of experiment results.
 
-Dependencies:
-- PyQt5
-- Matplotlib
+Components:
+- `GraphWidget`: Displays line plots for raw and processed signal data.
+- `SweepPlotWidget`: Displays 2D color mesh or 1D line plots of sweep results.
+
+Key Interactions:
+- Embedded in the main window by `gui.py`.
+- Updated by signals emitted from `Worker.py` during background experiment execution.
 """
 
 import pyscan_non_soc_version as ps

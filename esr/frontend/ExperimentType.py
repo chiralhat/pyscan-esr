@@ -1,16 +1,15 @@
 """
-experiment_type.py
+ExperimentType.py
 
-This module defines the ExperimentType class, which handles the backend logic, parameter management, 
-hardware setup, and data flow for Spin Echo and Pulse Frequency Sweep experiments. 
-It manages experiment settings, initializes devices (e.g., RFSoC, PSU, temperature controller), 
-generates default save files, controls sweeps, and connects to real-time graphing widgets.
+Defines the `ExperimentType` class, which encapsulates backend logic and state for Spin Echo or
+Pulse Frequency Sweep experiments. Handles parameter parsing, hardware initialization, graph setup,
+and communication with the backend server for initialization and control.
 
-Dependencies:
-- Custom experiment setup scripts (spinecho_scripts.py, pulsesweep_scripts.py)
-- PyScan backend for hardware control
-- PyQt5 for signal handling and graphical elements
-- GraphWidget and SweepPlotWidget from graphing.py for live visualization
+Key Interactions:
+- Called by `gui.py` to manage experiment state.
+- Sends requests to `server.py` for initializing experiments and starting sweeps.
+- Uses `graphing.py` widgets for displaying real-time data.
+- Works with `Worker.py` for threaded experiment control.
 """
 
 from graphing import *

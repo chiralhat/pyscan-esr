@@ -1,3 +1,19 @@
+"""
+rfsoc2.py
+
+Provides the low-level RFSoC pulse programming logic via Qick/QickASM. Includes experiment
+program definitions like CPMG sequences, data acquisition routines, and signal post-processing.
+
+Key Responsibilities:
+- Define `CPMGProgram` class for building pulse programs with configurable delays and pulses.
+- Run and decode RFSoC signal acquisitions.
+- Perform Fourier and exponential fitting on time-domain signal data.
+
+Key Interactions:
+- Used by both `spinecho_scripts.py` and `pulsesweep_scripts.py` for measurement routines.
+- Called from `server.py` to interact with real hardware.
+"""
+
 import sys
 
 sys.path.append("../../")

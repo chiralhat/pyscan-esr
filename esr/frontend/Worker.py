@@ -1,19 +1,17 @@
 """
-worker.py
+Worker.py
 
-This module defines the Worker class, which manages the execution of experiment tasks
-(reading data, running sweeps) in a separate thread to keep the GUI responsive.
+Defines the `Worker` class and associated utilities to offload experiment tasks (reading, sweeping)
+into separate threads, keeping the GUI responsive during long operations.
 
-Key responsibilities:
-- Run "read_processed" and "read_unprocessed" tasks in the background
-- Manage live sweeping of experiments with real-time plot updates
-- Emit signals to update status messages and graphs without freezing the UI
-- Handle start, update, and stop requests during experiment runs
+Key Responsibilities:
+- Communicates with `server.py` to run backend tasks like snapshot reads or sweeps.
+- Emits Qt signals to update GUI elements and graphs.
+- Deserializes experimental signal data returned from the backend using PyScan utilities.
 
-Dependencies:
-- PyQt5 for threading (QThread, QObject, pyqtSignal, pyqtSlot)
-- NumPy for efficient array comparisons
-- pyscan.py for hardware interaction and plotting utilities
+Key Interactions:
+- Instantiated and managed by `gui.py` for reading and sweeping.
+- Receives experiment instances from `ExperimentType.py`.
 """
 
 import matplotlib
