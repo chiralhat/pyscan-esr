@@ -317,7 +317,7 @@ EXPERIMENT_TEMPLATES = {
                     "max": 2000000000.0,
                     "default": 200.0,
                     "tool tip": "Helpful information",
-                },  
+                },
                 {
                     "display": "Ave",
                     "key": "soft_avgs",
@@ -589,7 +589,15 @@ EXPERIMENT_TEMPLATES = {
     },
 }
 
-TOOLTIPS = {"freq": "freq tooltip", "gain": "gain tooltip", "soft_avgs": "soft avgs tooltip", "save_dir": "save dir tooltip", "file_name": "file name tooltip", "psexpt": "psexpt tooltip", "['sweep_start', 'sweep_end', 'sweep_step']": "sweep start/end/step tooltip"}
+TOOLTIPS = {
+    "freq": "freq tooltip",
+    "gain": "gain tooltip",
+    "soft_avgs": "soft avgs tooltip",
+    "save_dir": "save dir tooltip",
+    "file_name": "file name tooltip",
+    "psexpt": "psexpt tooltip",
+    "['sweep_start', 'sweep_end', 'sweep_step']": "sweep start/end/step tooltip",
+}
 
 
 class DualStream:
@@ -622,7 +630,6 @@ class DualStream:
 class PopUpMenu(QMessageBox):
     """Simple wrapper for a standard pop-up dialog with an OK button."""
 
-
     def __init__(self, title="Notification", message="This is a pop-up message"):
         # Initializes a basic message box with the provided title and message
         super().__init__()
@@ -640,6 +647,7 @@ class DynamicSettingsPanel(QWidget):
     Uses templates from EXPERIMENT_TEMPLATES to auto-generate appropriate input widgets.
     Emits a signal whenever a setting is changed (which is then detected by the Worker class).
     """
+
     settingChanged = pyqtSignal()
 
     def __init__(self):
@@ -660,12 +668,11 @@ class DynamicSettingsPanel(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(self.settings_scroll)
 
-
     def load_settings_panel(self, settings, default_file=None):
         """Loads settings into the panel using the experiment template structure.
         If a default file is given, it tries to apply saved parameter values.
         """
-        
+
         # Create a type lookup map to interpret each setting key
         type_map = {}
         for group in settings.get("groups", {}).values():
@@ -833,7 +840,7 @@ class DynamicSettingsPanel(QWidget):
     def _connect_setting_signals(self, widget):
         """Connects value-changed signals from the widget (or sub-widgets)
         to the `settingChanged` signal for the panel.
-        
+
         This ensures UI reacts whenever a user modifies any input.
         """
 
@@ -847,8 +854,7 @@ class DynamicSettingsPanel(QWidget):
             widget.currentIndexChanged.connect(self.settingChanged.emit)
         elif isinstance(widget, QCheckBox):
             widget.stateChanged.connect(self.settingChanged.emit)
-        
-        
+
         # For composite widgets: recursively connect children
         elif hasattr(widget, "layout"):
             layout = widget.layout()
@@ -859,7 +865,7 @@ class DynamicSettingsPanel(QWidget):
 
 class ExperimentUI(QMainWindow):
     """Main application window for controlling Spin Echo and Pulse Frequency Sweep experiments.
-    
+
     Handles layout, widget initialization, parameter binding, worker thread execution,
     plotting, and experiment-specific GUI interactions.
     """
@@ -881,7 +887,7 @@ class ExperimentUI(QMainWindow):
         self.sweep_already_ran = False
 
         # Default experiment selection
-        self.current_experiment = self.experiments["Pulse Frequency Sweep"]
+        self.current_experiment = self.experiments["Spin Echo"]
         self.experiment_templates = EXPERIMENT_TEMPLATES
         self.temp_parameters = {}
 
@@ -914,7 +920,7 @@ class ExperimentUI(QMainWindow):
 
     def get_scopes_from_backend(self):
         """Attempts to query available scope devices from the backend server.
-        
+
         On success: stores the response in the global `scopes` variable and stops polling.
         On failure: logs the error message in the GUI.
         """
@@ -941,7 +947,7 @@ class ExperimentUI(QMainWindow):
 
     def on_setting_changed(self):
         """Triggered when any setting in the panel is modified.
-        
+
         Disables all action buttons and re-enables only the Initialize button,
         signaling that the user must reinitialize before running again.
         """
@@ -954,7 +960,7 @@ class ExperimentUI(QMainWindow):
 
     def init_layout(self):
         """Builds the full GUI layout structure:
-        
+
         - Top row: menu bar (buttons and experiment switcher)
         - Left panel: settings + queue
         - Right panel (split vertically): graphs and log area
@@ -1043,7 +1049,7 @@ class ExperimentUI(QMainWindow):
 
     def init_graphs_panel(self):
         """Initializes the tabbed panel used to show experiment result plots:
-        
+
         - Tab 1: Raw unprocessed data
         - Tab 2: Processed data
         - Tab 3: 2D sweep plot (with dropdown selector)
@@ -1137,7 +1143,7 @@ class ExperimentUI(QMainWindow):
 
     def init_top_menu_bar(self):
         """Creates the top button bar for experiment selection and core actions.
-    
+
         Includes:
         - Dropdown to switch experiment type
         - Buttons: Add to Queue, Initialize, Read (Processed/Unprocessed), Sweep
@@ -1187,7 +1193,7 @@ class ExperimentUI(QMainWindow):
 
     def init_experiment_specific_buttons(self, top_menu):
         """Adds buttons for experiment control:
-        
+
         - Initialize
         - Read Unprocessed
         - Read Processed
@@ -1217,7 +1223,6 @@ class ExperimentUI(QMainWindow):
         init_layout.addWidget(self.indicator_initialize)
         top_menu.addWidget(init_widget)
 
-
         # ----- Read Unprocessed -----
         read_unprocessed_widget = QWidget()
         read_unprocessed_layout = QHBoxLayout(read_unprocessed_widget)
@@ -1235,7 +1240,6 @@ class ExperimentUI(QMainWindow):
         read_unprocessed_layout.addWidget(self.read_unprocessed_btn)
         read_unprocessed_layout.addWidget(self.indicator_read_unprocessed)
         top_menu.addWidget(read_unprocessed_widget)
-
 
         # ----- Read Processed -----
         read_processed_widget = QWidget()
@@ -1281,7 +1285,7 @@ class ExperimentUI(QMainWindow):
 
     def change_experiment_type(self, experiment_type):
         """Handles switching between experiment modes (Spin Echo vs Pulse Frequency Sweep).
-        
+
         - Stops any running sweep
         - Resets parameters, graphs, and tab views
         - Rebinds the appropriate widgets to the newly selected experiment
@@ -1311,7 +1315,7 @@ class ExperimentUI(QMainWindow):
                 if self.graph_tabs.tabText(i) == "1D Sweep":
                     self.graph_tabs.removeTab(i)
                     break
-            
+
             # If new experiment type is Spin Echo, add back a 1D sweep tab
             if self.current_experiment.type == "Spin Echo":
                 graph_tab_4 = QWidget()
@@ -1404,7 +1408,7 @@ class ExperimentUI(QMainWindow):
 
     def update_1d_plot(self):
         """Redraws the 1D sweep plot based on the variable selected in the dropdown.
-    
+
         Only applicable for Spin Echo experiments, where line plots of sweep data are supported.
         """
         if self.current_experiment.expt:
@@ -1419,7 +1423,7 @@ class ExperimentUI(QMainWindow):
 
     def init_parameters_from_template(self):
         """Seeds self.temp_parameters using defaults from the current experiment template.
-        
+
         Ensures every key from the template is represented in the parameter dictionary,
         even before the user opens the settings panel or modifies values.
         """
@@ -1443,7 +1447,7 @@ class ExperimentUI(QMainWindow):
     def initialize_from_settings_panel(self):
         """Reads all current settings from the UI, sends them to the backend server,
         and stores them in the experiment object. Also enables action buttons.
-        
+
         Called when the user clicks the "Initialize" button.
         """
         self.set_parameters_and_initialize_btn.setEnabled(False)
@@ -1487,7 +1491,7 @@ class ExperimentUI(QMainWindow):
                                     print(f"Converting 'gain' value {v} to integer.")
                 else:
                     value = None
-                
+
                 # Insert value into parameter dictionary
                 if underlying is not None:
                     if isinstance(underlying, list) and isinstance(value, list):
@@ -1519,7 +1523,7 @@ class ExperimentUI(QMainWindow):
 
     def read_unprocessed_frontend(self):
         """Starts a worker thread to read unprocessed experiment data from the server.
-    
+
         Disables buttons and highlights the appropriate indicator while running.
         """
         self.indicator_read_unprocessed.setStyleSheet(
@@ -1560,7 +1564,7 @@ class ExperimentUI(QMainWindow):
 
     def read_processed_frontend(self):
         """Starts a worker thread to retrieve processed experiment data from the backend.
-    
+
         Disables buttons and updates the visual indicator during execution.
         """
         self.indicator_read_processed.setStyleSheet(
@@ -1601,7 +1605,7 @@ class ExperimentUI(QMainWindow):
 
     def toggle_start_stop_sweep_frontend(self):
         """Toggles between starting and stopping a sweep task in a worker thread.
-    
+
         - If starting: disables GUI buttons, sets up plotting, and launches the sweep
         - If stopping: flags the worker to exit early and resets indicators
         """
@@ -1676,7 +1680,7 @@ class ExperimentUI(QMainWindow):
 
     def reset_action_buttons(self):
         """Restores GUI button states after a task finishes.
-        
+
         - Re-enables Read and Initialize buttons
         - Greys out sweep button if a sweep already ran
         - Resets all indicator LEDs to grey
@@ -1713,7 +1717,7 @@ class ExperimentUI(QMainWindow):
 
     def hardware_off_frontend(self):
         """Calls the backend method to turn off experiment hardware and then closes the app.
-        
+
         Useful for safely shutting down instruments like power supplies or temperature controllers.
         """
         print("Shutting off.")
@@ -1740,7 +1744,7 @@ class ExperimentUI(QMainWindow):
         elif current_index == 3:
             fig = self.current_experiment.sweep_graph_1D.figure
         else:
-            return # No valid graph to save
+            return  # No valid graph to save
 
         # Show file dialog
         options = QFileDialog.Options()
@@ -1767,7 +1771,7 @@ class ExperimentUI(QMainWindow):
 
     def expand_queue_panel(self):
         """Opens a standalone window to view and manage the experiment queue.
-    
+
         Provides draggable lists for working/active queues and control buttons for queue history,
         clearing, and toggling execution.
         """
@@ -1775,35 +1779,54 @@ class ExperimentUI(QMainWindow):
         self.queue_window.setWindowTitle("Queue Viewer")
         self.queue_window.setGeometry(300, 300, 500, 400)
 
-        layout = QVBoxLayout()
+        # Main vertical layout
+        main_layout = QVBoxLayout(self.queue_window)
 
-        # --- Top control bar: History / Clear / Start-Stop ---
+        # Control bar (History / Clear / Start-Stop)
         control_bar = QHBoxLayout()
         for name in ["History", "Clear", "Start/Stop"]:
             btn = QPushButton(name)
             control_bar.addWidget(btn)
-        layout.addLayout(control_bar)
+        main_layout.addLayout(control_bar)
 
-        # --- Active Queue Display ---
-        layout.addWidget(QLabel("Active Queue:"))
+        # Scrollable content area
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        content_widget = QWidget()
+        scroll_area.setWidget(content_widget)
+
+        # Layout inside the scroll area
+        scroll_layout = QVBoxLayout(content_widget)
+
+        # Active Queue
+        scroll_layout.addWidget(QLabel("Active Queue:"))
         self.active_queue_list = QListWidget()
-        layout.addWidget(self.active_queue_list)
+        self.active_queue_list.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Preferred
+        )
+        scroll_layout.addWidget(self.active_queue_list)
 
-        # --- Working Queue Display (drag-and-drop) ---
-        layout.addWidget(QLabel("Working Queue:"))
+        # Working Queue (drag-and-drop)
+        scroll_layout.addWidget(QLabel("Working Queue:"))
         self.working_queue_list = QListWidget()
         self.working_queue_list.setDragEnabled(True)
         self.working_queue_list.setAcceptDrops(True)
         self.working_queue_list.setDragDropMode(QAbstractItemView.InternalMove)
         self.working_queue_list.setSpacing(2)
-        layout.addWidget(self.working_queue_list)
+        self.working_queue_list.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Preferred
+        )
+        scroll_layout.addWidget(self.working_queue_list)
 
-        self.queue_window.setLayout(layout)
+        # Add scroll area to the main layout
+        main_layout.addWidget(scroll_area)
+
+        self.queue_window.setLayout(main_layout)
         self.queue_window.show()
 
     def add_to_queue(self):
         """Creates a new queued experiment using the current settings and adds it to the working queue.
-    
+
         Opens a configuration dialog to customize the experiment’s metadata (e.g., name, graph output).
         """
         try:
@@ -1821,20 +1844,21 @@ class ExperimentUI(QMainWindow):
             # Only add if the user completed the dialog
             if queue_item.valid:
                 self.queue_manager.add_to_working_queue(queue_item)
-        
+
         except Exception as e:
             print(e)
 
 
 class QueueRunnerWorker(QThread):
     """Worker thread that runs through the active experiment queue.
-    
+
     For each experiment:
     - Locks it (greys out)
     - Initializes and runs it
     - Marks it done
     - Handles hardware errors and moves to next in queue
     """
+
     experiment_locked = pyqtSignal(object)
     experiment_unlocked = pyqtSignal(object)
     queue_stopped = pyqtSignal()
@@ -1873,9 +1897,9 @@ class QueueRunnerWorker(QThread):
             self.move_to_next_experiment()
 
     def run_worker_task(self, experiment, task):
-        """Starts a background Worker thread to perform a single task 
+        """Starts a background Worker thread to perform a single task
         (e.g., sweep, read_processed, read_unprocessed) for a given experiment.
-        
+
         Connects appropriate update and plotting signals to the GUI.
         """
         worker = Worker(experiment.experiment, task)
@@ -1956,9 +1980,10 @@ class QueueManager(QWidget):
     """Manages the experiment queue (working and active), controls queue execution,
     and handles user interaction with queued experiments (move, duplicate, delete).
     """
+
     def __init__(self, start_stop_sweep_function=None, parent=None):
         """Initializes the queue manager panel, including:
-        
+
         - A collapsed/expandable UI
         - Two queues: working (editable) and active (in progress)
         - Buttons for running, clearing, and showing history
@@ -1978,7 +2003,7 @@ class QueueManager(QWidget):
         self.main_layout.setSpacing(0)
 
         # Collapsed header
-        self.collapsed_button = QPushButton("Currently Running: [None] ▼")
+        self.collapsed_button = QPushButton("Queue: Currently Running: [None] ▲")
         self.collapsed_button.setMaximumHeight(40)
         self.collapsed_button.setStyleSheet("text-align: left; padding: 8px;")
         self.collapsed_button.clicked.connect(self.toggle_expand)
@@ -2131,16 +2156,16 @@ class QueueManager(QWidget):
         """
         is_visible = self.expanded_frame.isVisible()
         self.expanded_frame.setVisible(not is_visible)
-        arrow = "▲" if not is_visible else "▼"
+        arrow = "▼" if not is_visible else "▲"
         self.collapsed_button.setText(
-            f"Currently Running: {self.current_running_text} {arrow}"
+            f"Queue: Currently Running: {self.current_running_text} {arrow}"
         )
 
     def set_current_running(self, text):
         """Updates the header to show which experiment is currently running."""
         self.current_running_text = text
         if not self.expanded_frame.isVisible():
-            self.collapsed_button.setText(f"Currently Running: {text} ▼")
+            self.collapsed_button.setText(f"Queue: Currently Running: {text} ▲")
 
     def add_to_active_queue(self, widget_item):
         """Adds a queued experiment item to the active queue (for immediate execution)."""
@@ -2148,7 +2173,7 @@ class QueueManager(QWidget):
 
     def add_to_working_queue(self, queued_experiment):
         """Adds a queued experiment item to the working queue (editable list).
-        
+
         Also attaches the experiment’s QWidget display.
         """
         print(
@@ -2228,6 +2253,7 @@ class ExperimentSetupDialog(QDialog):
 
     Supports editing, moving, duplicating, and deleting queue entries through the interface.
     """
+
     def __init__(
         self,
         experiment_type,
@@ -2343,7 +2369,7 @@ class ExperimentSetupDialog(QDialog):
         # Loop through each group in the settings tree
         for i in range(root.childCount()):
 
-            # Loop through each setting item in the group    
+            # Loop through each setting item in the group
             grp = root.child(i)
             for j in range(grp.childCount()):
                 item = grp.child(j)
@@ -2408,11 +2434,11 @@ class ExperimentSetupDialog(QDialog):
         tree = self.settings_panel.settings_tree
         root = tree.invisibleRootItem()
 
-        # Traverse each group in the settings tree    
+        # Traverse each group in the settings tree
         for i in range(root.childCount()):
             grp = root.child(i)
-            
-            # Traverse each setting item within the group    
+
+            # Traverse each setting item within the group
             for j in range(grp.childCount()):
                 item = grp.child(j)
                 widget = tree.itemWidget(item, 1)
@@ -2424,7 +2450,7 @@ class ExperimentSetupDialog(QDialog):
                     for idx, subkey in enumerate(key):
                         sub_widget = layout.itemAt(idx).widget()
                         updated_params[subkey] = self._get_widget_value(sub_widget)
-                
+
                 # Handle standard single-key widgets
                 else:
                     if key:
@@ -2443,19 +2469,19 @@ class ExperimentSetupDialog(QDialog):
         # Numeric inputs
         if isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
             return widget.value()
-    
+
         # Boolean input
         elif isinstance(widget, QCheckBox):
             return widget.isChecked()
-        
+
         # Text input
         elif isinstance(widget, QLineEdit):
             return widget.text()
-        
+
         # Dropdown selector
         elif isinstance(widget, QComboBox):
             return widget.currentText()
-        
+
         # Fallback for unknown widget types
         else:
             return None
@@ -2487,7 +2513,7 @@ class ExperimentSetupDialog(QDialog):
         selected_dir = QFileDialog.getExistingDirectory(
             self, "Select Save Directory", self.save_directory
         )
-    
+
         # If a directory was selected, update both internal state and UI
         if selected_dir:
             self.save_directory = selected_dir
@@ -2501,7 +2527,7 @@ class QueuedExperiment(QListWidgetItem):
     Stores experiment configuration, user preferences, and metadata.
     Includes a QWidget-based visual representation with action buttons
     for editing, duplicating, moving, or deleting the experiment.
-    """ 
+    """
 
     def __init__(
         self,
@@ -2819,7 +2845,7 @@ class QueuedExperiment(QListWidgetItem):
         """
         clone_dict = self.parameters_dict.copy()
 
-        # Flip the target queue and label   
+        # Flip the target queue and label
         if clone_dict["current_queue"] == "working_queue":
             clone_dict["current_queue"] = "active_queue"
             target_queue = self.queue_manager.active_queue_list

@@ -5,7 +5,11 @@ from pathlib import Path
 import numpy as np
 from threading import Thread as thread
 from time import strftime
-from pyscan_non_soc_version.general import ItemAttribute, recursive_to_dict, is_list_type
+from pyscan_non_soc_version.general import (
+    ItemAttribute,
+    recursive_to_dict,
+    is_list_type,
+)
 from pyscan_non_soc_version.measurement.scans import PropertyScan, RepeatScan
 
 

@@ -3,7 +3,9 @@ import pytest
 import math
 from collections import OrderedDict
 import typing
-from pyscan_non_soc_version.drivers.testing.test_instrument_driver import TestInstrumentDriver
+from pyscan_non_soc_version.drivers.testing.test_instrument_driver import (
+    TestInstrumentDriver,
+)
 from pyscan_non_soc_version.general.get_pyscan_version import get_pyscan_version
 import os
 from datetime import datetime

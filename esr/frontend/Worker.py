@@ -236,7 +236,7 @@ class Worker(QObject):
                     self.experiment.parameters["single"] = self.experiment.parameters[
                         "loopback"
                     ]
-                    
+
                     data = {
                         "parameters": self.experiment.parameters,
                         "experiment type": "Spin Echo Read Processed",
@@ -381,7 +381,7 @@ class Worker(QObject):
                 if not self.experiment.expt.runinfo.running:
                     self.running = False
                     break
-                
+
                 # Generate and emit updated plots
                 if self.experiment.expt.runinfo.measured:
                     data_name_2d = self.combo_2d.currentText()

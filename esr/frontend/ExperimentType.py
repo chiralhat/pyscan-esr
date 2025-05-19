@@ -41,12 +41,12 @@ class ExperimentType(QObject):
 
     def __init__(self, exp_type):
         super().__init__()
-        self.type = exp_type # Experiment type string
+        self.type = exp_type  # Experiment type string
 
         # Parameter dictionaries to be populated by the UI or script
         self.parameters = {}
         self.sweep = {}
-        self.expt = None # Handle during sweep
+        self.expt = None  # Handle during sweep
 
         # Default parameter files for different experiment types
         if self.type == "Spin Echo":
@@ -83,7 +83,7 @@ class ExperimentType(QObject):
                 period = self.parameters["period"]
             else:
                 period = 500
-            
+
             # Compute subtime for each acquisition
             tmult = period / 1e6 * 4 * reps
             self.parameters["subtime"] = self.parameters["soft_avgs"] * tmult
@@ -127,7 +127,7 @@ class ExperimentType(QObject):
         # Stop experiment loop
         if "expt" in self.sweep.keys():
             self.sweep["expt"].runinfo.running = False
-        
+
         # Turn off power supply unit if enabled
         if self.parameters["use_psu"]:
             self.devices.psu.output = False
