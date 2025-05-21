@@ -28,6 +28,9 @@ python gui.py
   - Switch experiment type
   - Initialize and run experiments
 - Queue
+  - Queue experiments to be run
+  - Settings populated from the settings panel, but can be edited later
+  - Stopping the queue will stop after the current experiment is done
 
 #### How to edit the code and add an experiment type:
 1. Update EXPERIMENT_TEMPLATES dictionary to include the new experiment type and all settings
