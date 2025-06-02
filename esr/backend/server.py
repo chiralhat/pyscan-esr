@@ -287,7 +287,11 @@ def get_scopes():
 @app.route("/stop", methods=["POST"])
 def stop():
     global running
+    global sweep
     running = False
+    # Turn off power supply unit if enabled
+    if sweep['runinfo'].parameters["use_psu"]:
+        devices.psu.output = False
     print("Stopping experiment...")
     # insert your real code here to stop sweep
     return jsonify({"status": "stopped"})

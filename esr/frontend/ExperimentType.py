@@ -125,9 +125,9 @@ class ExperimentType(QObject):
         turns off the hardware
         """
         # Stop experiment loop
-        if "expt" in self.sweep.keys():
-            self.sweep["expt"].runinfo.running = False
-
-        # Turn off power supply unit if enabled
-        if self.parameters["use_psu"]:
-            self.devices.psu.output = False
+        print("about to send hardware off to server")
+        response = requests.post(
+            globals.server_address + "/stop", json=data
+        )
+        print("parameters sent to server")
+        print()
