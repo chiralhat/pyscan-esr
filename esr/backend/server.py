@@ -289,7 +289,7 @@ def stop():
     global running
     global sweep
     # Turn off power supply unit if enabled
-    sweep['expt'].runinfo.running = False
+    expt.runinfo.running = False
     running = False
     print("Stopping experiment...")
     # insert your real code here to stop sweep
