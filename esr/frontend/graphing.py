@@ -1,0 +1,228 @@
+"""
+graphing.py
+
+Provides PyQt5-compatible graphing widgets used for real-time visualization of experiment results.
+
+Components:
+- `GraphWidget`: Displays line plots for raw and processed signal data.
+- `SweepPlotWidget`: Displays 2D color mesh or 1D line plots of sweep results.
+
+Key Interactions:
+- Embedded in the main window by `gui.py`.
+- Updated by signals emitted from `Worker.py` during background experiment execution.
+"""
+
+import pyscan_non_soc_version as ps
+
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QMenu
+from PyQt5.QtGui import QPixmap
+
+from PyQt5.QtCore import Qt, pyqtSlot
+
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+import io
+import numpy as np
+
+
+class GraphWidget(QWidget):
+    """A QWidget subclass that embeds a Matplotlib figure for real-time plotting.
+    This widget provides a graphical interface for visualizing experimental data,
+    such as I/Q signals and amplitude over time. It contains a Matplotlib figure
+    canvas and a vertical layout to integrate smoothly with PyQt5-based GUIs."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # Set transparent background and no border
+        self.setStyleSheet("background: transparent; border: none;")
+
+        # Create a Matplotlib figure and embed it into a PyQt5 widget
+        self.figure = Figure()
+        self.ax = self.figure.add_subplot(111)
+        self.canvas = FigureCanvas(self.figure)
+
+        # Add canvas to vertical layout
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.canvas)
+        self.setLayout(self.layout)
+
+        # Enable right-click context menu for graph saving
+        self.canvas.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.canvas.customContextMenuRequested.connect(self.show_context_menu)
+
+    def update_canvas_se(self, sig, task_name):
+        """Clears the current plot and renders new data traces for CH1, CH2, and amplitude."""
+
+        time = sig.time
+        i = sig.i
+        q = sig.q
+        x = sig.x
+
+        self.ax.clear()
+        self.ax.plot(time, i, label="CH1", color="yellow")
+        self.ax.plot(time, q, label="CH2", color="blue")
+        self.ax.plot(time, x, label="AMP", color="green")
+        self.ax.set_xlabel("Time (μs)")
+        self.ax.set_ylabel("Signal (a.u.)")
+        self.ax.legend()
+        self.canvas.draw()
+
+    def update_canvas_psweep(self, sig, task_name):
+        self.ax.clear()
+        print("Updating pulse sweep canvas")
+
+        if task_name == "read_processed":
+            try:
+                # Fit and plot expected signal model
+                fit, err = ps.plot_exp_fit_norange(
+                    np.array([sig.time, sig.x]), sig.freq, 1, plt=self.ax
+                )
+                sig.fit = fit
+                self.ax.plot(
+                    sig.time, sig.x, label="Signal"
+                )  # This line is crucial for legend
+                # Display fit parameters on plot
+                fitstr = (
+                    f"A={sig.fit[1]:.3g} V, t={sig.fit[2]:.3g} μs, Q={sig.fit[-1]:.3g}"
+                )
+                freqstr = f"freq (MHz): {sig.freq}"
+
+                self.ax.text(
+                    0.5,
+                    0.95,
+                    fitstr,
+                    transform=self.ax.transAxes,
+                    ha="center",
+                    va="top",
+                )  # Near the top, inside
+                self.ax.text(
+                    0.5,
+                    0.90,
+                    freqstr,
+                    transform=self.ax.transAxes,
+                    ha="center",
+                    va="top",
+                )  # Slightly below the fitstr
+            except Exception as e:
+                self.updateStatus.emit(
+                    f"Error in plotting read_processed pulse frequency sweep: {e}\n"
+                )
+
+        elif task_name == "read_unprocessed":
+            # Plot raw signal components
+            self.ax.plot(sig.time, sig.i, color="yellow", label="CH1")
+            self.ax.plot(sig.time, sig.q, color="b", label="CH2")
+            self.ax.plot(sig.time, sig.x, color="g", label="AMP")
+
+        self.ax.set_xlabel("Time (μs)")
+        self.ax.set_ylabel("Signal (a.u.)")
+        self.ax.legend()
+        self.canvas.draw()
+
+    def show_context_menu(self, pos):
+        menu = QMenu()
+        copy_action = menu.addAction("Copy graph to clipboard")
+        action = menu.exec_(self.canvas.mapToGlobal(pos))
+        if action == copy_action:
+            self.copy_to_clipboard()
+
+    def copy_to_clipboard(self):
+        buf = io.BytesIO()
+        self.figure.savefig(buf, format="png")
+        buf.seek(0)
+        image = QPixmap()
+        image.loadFromData(buf.getvalue())
+
+        QApplication.clipboard().setPixmap(image)
+        print("Copied graph to clipboard.")
+
+
+class SweepPlotWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("background: transparent; border: none;")
+
+        # Create figure, canvas, and axes
+        self.figure = Figure()
+        self.canvas = FigureCanvas(self.figure)
+        self.ax = self.figure.add_subplot(111)
+
+        # Placeholder plot elements
+        self.mesh = None
+        self.colorbar = None
+        (self.line,) = self.ax.plot([], [], "o-")
+
+        # Add canvas to layout
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.canvas)
+
+        # Enable context menu
+        self.canvas.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.canvas.customContextMenuRequested.connect(self.show_context_menu)
+
+    @pyqtSlot(object)
+    def on_live_plot_2D(self, pg):
+        print("Updating 2D plot\n")
+        if pg is None or pg.data.size == 0:
+            return
+
+        if self.mesh is None:
+            # Initial draw of the pcolormesh
+            self.mesh = self.ax.pcolormesh(
+                pg.x,
+                pg.y,
+                pg.data.T,
+                shading="auto",
+                vmin=pg.get_data_range()[0],
+                vmax=pg.get_data_range()[1],
+            )
+            self.colorbar = self.figure.colorbar(self.mesh, ax=self.ax)
+        else:
+            # Update existing mesh with new data
+            self.mesh.set_array(pg.data.T.ravel())
+            vmin, vmax = pg.get_data_range()
+            self.mesh.set_clim(vmin, vmax)
+
+        # Update plot labels and title
+        self.ax.set_title(pg.get_title())
+        self.ax.set_xlabel(pg.get_xlabel())
+        self.ax.set_ylabel(pg.get_ylabel())
+
+        self.canvas.draw_idle()
+
+    @pyqtSlot(object)
+    def on_live_plot_1D(self, pg):
+        print("Updating 1D plot\n")
+        if pg is None or pg.data is None or pg.x is None or pg.data.size == 0:
+            return
+
+        self.line.set_data(pg.x, pg.data)
+
+        # Rescale axes to fit new data
+        self.ax.relim()
+        self.ax.autoscale_view()
+
+        # Set labels and title
+        self.ax.set_title(pg.get_title())
+        self.ax.set_xlabel(pg.get_xlabel())
+        self.ax.set_ylabel(pg.get_ylabel())
+
+        self.canvas.draw_idle()
+
+    def show_context_menu(self, pos):
+        menu = QMenu()
+        copy_action = menu.addAction("Copy graph to clipboard")
+        action = menu.exec_(self.canvas.mapToGlobal(pos))
+        if action == copy_action:
+            self.copy_to_clipboard()
+
+    def copy_to_clipboard(self):
+        buf = io.BytesIO()
+        self.figure.savefig(buf, format="png")
+        buf.seek(0)
+        image = QPixmap()
+        image.loadFromData(buf.getvalue())
+
+        QApplication.clipboard().setPixmap(image)
+        print("Copied graph to clipboard.")
