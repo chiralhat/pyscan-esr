@@ -288,10 +288,11 @@ def get_scopes():
 def stop():
     global running
     global sweep
-    running = False
     # Turn off power supply unit if enabled
     if sweep['runinfo'].parameters["use_psu"]:
+        print('Turning off PSU')
         devices.psu.output = False
+    running = False
     print("Stopping experiment...")
     # insert your real code here to stop sweep
     return jsonify({"status": "stopped"})
