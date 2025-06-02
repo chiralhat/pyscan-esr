@@ -1165,30 +1165,6 @@ class ExperimentUI(QMainWindow):
         init_layout.addWidget(self.indicator_initialize)
         top_menu.addWidget(init_widget)
 
-        # ----- Hardware Off -----
-        off_widget = QWidget()
-        off_layout = QHBoxLayout(off_widget)
-        off_layout.setContentsMargins(0, 0, 0, 0)
-        self.hardware_off_btn = QPushButton("Hardware Off")
-        self.hardware_off_btn.setMinimumHeight(40)
-        self.hardware_off_btn.setStyleSheet(
-            "font-size: 10pt; padding: 2px 4px;"
-        )
-        self.hardware_off_btn.clicked.connect(
-            self.hardware_off_frontend
-        )
-        self.hardware_off_btn.setToolTip(
-            "Helpful information"
-        )  # Tool tip here!
-        self.indicator_off = QLabel(" ")
-        self.indicator_off.setFixedSize(10, 10)
-        self.indicator_off.setStyleSheet(
-            "background-color: grey; border: 1px solid black; border-radius: 5px;"
-        )
-        off_layout.addWidget(self.hardware_off_btn)
-        off_layout.addWidget(self.indicator_off)
-        top_menu.addWidget(off_widget)
-
         # ----- Read Unprocessed -----
         read_unprocessed_widget = QWidget()
         read_unprocessed_layout = QHBoxLayout(read_unprocessed_widget)
@@ -1246,6 +1222,30 @@ class ExperimentUI(QMainWindow):
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
         self.sweep_start_stop_btn.setEnabled(False)
+
+        # ----- Hardware Off -----
+        off_widget = QWidget()
+        off_layout = QHBoxLayout(off_widget)
+        off_layout.setContentsMargins(0, 0, 0, 0)
+        self.hardware_off_btn = QPushButton("Hardware Off")
+        self.hardware_off_btn.setMinimumHeight(40)
+        self.hardware_off_btn.setStyleSheet(
+            "font-size: 10pt; padding: 2px 4px;"
+        )
+        self.hardware_off_btn.clicked.connect(
+            self.hardware_off_frontend
+        )
+        self.hardware_off_btn.setToolTip(
+            "Helpful information"
+        )  # Tool tip here!
+        self.indicator_off = QLabel(" ")
+        self.indicator_off.setFixedSize(10, 10)
+        self.indicator_off.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
+        off_layout.addWidget(self.hardware_off_btn)
+        off_layout.addWidget(self.indicator_off)
+        top_menu.addWidget(off_widget)
 
         return top_menu
 
@@ -1629,6 +1629,7 @@ class ExperimentUI(QMainWindow):
             # Stop sweep mode
             if hasattr(self, "worker"):
                 print("Stopping sweep…")
+                self.current_experiment.stop()
                 self.worker.stop_sweep()
                 print("Stop requested.")
                 self.on_finished_sweep()

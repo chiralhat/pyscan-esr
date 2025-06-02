@@ -283,19 +283,30 @@ def get_scopes():
     return jsonify(scopes)
 
 
-#### I THINK THIS WILL TURN OFF THE SERVER
+#### Stop the running sweep
 @app.route("/stop", methods=["POST"])
 def stop():
     global running
     global sweep
     # Turn off power supply unit if enabled
-    if sweep['runinfo'].parameters["use_psu"]:
-        print('Turning off PSU')
-        devices.psu.output = False
+    sweep['expt'].runinfo.running = False
     running = False
     print("Stopping experiment...")
     # insert your real code here to stop sweep
     return jsonify({"status": "stopped"})
+
+
+#### Turn off the hardware
+@app.route("/off", methods=["POST"])
+def hardware_off():
+    global sweep
+    # Turn off power supply unit if enabled
+    if sweep['runinfo'].parameters["use_psu"]:
+        print('Turning off PSU')
+        devices.psu.output = False
+    print("Turning off hardware...")
+    # insert your real code here to stop sweep
+    return jsonify({"status": "off"})
 
 
 @app.route("/status", methods=["GET"])

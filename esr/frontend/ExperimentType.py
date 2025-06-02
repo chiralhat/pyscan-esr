@@ -120,14 +120,27 @@ class ExperimentType(QObject):
             print("error in set_parameters:")
             print(e)
 
+    def stop(self):
+        """
+        turns off the hardware
+        """
+        # Stop experiment loop
+        #print("about to send sweep stop to server")
+        response = requests.post(
+            globals.server_address + "/stop"#, json=data
+        )
+       #print("parameters sent to server")
+        print()
+
+
     def hardware_off(self):
         """
         turns off the hardware
         """
         # Stop experiment loop
-        print("about to send hardware off to server")
+        #print("about to send hardware off to server")
         response = requests.post(
-            globals.server_address + "/stop"#, json=data
+            globals.server_address + "/off"#, json=data
         )
-        print("parameters sent to server")
+       # print("parameters sent to server")
         print()
