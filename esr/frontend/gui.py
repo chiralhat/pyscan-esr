@@ -224,12 +224,6 @@ EXPERIMENT_TEMPLATES = {
             ],
             "Utility Settings": [
                 {
-                    "display": "PSU Addr",
-                    "key": "psu_address",
-                    "type": "line_edit",
-                    "default": "",
-                },
-                {
                     "display": "Use PSU",
                     "key": "use_psu",
                     "type": "check",
@@ -456,12 +450,6 @@ EXPERIMENT_TEMPLATES = {
                 },
             ],
             "Utility Settings": [
-                {
-                    "display": "PSU Addr",
-                    "key": "psu_address",
-                    "type": "line_edit",
-                    "default": "",
-                },
                 {
                     "display": "Use PSU? (no magnet if not)",
                     "key": "use_psu",
