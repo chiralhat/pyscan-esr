@@ -1682,15 +1682,17 @@ class ExperimentUI(QMainWindow):
         self.is_process_running = False
 
     def hardware_off_frontend(self):
-        """Calls the backend method to turn off experiment hardware and then closes the app.
+        """Calls the backend method to turn off experiment hardware.
 
         Useful for safely shutting down instruments like power supplies or temperature controllers.
         """
         print("Shutting off.")
         try:
             self.current_experiment.hardware_off()
-        finally:
-            self.close()
+        except Exception as e:
+            print(e)
+        # finally:
+        #     self.close()
 
     def on_worker_status_update(self, message):
         """Receives status messages emitted from the worker thread and logs them to the console/log pane."""
