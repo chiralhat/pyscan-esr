@@ -127,7 +127,7 @@ class ExperimentType(QObject):
         # Stop experiment loop
         print("about to send hardware off to server")
         response = requests.post(
-            globals.server_address + "/stop", json=data
+            globals.server_address + "/stop"#, json=data
         )
         print("parameters sent to server")
         print()
