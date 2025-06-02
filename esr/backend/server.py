@@ -75,11 +75,11 @@ def initialize_experiment():
         try:
             for inst in res_list:
                 try:
-                    test = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                    devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
                     break
                 except Exception as e:
                     try:
-                        test = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                        devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
                     except:
                         pass
         except Exception as e:
