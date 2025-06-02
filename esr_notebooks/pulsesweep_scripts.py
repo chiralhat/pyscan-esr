@@ -54,10 +54,10 @@ def setup_measure_function(soc, function):
         runinfo = expt.runinfo
         devices = expt.devices
 
-        prog = runinfo.progfunc(runinfo.parameters)
+        #prog = runinfo.progfunc(runinfo.parameters)
 
         #if function==0:
-        d = measure_decay(prog, soc)
+        d = measure_decay(runinfo.parameters, soc)
         #else:
         #    d = runinfo.measure_phase(prog, soc)
 

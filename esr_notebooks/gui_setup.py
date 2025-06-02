@@ -312,7 +312,7 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
             tmult = period/1e6*4*reps
             parameters['subtime'] = parameters['soft_avgs']*tmult
             datestr = date.today().strftime('%y%m%d')
-            fname = datestr+str(parameters['file_name'])+'_'
+            fname = datestr+'_'+str(parameters['file_name'])+'_'
             parameters['outfile'] = str(Path(parameters['save_dir']) / fname)
             with open(default_file, 'wb') as f:
                 pickle.dump(parameters, f)

@@ -14,6 +14,9 @@ Make the delay, pulse length, nutation length, nutation delay all configurable (
 qick-dawg does it.
 """
 
+pi2_phase_list = [0, 180, 180, 0]
+pi_phase_list = [90, 90, 270, 270]
+
 def plot_mesh(x, y, z, xlab='', ylab='', zlab='', bar=True, ax=False, cax=False, **kwargs):
     A, B = np.meshgrid(x, y)
     if ax:
@@ -137,6 +140,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
 
     def cpmg(self, ph1, ph2, phdel=0, pulses=1, tstart=0):
         res_ch = self.cfg["res_ch"]
+        # self.reset_phase(gen_ch=[res_ch], ro_ch=self.cfg["ro_chs"])
         tpi2 = self.cfg["pulse1_1"]/1000
         tpi = self.cfg["pulse1_2"]/1000
         delay = self.cfg["delay"]/1000
@@ -192,18 +196,20 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
 
     def body(self):
         phase1 = [self.deg2reg(self.cfg["pi2_phase"]+ph, gen_ch=self.cfg["res_ch"])
-                  for ph in [0, 180, 180, 0]]
+                  for ph in [0, 0, 180, 0]]
         phase2 = [self.deg2reg(self.cfg["pi_phase"]+ph, gen_ch=self.cfg["res_ch"])
-                  for ph in [0, 0, 180, 180]]
+                  for ph in [0, 0, 180, 0]]
         phase_delta = self.deg2reg(self.cfg["cpmg_phase"], gen_ch=self.cfg["res_ch"])
         
         self.trigger_no_off(pins=[0])
         self.synci(self.us2cycles(0.1))
         
-        if self.cfg['single']:
-            self.cpmg(phase1[0], phase2[0], phase_delta, self.cfg["pulses"])
-        else:
-            [self.cpmg(phase1[n], phase2[n], phase_delta, self.cfg["pulses"]) for n in np.arange(4)]
+        #if self.cfg['single']:
+        self.cpmg(phase1[0], phase2[0], phase_delta, self.cfg["pulses"])
+        # else:
+        #     for n in np.arange(4):
+        #         self.synci(self.us2cycles(0.1))
+        #         self.cpmg(phase1[n], phase2[n], phase_delta, self.cfg["pulses"])
 
 
 def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):
@@ -268,26 +274,26 @@ def fourier_signal(d, fstart=1, fstop=50):
     return d
 
 
-def measure_decay(prog, soc, d=0, ro=0, progress=False):
-    reps = prog.cfg['ave_reps']
-    pulses = prog.cfg['pulses']
+def measure_decay(parameters, soc, d=0, ro=0, progress=False):
+    reps = parameters['ave_reps']
+    pulses = parameters['pulses']
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    iq_list = safe_read(prog, soc, progress)
+    iq_list = safe_read(parameters, soc, progress)
 
     d.time, d.i, d.q, d.x = iq_convert(soc, iq_list,
                                      pulses=pulses,
                                      ro=ro,
-                                     single=prog.cfg['single'],
+                                     single=parameters['single'],
                                      decimated=True)
 
     if reps>1:
         for n in np.arange(reps-1):
-            iq_list = safe_read(prog, soc, progress)
+            iq_list = safe_read(parameters, soc, progress)
             _, i, q, x = iq_convert(soc, iq_list,
                                      pulses=pulses,
                                      ro=ro,
-                                     single=prog.cfg['single'],
+                                     single=parameters['single'],
                                      decimated=True)
             d.i += i
             d.q += q
@@ -297,37 +303,37 @@ def measure_decay(prog, soc, d=0, ro=0, progress=False):
         d.x = d.x/reps
     
     d.fit, d.fiterr, d.R2b = ps.exp_fit_norange(np.array([d.time, d.x]),
-                                         prog.cfg['freq'], 1)
+                                         parameters['freq'], 1)
     d.Q = d.fit[-1]
     d.Qerr = d.fiterr[-1]
     
     fourier_signal(d)
 
-    d.time += prog.cfg['h_offset']
+    d.time += parameters['h_offset']
 
     return d
 
 
-def measure_phase(prog, soc, d=0, ro=0, progress=False):
-    reps = prog.cfg['ave_reps']
-    pulses = prog.cfg['pulses']
+def measure_phase(parameters, soc, d=0, ro=0, progress=False):
+    reps = parameters['ave_reps']
+    pulses = parameters['pulses']
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    iq_list = safe_read(prog, soc, progress)
+    iq_list = safe_read(parameters, soc, progress)
 
     d.time, d.i, d.q, d.x = iq_convert(soc, iq_list,
                                      pulses=pulses,
                                      ro=ro,
-                                     single=prog.cfg['single'],
+                                     single=parameters['single'],
                                      decimated=True)
 
     if reps>1:
         for n in np.arange(reps-1):
-            iq_list = safe_read(prog, soc, progress)
+            iq_list = safe_read(parameters, soc, progress)
             _, i, q, x = iq_convert(soc, iq_list,
                                      pulses=pulses,
                                      ro=ro,
-                                     single=prog.cfg['single'],
+                                     single=parameters['single'],
                                      decimated=True)
             d.i += i
             d.q += q
@@ -338,7 +344,7 @@ def measure_phase(prog, soc, d=0, ro=0, progress=False):
 
     d.imean, d.qmean, d.xmean = [np.mean(sig) for sig in [d.i, d.q, d.x]]
 
-    d.time += prog.cfg['h_offset']
+    d.time += parameters['h_offset']
     
     return d
 
@@ -376,10 +382,25 @@ def acquire_phase(prog, soc, d=0, ro=0, progress=False):
     return d
 
 
-def safe_read(prog, soc, progress=False):
+
+def sread(parameters, soc, progress):
+    prog = CPMGProgram(soc, parameters)
     try:
         iq_list = prog.acquire_decimated(soc, progress=progress)[0]
     except RuntimeError:
         soc.__init__()
         iq_list = prog.acquire_decimated(soc, progress=progress)[0]
+    return iq_list
+
+
+# def safe_read(prog, soc, progress=False):
+def safe_read(parameters, soc, progress=False):
+    if parameters['single']:
+        iq_list = sread(parameters, soc, progress)
+    else:
+        iq_list = []
+        for n in np.arange(4):
+            parameters['pi2_phase'] = pi2_phase_list[n]
+            parameters['pi_phase'] = pi_phase_list[n]
+            iq_list.append(sread(parameters, soc, progress))
     return iq_list
