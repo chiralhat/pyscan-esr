@@ -20,6 +20,7 @@ from flask import Flask, request, jsonify, make_response
 import spinecho_scripts
 import pulsesweep_scripts
 import pyscan as ps
+import pyvisa
 from time import sleep, time
 import numpy as np
 
@@ -27,6 +28,10 @@ import sys, os
 
 sys.path.append("../../")
 from rfsoc2 import *
+
+if not hasattr(ps, "rm"):
+    ps.rm = pyvisa.ResourceManager("@py")
+res_list = ps.rm.list_resources()
 
 app = Flask(__name__)
 
@@ -67,15 +72,18 @@ def initialize_experiment():
 
     # Initialize PSU if necessary
     if not hasattr(devices, "psu") and parameters["use_psu"]:
-        psu_address = parameters.get("psu_address", "").strip()
-        if psu_address:
-            waddr = psu_address.split("ASRL")[-1].split("::")[0]
-            try:
-                devices.psu = ps.GPD3303S(waddr)
-            except Exception as e:
-                print(f"Error initializing PSU: {e}")
-        else:
-            print("Error: PSU address is not provided or invalid.")
+        try:
+            for inst in res_list:
+                try:
+                    test = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                    break
+                except Exception as e:
+                    try:
+                        test = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                    except:
+                        pass
+        except Exception as e:
+            print(f"Error initializing PSU: {e}")
 
     # Initialize temperature device if necessary
     if not hasattr(devices, "ls335") and parameters["use_temp"]:

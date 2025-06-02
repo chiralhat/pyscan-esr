@@ -60,7 +60,6 @@ sys.path.append("../")
 from time import sleep, time
 from datetime import date, datetime
 import pickle
-import pyvisa
 import requests
 import pyscan_non_soc_version as ps
 
@@ -77,10 +76,6 @@ for n in range(9, -1, -1):
     tdivs += [2 * 10**-n, 4 * 10**-n, 10 * 10**-n]  # [2.5*10**-n, 5*10**-n, 10*10**-n]
 
 scopes = []
-
-if not hasattr(ps, "rm"):
-    ps.rm = pyvisa.ResourceManager("@py")
-res_list = ps.rm.list_resources()
 
 # Global setting trees for the Pulse Frequency Sweep and Spin Echo experiment settings
 sweep_list = [
@@ -248,27 +243,6 @@ EXPERIMENT_TEMPLATES = {
                 },
             ],
             "Never Change": [
-                {
-                    "display": "Scope Address",
-                    "key": "scope_address",
-                    "type": "combo",
-                    "options": res_list,
-                    "default": "USB0::1689::261::SGVJ0001055::0::INSTR",
-                },
-                {
-                    "display": "FPGA Address",
-                    "key": "fpga_address",
-                    "type": "combo",
-                    "options": res_list,
-                    "default": "ASRL/dev/ttyUSB4::INSTR",
-                },
-                {
-                    "display": "Synth Address",
-                    "key": "synth_address",
-                    "type": "combo",
-                    "options": res_list,
-                    "default": "ASRL/dev/ttyACM0::INSTR",
-                },
                 {
                     "display": "Phase",
                     "key": "phase",
@@ -509,27 +483,6 @@ EXPERIMENT_TEMPLATES = {
                     "min": 1,
                     "max": 256,
                     "default": 1,
-                },
-                {
-                    "display": "Scope Address",
-                    "key": "scope_address",
-                    "type": "combo",
-                    "options": res_list,
-                    "default": "USB0::1689::261::SGVJ0001055::0::INSTR",
-                },
-                {
-                    "display": "FPGA Address",
-                    "key": "fpga_address",
-                    "type": "combo",
-                    "options": res_list,
-                    "default": "ASRL/dev/ttyUSB4::INSTR",
-                },
-                {
-                    "display": "Synth Address",
-                    "key": "synth_address",
-                    "type": "combo",
-                    "options": res_list,
-                    "default": "ASRL/dev/ttyACM0::INSTR",
                 },
                 {
                     "display": "Phase",
