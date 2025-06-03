@@ -63,7 +63,7 @@ def initialize_experiment():
     global sweep
     # Step 1: Get the data from the request
     data = request.get_json()  # Assuming the data sent is in JSON format
-    print("Received data:", data)
+    #print("Received data:", data)
     parameters = data.get("parameters")
     sweep = data.get("sweep")
     experiment_type = data.get("experiment type")
@@ -133,7 +133,7 @@ def initialize_experiment():
 
         pulsesweep_scripts.setup_experiment(parameters, devices, sweep, soc)
 
-    print(sweep)
+    #print(sweep)
     # if 'runinfo' in sweep:
     #     sweep['runinfo'] = serialize_object(sweep['runinfo'])
     # Step 2: Extract data and handle it accordingly
@@ -194,7 +194,7 @@ def serialize_object(obj, max_depth=5, _depth=0):
 def run_snapshot():
     # Get the data from the request
     data = request.get_json()  # Assuming the data sent is in JSON format
-    print("Received data:", data)
+    #print("Received data:", data)
     parameters = data.get("parameters")
     experiment_type = data.get("experiment type")
 
@@ -203,7 +203,7 @@ def run_snapshot():
 
     # Serialize all public attributes of `sig`
     serialized_sig = serialize_object(sig)
-    print(serialized_sig)
+    #print(serialized_sig)
 
     return jsonify({"sig": serialized_sig})
 
@@ -219,7 +219,7 @@ def start_sweep():
         """starts up the hardware to run a sweep and runs a sweep"""
         # Get the data from the request
         data = request.get_json()  # Assuming the data sent is in JSON format
-        print("Received data:", data)
+        #print("Received data:", data)
         parameters = data.get("parameters")
         experiment_type = data.get("experiment type")
         # sweep = data.get('sweep')
@@ -257,7 +257,7 @@ def start_sweep():
                     2 * runinfo.parameters["delay"] * runinfo.parameters["pulses"]
                 )
 
-        print(expt)
+        #print(expt)
         expt.start_time = time()
         expt.start_thread()
         return jsonify({"status": "sweep started"})
@@ -267,11 +267,11 @@ def start_sweep():
 def get_sweep_data():
     global expt
     try:
-        print("returning experiment data")
+        #print("returning experiment data")
         response = {
             "serialized_experiment": serialize_object(expt),
         }
-        print(expt.runinfo.measured)
+        #print(expt.runinfo.measured)
         return jsonify({"expt": serialize_object(response)})
     except Exception as e:
         print("Error in get_sweep_data:", e)
@@ -302,7 +302,6 @@ def hardware_off():
     global sweep
     # Turn off power supply unit if enabled
     if sweep['runinfo'].parameters["use_psu"]:
-        print('Turning off PSU')
         devices.psu.output = False
     print("Turning off hardware...")
     # insert your real code here to stop sweep
