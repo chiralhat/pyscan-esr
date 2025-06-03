@@ -226,13 +226,14 @@ class Worker(QObject):
         so the main GUI thread won't freeze.
         """
         try:
+            single = self.experiment.parameters["single"]
+            avgs = self.experiment.parameters["soft_avgs"]
             if self.task_name == "read_processed":
                 self.updateStatus.emit("Reading processed data...\n")
 
                 # Prepare data and handle specific experiment types
                 if self.experiment.type == "Spin Echo":
                     # Change parameters for read
-                    single = self.experiment.parameters["single"]
                     self.experiment.parameters["single"] = self.experiment.parameters[
                         "loopback"
                     ]
@@ -241,53 +242,16 @@ class Worker(QObject):
                         "parameters": self.experiment.parameters,
                         "experiment type": "Spin Echo Read Processed",
                     }
-
-                    print("about to ask server")
-                    # Send request to server
-                    try:
-                        response = requests.post(
-                            globals.server_address + "/run_snapshot", json=data
-                        )
-                    except Exception as e:
-                        self.updateStatus.emit(f"Error in connecting to server: {e}\n")
-                    print("asked server")
-
-                    # Handle server response
-                    if response.ok:
-                        response_data = response.json()
-                        self.experiment.sig = deserialize_obj(response_data["sig"])
-                    else:
-                        print("Error:", response.status_code, response.text)
-                    self.experiment.parameters["single"] = single
-
                 elif self.experiment.type == "Pulse Frequency Sweep":
                     data = {
                         "parameters": self.experiment.parameters,
                         "experiment type": "Pulse Frequency Sweep Read Processed",
                     }
-                    print("about to ask server")
-                    # Send request to server
-                    response = requests.post(
-                        globals.server_address + "/run_snapshot", json=data
-                    )
-                    print("asked server")
-                    # Handle server response
-                    if response.ok:
-                        response_data = response.json()
-                        self.experiment.sig = deserialize_obj(response_data["sig"])
-                        self.experiment.sig.x = np.array(self.experiment.sig.x)
-                    else:
-                        print("Error:", response.status_code, response.text)
-                    freq = self.experiment.parameters["freq"]
-                    self.experiment.sig.freq = freq
-                self.updateStatus.emit("Done reading processed data.\n")
 
             elif self.task_name == "read_unprocessed":
                 self.updateStatus.emit("Reading unprocessed data...\n")
 
                 if self.experiment.type == "Spin Echo":
-                    single = self.experiment.parameters["single"]
-                    avgs = self.experiment.parameters["soft_avgs"]
                     self.experiment.parameters["single"] = True
                     self.experiment.parameters["soft_avgs"] = 1
                     data = {
@@ -305,9 +269,6 @@ class Worker(QObject):
                     else:
                         print("Error:", response.status_code, response.text)
 
-                    self.experiment.parameters["single"] = single
-                    self.experiment.parameters["soft_avgs"] = avgs
-
                 elif self.experiment.type == "Pulse Frequency Sweep":
                     self.experiment.parameters["single"] = True
                     self.experiment.parameters["soft_avgs"] = 1
@@ -316,17 +277,27 @@ class Worker(QObject):
                         "experiment type": "Pulse Frequency Sweep Read Unprocessed",
                     }
 
-                    response = requests.post(
-                        globals.server_address + "/run_snapshot", json=data
-                    )
-
-                    if response.ok:
-                        response_data = response.json()
-                        self.experiment.sig = deserialize_obj(response_data["sig"])
-                    else:
-                        print("Error:", response.status_code, response.text)
-
                 self.updateStatus.emit("Done reading unprocessed data.\n")
+
+            print("about to ask server")
+            # Send request to server
+            try:
+                response = requests.post(
+                    globals.server_address + "/run_snapshot", json=data
+                )
+            except Exception as e:
+                self.updateStatus.emit(f"Error in connecting to server: {e}\n")
+            print("asked server")
+
+            # Handle server response
+            if response.ok:
+                response_data = response.json()
+                self.experiment.sig = deserialize_obj(response_data["sig"])
+            else:
+                print("Error:", response.status_code, response.text)
+            self.experiment.parameters["single"] = single
+            self.experiment.parameters["soft_avgs"] = avgs
+            self.experiment.sig.freq = self.experiment.parameters["freq"]
 
             # Emit signals based on experiment type for plotting
             if self.experiment.type == "Spin Echo":
