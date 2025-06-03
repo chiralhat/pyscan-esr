@@ -1520,7 +1520,7 @@ class ExperimentUI(QMainWindow):
         self.worker.dataReady_ps.connect(
             self.current_experiment.read_unprocessed_graph.update_canvas_psweep
         )
-        self.worker.finished.connect(self.worker_thread.quit)
+        #self.worker.finished.connect(self.worker_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker_thread.finished.connect(self.worker_thread.deleteLater)
         self.worker.finished.connect(self.reset_action_buttons)
@@ -1561,7 +1561,7 @@ class ExperimentUI(QMainWindow):
         self.worker.dataReady_ps.connect(
             self.current_experiment.read_processed_graph.update_canvas_psweep
         )
-        self.worker.finished.connect(self.worker_thread.quit)
+        #self.worker.finished.connect(self.worker_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker_thread.finished.connect(self.worker_thread.deleteLater)
         self.worker.finished.connect(self.reset_action_buttons)
@@ -1617,7 +1617,7 @@ class ExperimentUI(QMainWindow):
                 self.current_experiment.sweep_graph_1D.on_live_plot_1D
             )
             self.worker.updateStatus.connect(self.on_worker_status_update)
-            self.worker.finished.connect(self.worker_thread.quit)
+            #self.worker.finished.connect(self.worker_thread.quit)
             self.worker.finished.connect(self.worker.deleteLater)
             self.worker_thread.finished.connect(self.worker_thread.deleteLater)
             self.worker.finished.connect(self.on_finished_sweep)
@@ -1887,7 +1887,7 @@ class QueueRunnerWorker(QThread):
 
         # Status updates + cleanup
         worker.updateStatus.connect(self.queue_manager.parent().on_worker_status_update)
-        worker.finished.connect(thread.quit)
+        #worker.finished.connect(thread.quit)
         worker.finished.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
 
