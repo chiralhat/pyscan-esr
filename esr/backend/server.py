@@ -226,6 +226,8 @@ def start_sweep():
 
         runinfo = sweep["runinfo"]
         expt = ps.Sweep(runinfo, devices, sweep["name"])
+        expt.out = 0
+        expt.outerr = 0
 
         if experiment_type == "Spin Echo":
             if parameters["expt"] == "Hahn Echo":
