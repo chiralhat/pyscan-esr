@@ -33,7 +33,7 @@ def try_fit(func, dat):
 
 
 def end_func(d, expt, run):
-    sigs = list(expt.xmean[:-1]) + [d.xmean]
+    sigs = list(expt.x[:, 0]) + [d.x[0]]
     expt.fit = np.zeros((2, 4))
     expt.out, expt.outerr = 0, 0
     if run == "Freq Sweep":  # Frequency sweep
