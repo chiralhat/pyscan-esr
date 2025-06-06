@@ -24,6 +24,24 @@ import numpy as np
 from time import sleep, time
 
 
+def try_fit(func, dat):
+    try:
+        fit = np.array(ps.func_fit(func, dat)[:2])
+    except:
+        fit = np.zeros((2, 4))
+    return fit
+
+
+def end_func(d, expt, run):
+    sigs = list(expt.xmean[:-1]) + [d.xmean]
+    expt.fit = np.zeros((2, 4))
+    expt.out, expt.outerr = 0, 0
+    if run == "Freq Sweep":  # Frequency sweep
+        dat = np.array([expt.freq_sweep, sigs])
+        fit = try_fit(ps.lor_fit, dat)
+        expt.fit, expt.out, expt.outerr = fit, *fit[:, -1]
+
+
 def decay_freq_sweep(expt):
     """ """
 
@@ -72,6 +90,10 @@ def setup_measure_function(soc, function):
         expt.t = d.time
 
         d.current_time = time()
+
+        if runinfo._indicies[0] == (runinfo._dims[0] - 1):
+            end_func(d, expt, runinfo.parameters["expt"])
+            expt.elapsed_time = d.current_time - expt.start_time
 
         return d
 
