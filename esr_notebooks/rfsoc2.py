@@ -41,17 +41,17 @@ def plot_mesh(x, y, z, xlab='', ylab='', zlab='', bar=True, ax=False, cax=False,
     return c
 
 
-class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
-    def trigger_no_off(self, adcs=None, pins=None, adc_trig_offset=0, t=0, rp=0, r_out=31):
+class CPMGProgram(AveragerProgram):
+    def trigger_no_off(self, pins=None, t=0, rp=0, r_out=31):
         """
-        Adapted from qick-dawg.
-        Method that is a slight modificaiton of qick.QickProgram.trigger().
+        Adapted from qick-dawg. Currently only used for digital I/O pins, so I removed the rest.
+        Sets the specified pin high starting at time t, lasting until the end of the cycle.
+        
+        Method that is a slight modification of qick.QickProgram.trigger().
         This method does not turn off the PMOD pins, thus also does not require a width parameter
 
         Parameters
         ----------
-        adcs : list of int
-            List of readout channels to trigger (index in 'readouts' list) [0], [1], or [0, 1]
         pins : list of int
             List of marker pins to pulsem, i.e. PMOD channels.
             Use the pin numbers in the QickConfig printout.
@@ -64,46 +64,28 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         r_out : int, optional
             Register number
         """
-        if adcs is None:
-            adcs = []
         if pins is None:
             pins = []
-        if not adcs and not pins:
-            raise RuntimeError("must pulse at least one ADC or pin")
-
+        if not pins:
+            raise RuntimeError("must pulse at least one pin")
+            
         outdict = defaultdict(int)
-        for ro in adcs:
-            rocfg = self.soccfg['readouts'][ro]
-            outdict[rocfg['trigger_port']] |= (1 << rocfg['trigger_bit'])
-            # update trigger count for this readout
-            self.ro_chs[ro]['trigs'] += 1
         for pin in pins:
             pincfg = self.soccfg['tprocs'][0]['output_pins'][pin]
             outdict[pincfg[1]] |= (1 << pincfg[2])
 
         t_start = t
-        if adcs:
-            t_start += adc_trig_offset
-            # update timestamps with the end of the readout window
-            for adc in adcs:
-                ts = self.get_timestamp(ro_ch=adc)
-                if t_start < ts:
-                    print("Readout time %d appears to conflict with previous readout ending at %f?" % (t, ts))
-                # convert from readout clock to tProc clock
-                ro_length = self.ro_chs[adc]['length']
-                ro_length *= self.soccfg['fs_proc'] / self.soccfg['readouts'][adc]['f_fabric']
-                self.set_timestamp(t_start + ro_length, ro_ch=adc)
 
         for outport, out in outdict.items():
             self.regwi(rp, r_out, out, f'out = 0b{out:>016b}')
             self.seti(outport, rp, r_out, t_start, f'ch =0 out = ${r_out} @t = {t}')
-            #self.seti(outport, rp, 0, t_end, f'ch =0 out = 0 @t = {t}')
 
 
     def initialize(self):
         cfg=self.cfg   
         res_ch = cfg["res_ch"]
         
+        # Convert frequently-used times from us to cycles
         readout_length = [self.us2cycles(cfg["readout_length"], ro_ch=ch) for ch in cfg["ro_chs"]]
         length = self.us2cycles(cfg["pulse1_1"]/1000, gen_ch=res_ch)
         delay = self.us2cycles(cfg['delay']/1000-cfg['pulse1_1']/1000)
@@ -121,26 +103,18 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         # convert frequency to DAC frequency (ensuring it is an available ADC frequency)
         freq = self.freq2reg(cfg["freq"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
 
+        # set our output to be the default pulse register
         self.default_pulse_registers(ch=res_ch, style="const", freq=freq)
-        
-        self.delay_register = self.new_gen_reg(res_ch,
-                                               name='delay',
-                                               init_val=delay)
-        
-        self.tpi2_register = self.new_gen_reg(res_ch,
-                                               name='tpi2',
-                                               init_val=tpi2)
-        
-        self.nutation_register = self.new_gen_reg(res_ch,
-                                               name='tstart',
-                                               init_val=tstart)
         
         self.synci(200)  # give processor some time to configure pulses
 
 
     def cpmg(self, ph1, ph2, phdel=0, pulses=1, tstart=0):
+        """
+        Runs a Carr-Purcell pulse sequence with optional nutation pulse
+        """
+        # Set relevant times
         res_ch = self.cfg["res_ch"]
-        # self.reset_phase(gen_ch=[res_ch], ro_ch=self.cfg["ro_chs"])
         tpi2 = self.cfg["pulse1_1"]/1000
         tpi = self.cfg["pulse1_2"]/1000
         delay = self.cfg["delay"]/1000
@@ -149,44 +123,47 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         nutwidth = self.cfg["nutation_length"]/1000
         nutdelay = self.cfg["nutation_delay"]/1000
         gain = self.cfg["gain"]
+        
+        # We want half the power for our pi/2 pulse, and this achieves that
         gain2 = gain if gain<10000 else gain-10000
+        
+        # In Loopback mode we want to start readout at the beginning of the pi/2 pulse
+        # Otherwise we want to delay readout until the echo location
         offset = 0 if self.cfg["loopback"] else delay+(2*pulses-1)*delay#+(pulses-1)*(delay_pi)
+        # Actually set the trigger offset, including empirically-determined delay of 0.25 us
         trig_offset = self.us2cycles(0.25+nutwidth+self.cfg["h_offset"]+offset)
+        
+        # If the nutation pulse width is greater than the minimum number of cycles, add it in
         nut_length = self.us2cycles(nutwidth, gen_ch=res_ch)
         if nut_length>2:
             self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, phase=90, length=nut_length)
             self.pulse(ch=self.cfg["res_ch"])
         
-        # self.sync(self.nutation_register.page, self.nutation_register.addr)
+        # Wait the nutation delay time
         self.synci(self.us2cycles(nutdelay))
         
+        # Tell the ADC when to trigger readout, based on the trigger offset defined above
+        # If you uncomment the pins argument, it will also send a pulse on an I/O pin
         self.trigger(adcs=self.ro_chs,
                     # pins=[0],
                     adc_trig_offset=trig_offset)
 
+        # pi/2 pulse
         self.set_pulse_registers(ch=res_ch, gain=gain2, phase=ph1,
                                  length=self.us2cycles(tpi2, gen_ch=res_ch))
         self.pulse(ch=res_ch)
         
-        #self.sync(self.delay_register.page, self.delay_register.addr)
+        # Delay between pi/2 and pi pulses
         self.synci(self.us2cycles(delay_pi2))
         
+        # Add a configurable number of pi pulses, along with delays.
+        # delay_pi is roughly twice delay_pi2, as the delay between pi pulses should be
         for n in np.arange(pulses):
-
-            # self.sync(self.delay_register.page, self.delay_register.addr)
             self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
                                      length=self.us2cycles(tpi, gen_ch=res_ch))
             self.pulse(ch=self.cfg["res_ch"])
 
             self.synci(self.us2cycles(delay_pi))
-
-            #self.trigger(adcs=self.ro_chs)#,
-                         #pins=[0])#,
-                         #adc_trig_offset=trig_offset)
-            #self.wait_all(
-            # self.sync_all(0)#self.us2cycles(2*delay-tpi2-1.2))#-self.cfg['readout_length
-            # self.sync(self.delay_register.page, self.delay_register.addr)
-            # self.sync(self.tpi2_register.page, self.tpi2_register.addr)
 
         self.synci(self.us2cycles(delay_pi))
         
@@ -195,17 +172,18 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         
 
     def body(self):
-        phase1 = [self.deg2reg(self.cfg["pi2_phase"]+ph, gen_ch=self.cfg["res_ch"])
-                  for ph in [0, 0, 180, 0]]
-        phase2 = [self.deg2reg(self.cfg["pi_phase"]+ph, gen_ch=self.cfg["res_ch"])
-                  for ph in [0, 0, 180, 0]]
-        phase_delta = self.deg2reg(self.cfg["cpmg_phase"], gen_ch=self.cfg["res_ch"])
+        # This phase-cycling method doesn't work for some reason
+        # phase1 = [self.deg2reg(self.cfg["pi2_phase"]+ph, gen_ch=self.cfg["res_ch"])
+        #           for ph in [0, 0, 180, 0]]
+        # phase2 = [self.deg2reg(self.cfg["pi_phase"]+ph, gen_ch=self.cfg["res_ch"])
+        #           for ph in [0, 0, 180, 0]]
+        # phase_delta = self.deg2reg(self.cfg["cpmg_phase"], gen_ch=self.cfg["res_ch"])
         
         self.trigger_no_off(pins=[0])
         self.synci(self.us2cycles(0.1))
         
         #if self.cfg['single']:
-        self.cpmg(phase1[0], phase2[0], phase_delta, self.cfg["pulses"])
+        self.cpmg(0, 0, 0, self.cfg["pulses"])
         # else:
         #     for n in np.arange(4):
         #         self.synci(self.us2cycles(0.1))
