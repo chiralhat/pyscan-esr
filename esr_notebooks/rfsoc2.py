@@ -179,7 +179,16 @@ class CPMGProgram(AveragerProgram):
         #           for ph in [0, 0, 180, 0]]
         # phase_delta = self.deg2reg(self.cfg["cpmg_phase"], gen_ch=self.cfg["res_ch"])
         
+        nutwidth = self.cfg["nutation_length"]/1000
+        nutdelay = self.cfg["nutation_delay"]/1000
+        delay = self.cfg["delay"]/1000
+
+        offset = 0 if self.cfg["loopback"] else delay+(2*self.cfg["pulses"]-1)*delay#+(pulses-1)*(delay_pi)
+        # Actually set the trigger offset, including empirically-determined delay of 0.25 us
+        trig_offset = self.us2cycles(0.25+nutwidth+nutdelay+self.cfg["h_offset"]+offset)
+        
         self.trigger_no_off(pins=[0])
+        self.trigger_no_off(t=trig_offset, pins=[1])
         self.synci(self.us2cycles(0.1))
         
         #if self.cfg['single']:
