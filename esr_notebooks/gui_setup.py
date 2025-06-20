@@ -318,9 +318,20 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
                 pickle.dump(parameters, f)
                 
             inst = ps.ItemAttribute()
-            if not hasattr(devices, 'psu') and parameters['use_psu']:
-                waddr = parameters['psu_address'].split('ASRL')[-1].split('::')[0]
-                devices.psu = ps.GPD3303S(waddr)
+            
+            if not hasattr(devices, "psu") and parameters["use_psu"]:
+                try:
+                    for inst in res_list:
+                        try:
+                            devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                            break
+                        except Exception as e:
+                            try:
+                                devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                            except:
+                                pass
+                except Exception as e:
+                    print(f"Error initializing PSU: {e}")
             if not hasattr(devices, 'ls335') and parameters['use_temp']:
                 devices.ls335 = ps.Lakeshore335()
                 ttemp = devices.ls335.get_temp()
