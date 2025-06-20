@@ -219,7 +219,7 @@ EXPERIMENT_TEMPLATES = {
                     "display": "Integral only",
                     "key": "integrate",
                     "type": "check",
-                    "default": False,
+                    "default": True,
                 },
             ],
             "Utility Settings": [
@@ -1588,7 +1588,10 @@ class ExperimentUI(QMainWindow):
             self.sweep_start_stop_btn.setText("Stop Sweep")
 
             # Focus on the 2d sweep graph tab
-            self.graph_tabs.setCurrentIndex(2)
+            if self.current_experiment.parameters['integrate']:
+                self.graph_tabs.setCurrentIndex(3)
+            else:
+                self.graph_tabs.setCurrentIndex(2)
 
             # Choose appropriate worker config depending on experiment type
             if self.current_experiment.type == "Pulse Frequency Sweep":
