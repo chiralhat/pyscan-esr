@@ -149,13 +149,11 @@ def setup_measure_function(soc, integrate):
         
         runinfo = expt.runinfo
         devices = expt.devices
-            
-        prog = runinfo.progfunc(runinfo.parameters)
 
         if integrate:
-            d = acquire_phase(prog, soc)
+            d = acquire_phase(runinfo.parameters, soc)
         else:
-            d = measure_phase(prog, soc)
+            d = measure_phase(runinfo.parameters, soc)
             
             expt.t = d.time
 
