@@ -311,11 +311,12 @@ def fourier_signal(d, fstart=1, fstop=50):
     return d
 
 
-def measure_decay(prog, soc, d=0, ro=0, progress=False):
-    reps = prog.cfg["ave_reps"]
-    pulses = prog.cfg["pulses"]
+def measure_decay(config, soc, d=0, ro=0, progress=False):
+    reps = config["ave_reps"]
+    pulses = config["pulses"]
     if isinstance(d, int):
         d = ps.ItemAttribute()
+    prog = CPMGProgram(soc, config)
     iq_list = safe_read(prog, soc, progress)
 
     d.time, d.i, d.q, d.x = iq_convert(
@@ -353,11 +354,12 @@ def measure_decay(prog, soc, d=0, ro=0, progress=False):
     return d
 
 
-def measure_phase(prog, soc, d=0, ro=0, progress=False):
-    reps = prog.cfg["ave_reps"]
-    pulses = prog.cfg["pulses"]
+def measure_phase(config, soc, d=0, ro=0, progress=False):
+    reps = config["ave_reps"]
+    pulses = config["pulses"]
     if isinstance(d, int):
         d = ps.ItemAttribute()
+    prog = CPMGProgram(soc, config)
     iq_list = safe_read(prog, soc, progress)
 
     d.time, d.i, d.q, d.x = iq_convert(
@@ -389,15 +391,16 @@ def measure_phase(prog, soc, d=0, ro=0, progress=False):
     return d
 
 
-def acquire_phase(prog, soc, d=0, ro=0, progress=False):
-    reps = prog.cfg["ave_reps"]
-    pulses = prog.cfg["pulses"]
-    prog.cfg["single"] = False
-    nreps = prog.cfg['soft_avgs']
-    prog.cfg['reps'] = nreps
-    prog.cfg['soft_avgs'] = 1
+def acquire_phase(config, soc, d=0, ro=0, progress=False):
+    reps = config["ave_reps"]
+    pulses = config["pulses"]
+    config["single"] = False
+    nreps = config['soft_avgs']
+    config['reps'] = nreps
+    config['soft_avgs'] = 1
     if isinstance(d, int):
         d = ps.ItemAttribute()
+    prog = CPMGProgram(soc, config)
     iq_lists = prog.acquire(soc, progress=progress)
 
     d.imean, d.qmean, d.xmean = iq_convert(
@@ -423,8 +426,8 @@ def acquire_phase(prog, soc, d=0, ro=0, progress=False):
         d.qmean = d.qmean / reps
         d.xmean = d.xmean / reps
 
-    prog.cfg['soft_avgs'] = nreps
-    prog.cfg['reps'] = 1
+    config['soft_avgs'] = nreps
+    config['reps'] = 1
     return d
 
 
