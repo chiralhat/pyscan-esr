@@ -198,8 +198,7 @@ def run_snapshot():
     parameters = data.get("parameters")
     experiment_type = data.get("experiment type")
 
-    prog = CPMGProgram(soc, parameters)
-    measure_phase(prog, soc, sig)
+    measure_phase(parameters, soc, sig)
 
     # Serialize all public attributes of `sig`
     serialized_sig = serialize_object(sig)
