@@ -57,7 +57,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import sys, os
 
 sys.path.append("../")
-from time import sleep, time
+from time import sleep
 from datetime import date, datetime
 import pickle
 import requests
