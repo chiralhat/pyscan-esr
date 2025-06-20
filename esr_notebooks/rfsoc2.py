@@ -316,7 +316,7 @@ def measure_decay(config, soc, d=0, ro=0, progress=False):
     pulses = config["pulses"]
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    prog = CPMGProgram(soc, parameters)
+    prog = CPMGProgram(soc, config)
     iq_list = safe_read(prog, soc, progress)
 
     d.time, d.i, d.q, d.x = iq_convert(
@@ -359,7 +359,7 @@ def measure_phase(config, soc, d=0, ro=0, progress=False):
     pulses = config["pulses"]
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    prog = CPMGProgram(soc, parameters)
+    prog = CPMGProgram(soc, config)
     iq_list = safe_read(prog, soc, progress)
 
     d.time, d.i, d.q, d.x = iq_convert(
@@ -400,7 +400,7 @@ def acquire_phase(config, soc, d=0, ro=0, progress=False):
     config['soft_avgs'] = 1
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    prog = CPMGProgram(soc, parameters)
+    prog = CPMGProgram(soc, config)
     iq_lists = prog.acquire(soc, progress=progress)
 
     d.imean, d.qmean, d.xmean = iq_convert(
