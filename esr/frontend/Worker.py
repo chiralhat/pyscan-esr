@@ -355,15 +355,16 @@ class Worker(QObject):
 
                 # Generate and emit updated plots
                 if self.experiment.expt.runinfo.measured:
-                    data_name_2d = self.combo_2d.currentText()
-                    pg_2D = ps.PlotGenerator(
-                        expt=self.experiment.expt,
-                        d=2,
-                        x_name="t",
-                        y_name=self.experiment.parameters["y_name"],
-                        data_name=data_name_2d,
-                        transpose=1,
-                    )
+                    if not self.experiment.parameters['integrate']:
+                        data_name_2d = self.combo_2d.currentText()
+                        pg_2D = ps.PlotGenerator(
+                            expt=self.experiment.expt,
+                            d=2,
+                            x_name="t",
+                            y_name=self.experiment.parameters["y_name"],
+                            data_name=data_name_2d,
+                            transpose=1,
+                        )
 
                     if self.experiment.type == "Spin Echo":
                         data_name_1d = self.combo_1d.currentText()
@@ -374,11 +375,12 @@ class Worker(QObject):
                             data_name=data_name_1d,
                         )
 
-                    if last_data_2d is None or not np.array_equal(
-                        pg_2D.data, last_data_2d
-                    ):
-                        last_data_2d = pg_2D.data.copy()
-                        self.live_plot_2D_update_signal.emit(pg_2D)
+                    if not self.experiment.parameters['integrate']:
+                        if last_data_2d is None or not np.array_equal(
+                            pg_2D.data, last_data_2d
+                        ):
+                            last_data_2d = pg_2D.data.copy()
+                            self.live_plot_2D_update_signal.emit(pg_2D)
 
                     if self.experiment.type == "Spin Echo":
                         if last_data_1d is None or not np.array_equal(
@@ -391,15 +393,17 @@ class Worker(QObject):
             # final emitting of plots when sweep is over
             if self.experiment.expt.runinfo.measured:
                 try:
-                    data_name_2d = self.combo_2d.currentText()
-                    pg_2D = ps.PlotGenerator(
-                        expt=self.experiment.expt,
-                        d=2,
-                        x_name="t",
-                        y_name=self.experiment.parameters["y_name"],
-                        data_name=data_name_2d,
-                        transpose=1,
-                    )
+                    if not self.experiment.parameters['integrate']:
+                        data_name_2d = self.combo_2d.currentText()
+                        pg_2D = ps.PlotGenerator(
+                            expt=self.experiment.expt,
+                            d=2,
+                            x_name="t",
+                            y_name=self.experiment.parameters["y_name"],
+                            data_name=data_name_2d,
+                            transpose=1,
+                        )
+                    
                     if self.experiment.type == "Spin Echo":
                         data_name_1d = self.combo_1d.currentText()
                         pg_1D = ps.PlotGenerator(
@@ -409,7 +413,8 @@ class Worker(QObject):
                             data_name=data_name_1d,
                         )
 
-                    self.live_plot_2D_update_signal.emit(pg_2D)
+                    if not self.experiment.parameters['integrate']:
+                        self.live_plot_2D_update_signal.emit(pg_2D)
 
                     if self.experiment.type == "Spin Echo":
                         self.live_plot_1D_update_signal.emit(pg_1D)
