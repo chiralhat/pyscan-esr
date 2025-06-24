@@ -215,6 +215,120 @@ class CPMGProgram(AveragerProgram):
         #         self.cpmg(phase1[n], phase2[n], phase_delta, self.cfg["pulses"])
 
 
+class DEERProgram(CPMGProgram):
+    """
+    Program to perform four-pulse DEER pulse sequences.
+    I'm going to try to write it first with all pulses occurring on a single output,
+    and if that doesn't work I'll use the second DAQ for the second frequency.
+    """
+    def initialize(self):
+        cfg=self.cfg   
+        res_ch = cfg["res_ch"]
+        
+        # Convert frequently-used times from us to cycles
+        readout_length = [self.us2cycles(cfg["readout_length"], ro_ch=ch) for ch in cfg["ro_chs"]]
+        length = self.us2cycles(cfg["pulse1_1"]/1000, gen_ch=res_ch)
+        delay = self.us2cycles(cfg['delay']/1000-cfg['pulse1_1']/1000)
+        tpi2 = self.us2cycles(cfg['pulse1_1']/1000)
+        tstart = self.us2cycles(cfg['nutation_delay']/1000)
+
+        # set the nyquist zone
+        self.declare_gen(ch=res_ch, nqz=1)
+        
+        # configure the readout lengths and downconversion frequencies (ensuring it is an available DAC frequency)
+        for n, ch in enumerate(cfg["ro_chs"]):
+            self.declare_readout(ch=ch, length=readout_length[n],
+                                 freq=cfg["freq"], gen_ch=res_ch)
+
+        # convert frequency to DAC frequency (ensuring it is an available ADC frequency)
+        freq1 = self.freq2reg(cfg["freq1"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
+        freq2 = self.freq2reg(cfg["freq2"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
+
+        # set our output to be the default pulse register
+        self.default_pulse_registers(ch=res_ch, style="const", freq=freq1)
+        
+        self.synci(200)  # give processor some time to configure pulses
+
+
+    def deer(self, ph1, ph2, tstart=0):
+        """
+        Runs a four-pulse DEER sequence with optional nutation pulse
+        """
+        # Set relevant times
+        res_ch = self.cfg["res_ch"]
+        tpi2 = self.cfg["pulse1_1"]/1000
+        tpi = self.cfg["pulse1_2"]/1000
+        delay = self.cfg["delay"]/1000
+        delay_pi2 = delay-tpi2
+        delay_pi = 2*delay-tpi
+        tau = self.cfg["tau"]/1000-tpi
+        gain = self.cfg["gain"]
+
+        T = self.cfg["DEER_delay"]/1000
+        first_tau = tau-T
+        
+        # convert second frequency to DAC frequency (ensuring it is an available ADC frequency)
+        freq2 = self.freq2reg(cfg["freq2"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
+
+        # We want half the power for our pi/2 pulse, and this achieves that
+        gain2 = gain if gain<10000 else gain-10000
+        
+        # In Loopback mode we want to start readout at the beginning of the pi/2 pulse
+        # Otherwise we want to delay readout until the second echo location
+        offset = 0 if self.cfg["loopback"] else 2*delay+(2*tau)
+        # Actually set the trigger offset, including empirically-determined delay of 0.25 us
+        trig_offset = self.us2cycles(0.25+self.cfg["h_offset"]+offset)
+        
+        # Tell the ADC when to trigger readout, based on the trigger offset defined above
+        # If you uncomment the pins argument, it will also send a pulse on an I/O pin
+        self.trigger(adcs=self.ro_chs,
+                    # pins=[0],
+                    adc_trig_offset=trig_offset)
+
+        # pi/2 pulse
+        self.set_pulse_registers(ch=res_ch, gain=gain2, phase=ph1,
+                                 length=self.us2cycles(tpi2, gen_ch=res_ch))
+        self.pulse(ch=res_ch)
+        
+        # Delay between pi/2 and pi pulses
+        self.synci(self.us2cycles(delay_pi2))
+        
+        # First pi pulse
+        self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
+                                 length=self.us2cycles(tpi, gen_ch=res_ch))
+        self.pulse(ch=self.cfg["res_ch"])
+
+        # Wait until first echo
+        self.synci(self.us2cycles(delay_pi))
+
+        # Send DEER pulse for second spin
+        self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2, freq=freq2,
+                                 length=self.us2cycles(tpi, gen_ch=res_ch))
+        self.pulse(ch=self.cfg["res_ch"])
+
+        # Delay between DEER pulse and second pi pulse
+        self.synci(self.us2cycles(first_tau))
+
+        # Second pi pulse
+        self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2, freq=freq1,
+                                 length=self.us2cycles(tpi, gen_ch=res_ch))
+        self.pulse(ch=self.cfg["res_ch"])
+
+        # Wait until second echo
+        self.synci(self.us2cycles(tau))
+        
+        self.wait_all()
+        self.sync_all(self.us2cycles(self.cfg["period"]))
+        
+
+    def body(self):
+        self.trigger_no_off(pins=[0])
+        self.synci(self.us2cycles(0.1))
+        
+        #if self.cfg['single']:
+        self.deer(0, 0)
+
+
 def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):
     """
     When doing phase subtraction with multiple triggers, the subsequent pulse triggers
@@ -407,6 +521,8 @@ def safe_read(parameters, soc, progress=False):
         iq_list = sread(parameters, soc, progress)
     else:
         iq_list = []
+        # TODO: Look into using a QickSweep object for doing this phase sweeping
+        # TODO: Incorporate the other refinements that went into the example notebook
         for n in np.arange(4):
             parameters['pi2_phase'] = pi2_phase_list[n]
             parameters['pi_phase'] = pi_phase_list[n]
