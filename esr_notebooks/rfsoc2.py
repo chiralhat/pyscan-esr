@@ -42,7 +42,7 @@ def plot_mesh(x, y, z, xlab='', ylab='', zlab='', bar=True, ax=False, cax=False,
 
 
 class CPMGProgram(AveragerProgram):
-    def trigger_no_off(self, pins=None, t=0, rp=0, r_out=31):
+    def trigger_no_off(self, pins=None, t=0, rp=0, r_out=31, width=0):
         """
         Adapted from qick-dawg. Currently only used for digital I/O pins, so I removed the rest.
         Sets the specified pin high starting at time t, lasting until the end of the cycle.
@@ -75,10 +75,14 @@ class CPMGProgram(AveragerProgram):
             outdict[pincfg[1]] |= (1 << pincfg[2])
 
         t_start = t
+        if width:
+            t_end = t_start + width
 
         for outport, out in outdict.items():
             self.regwi(rp, r_out, out, f'out = 0b{out:>016b}')
             self.seti(outport, rp, r_out, t_start, f'ch =0 out = ${r_out} @t = {t}')
+            if width:
+                self.seti(outport, rp, 0, t_end, f'ch =0 out = 0 @t = {t}')
 
 
     def initialize(self):
@@ -114,6 +118,7 @@ class CPMGProgram(AveragerProgram):
         Runs a Carr-Purcell pulse sequence with optional nutation pulse
         """
         # Set relevant times
+        period = self.us2cycles(self.cfg["period"])
         res_ch = self.cfg["res_ch"]
         tpi2 = self.cfg["pulse1_1"]/1000
         tpi = self.cfg["pulse1_2"]/1000
@@ -121,7 +126,7 @@ class CPMGProgram(AveragerProgram):
         delay_pi2 = delay-tpi2
         delay_pi = 2*delay-tpi
         nutwidth = self.cfg["nutation_length"]/1000
-        nutdelay = self.cfg["nutation_delay"]/1000
+        nutdelay = self.us2cycles(self.cfg["nutation_delay"]/1000)
         gain = self.cfg["gain"]
         
         # We want half the power for our pi/2 pulse, and this achieves that
@@ -140,7 +145,7 @@ class CPMGProgram(AveragerProgram):
             self.pulse(ch=self.cfg["res_ch"])
         
         # Wait the nutation delay time
-        self.synci(self.us2cycles(nutdelay))
+        self.synci(nutdelay)
         
         # Tell the ADC when to trigger readout, based on the trigger offset defined above
         # If you uncomment the pins argument, it will also send a pulse on an I/O pin
@@ -168,17 +173,10 @@ class CPMGProgram(AveragerProgram):
         self.synci(self.us2cycles(delay_pi))
         
         self.wait_all()
-        self.sync_all(self.us2cycles(self.cfg["period"]))
+        self.sync_all(period-trig_offset-nutdelay)
         
 
     def body(self):
-        # This phase-cycling method doesn't work for some reason
-        # phase1 = [self.deg2reg(self.cfg["pi2_phase"]+ph, gen_ch=self.cfg["res_ch"])
-        #           for ph in [0, 0, 180, 0]]
-        # phase2 = [self.deg2reg(self.cfg["pi_phase"]+ph, gen_ch=self.cfg["res_ch"])
-        #           for ph in [0, 0, 180, 0]]
-        # phase_delta = self.deg2reg(self.cfg["cpmg_phase"], gen_ch=self.cfg["res_ch"])
-        
         nutwidth = self.cfg["nutation_length"]/1000
         nutdelay = self.cfg["nutation_delay"]/1000
         delay = self.cfg["delay"]/1000
@@ -187,16 +185,13 @@ class CPMGProgram(AveragerProgram):
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
         trig_offset = self.us2cycles(0.25+nutwidth+nutdelay+self.cfg["h_offset"]+offset)
         
+        # Trigger the switch-controlling pulse
         self.trigger_no_off(pins=[0])
+        # Trigger the scope sync pulse
         self.trigger_no_off(t=trig_offset, pins=[1])
         self.synci(self.us2cycles(0.1))
         
-        #if self.cfg['single']:
         self.cpmg(0, 0, 0, self.cfg["pulses"])
-        # else:
-        #     for n in np.arange(4):
-        #         self.synci(self.us2cycles(0.1))
-        #         self.cpmg(phase1[n], phase2[n], phase_delta, self.cfg["pulses"])
 
 
 def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):
