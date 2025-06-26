@@ -180,10 +180,12 @@ class CPMGProgram(AveragerProgram):
         nutwidth = self.cfg["nutation_length"]/1000
         nutdelay = self.cfg["nutation_delay"]/1000
         delay = self.cfg["delay"]/1000
+        tpi = self.cfg["pulse1_2"]/1000
+        tpi2 = self.cfg["pulse1_1"]/1000
 
-        offset = 0 if self.cfg["loopback"] else delay+(2*self.cfg["pulses"]-1)*delay#+(pulses-1)*(delay_pi)
+        offset = 0 if self.cfg["loopback"] else (tpi2+delay+self.cfg["pulses"]*tpi+2*self.cfg["pulses"]-1)*(delay)
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
-        trig_offset = self.us2cycles(0.25+nutwidth+nutdelay+self.cfg["h_offset"]+offset)
+        trig_offset = self.us2cycles(nutwidth+nutdelay+self.cfg["h_offset"]+offset)
         
         # Trigger the switch-controlling pulse
         self.trigger_no_off(pins=[0])
