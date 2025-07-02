@@ -24,9 +24,9 @@ try:
 except OSError:
     print('Temperature Controller not found, Lakeshore335 not loaded')
 try:
-    from .gpd3303s import GPD3303S
+    from .mokugo import MokuGo
 except OSError:
-    print('Power Supply not found, GPD3303S not loaded')
+    print('Power Supply not found, Moku:Go not loaded')
 
 
 

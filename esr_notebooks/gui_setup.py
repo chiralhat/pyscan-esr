@@ -397,8 +397,7 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
                 waddr = parameters['synth_address'].split('ASRL')[-1].split('::')[0]
                 devices.synth = ps.WindfreakSynthHD(waddr)
             if not hasattr(devices, 'psu') and parameters['use_psu']:
-                waddr = parameters['psu_address'].split('ASRL')[-1].split('::')[0]
-                devices.psu = ps.GPD3303S(waddr)
+                devices.psu = ps.MokuGo()
             if not hasattr(devices, 'ls335'):
                 devices.ls335 = ps.Lakeshore335()
             if (parameters['init'] or btn.description=='Initialize'):
