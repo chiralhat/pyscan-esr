@@ -1,5 +1,5 @@
 '''
-Pytest functions to test the AverageSweep experiment class
+Pytest functions to test the AverageExperiment experiment class
 '''
 
 
@@ -72,7 +72,7 @@ def set_up_experiment(num_devices, measure_function, data_dir, verbose, n_averag
         if (num_devices < 0):
             assert False, "Num devices shouldn't be negative"
         if (num_devices == 0):
-            runinfo.scan0 = ps.AverageScan(n_average, dt=0.01)
+            runinfo.scan0 = ps.AverageScan(n_average, dt=0.001)
         elif (num_devices == 1):
             devices.v1 = ps.TestVoltage()
             runinfo.scan0 = ps.PropertyScan({'v1': ps.drange(0, 0.1, 0.1)}, 'voltage')
@@ -90,7 +90,7 @@ def set_up_experiment(num_devices, measure_function, data_dir, verbose, n_averag
             runinfo.scan0 = ps.PropertyScan({'v1': ps.drange(0, 0.1, 0.1)}, 'voltage')
             runinfo.scan1 = ps.PropertyScan({'v2': ps.drange(0.1, 0.1, 0)}, 'voltage')
             runinfo.scan2 = ps.PropertyScan({'v3': ps.drange(0.3, 0.1, 0.2)}, 'voltage')
-            runinfo.scan3 = ps.AverageScan(n_average + 2, dt=0.1)
+            runinfo.scan3 = ps.AverageScan(n_average + 2, dt=0.01)
         if (num_devices > 4):
             assert False, "num_devices > 4 not implemented in testing"
     # if bad runinfo it will have no average scan and thus should fail
@@ -101,16 +101,16 @@ def set_up_experiment(num_devices, measure_function, data_dir, verbose, n_averag
     # instantiate expt based on additional parameters
     if data_dir is None:
         if verbose is False:
-            expt = ps.Sweep(runinfo, devices)
+            expt = ps.Experiment(runinfo, devices)
         elif verbose is True:
-            expt = ps.Sweep(runinfo, devices, verbose=verbose)
+            expt = ps.Experiment(runinfo, devices, verbose=verbose)
         else:
             assert False, "Invalid verbose entry. Must be boolean."
     elif isinstance(data_dir, str):
         if verbose is False:
-            expt = ps.Sweep(runinfo, devices, data_dir)
+            expt = ps.Experiment(runinfo, devices, data_dir)
         elif verbose is True:
-            expt = ps.Sweep(runinfo, devices, data_dir, verbose)
+            expt = ps.Experiment(runinfo, devices, data_dir, verbose)
         else:
             assert False, "Invalid verbose entry. Must be boolean."
     else:
@@ -184,9 +184,9 @@ def check_multi_data_results(expt, num_devices, shape1=[2], shape2=[2, 2], shape
 
 ##################### TEST CASES BEGIN HERE #####################
 
-def test_averagesweep():
+def test_average_experiment():
     """
-    Testing AverageSweep
+    Testing AverageExperiment
 
     Returns
     --------
@@ -276,6 +276,6 @@ def test_averagesweep():
     test_variations(bad=True)
 
     with pytest.raises(Exception):
-        test_variations(n_average=-1), "Averagesweep's n_average must be 1 or more"
+        test_variations(n_average=-1), "AverageExperiment's n_average must be 1 or more"
     with pytest.raises(Exception):
-        test_variations(n_average=0), "Averagesweep's n_average must be 1 or more"
+        test_variations(n_average=0), "AverageExperiment's n_average must be 1 or more"

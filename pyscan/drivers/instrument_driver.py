@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pyscan.general.item_attribute import ItemAttribute
+from ..general.item_attribute import ItemAttribute
 from .new_instrument import new_instrument
 from collections import OrderedDict
 import numpy as np
@@ -433,20 +433,29 @@ class InstrumentDriver(ItemAttribute):
 
         doc = self.__doc__.split('\n')
 
-        r = re.compile(".*{} :".format(prop_name))
-        match = list(filter(r.match, doc))
+        r = "    {} :".format(prop_name)
 
-        assert len(match) > 0, "No matches for {} documentation".format(prop_name)
-        assert len(match) == 1, "Too many matches for {} documentation".format(prop_name)
-        match = match[0]
+        def find_match(str):
+            if r in str:
+                return True
+            else:
+                return False
 
+        match = list(filter(find_match, doc))
+
+        assert not len(match) > 1, "Too many matches for {} documentation".format(prop_name)
+
+        if len(match) == 0:
+            match = ''
+        else:
+            match = match[0]
         for i, string in enumerate(doc):
             if string == match:
                 break
 
         doc_string = doc[i][4::]
 
-        for j in range(len(doc_string)):
+        for j in range(len(doc)):
             try:
                 doc[i + 1 + j]
             except:

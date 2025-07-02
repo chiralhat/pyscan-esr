@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from pyscan.general.item_attribute import ItemAttribute
-from pyscan.general.get_pyscan_version import get_pyscan_version
+from ..general.item_attribute import ItemAttribute
+from ..general.get_pyscan_version import get_pyscan_version
 from .scans import PropertyScan, AverageScan
+import pyscan as ps
 
 
 class RunInfo(ItemAttribute):
@@ -62,6 +63,9 @@ class RunInfo(ItemAttribute):
         self.initial_pause = 0.1
         self.average_d = -1
 
+        # Assumed not a continuous expt. If there is a continuous scan this will be set to true in self.check()
+        self.continuous = False
+
         self.verbose = False
         self._pyscan_version = get_pyscan_version()
 
@@ -88,6 +92,46 @@ class RunInfo(ItemAttribute):
         if num_av_scans > 1:
             assert False, "More than one average scan is not allowed"
 
+        # make sure there are no empty scans inbetween used scans.
+        used_scan_found = False
+        scans = self.scans
+        for i in range(len(scans)):
+            count_down = len(scans) - i - 1
+            if used_scan_found is False:
+                if not (isinstance(scans[count_down], PropertyScan) and len(scans[count_down].input_dict) == 0):
+                    used_scan_found = True
+                    used_scan_index = count_down
+            else:
+                assert not (isinstance(scans[count_down], PropertyScan) and len(scans[count_down].input_dict) == 0), \
+                    (f"Found empty PropertyScan (scan{count_down}) below used scan (scan{used_scan_index}).\n"
+                     + "Scans must be populated in sequential order.")
+
+        # find the scan set to continuous scan (if any) and determine the index
+        for i, scan in enumerate(self.scans):
+            if isinstance(scan, ps.ContinuousScan):
+                self.continuous = True
+                self.continuous_scan_index = i
+
+        # If there is a ContinuousScan, ensure it is the highest level scan
+        if self.continuous:
+            for i in range(self.continuous_scan_index + 1, len(self.scans)):
+                assert isinstance(self.scans[i], PropertyScan) and len(self.scans[i].input_dict) == 0, \
+                    f"ContinuousScan found at scan{self.continuous_scan_index} but is not the highest level scan."
+
+    def stop_continuous(self, plus_one=False):
+        stop = False
+        if self.continuous:
+            continuous_scan = self.scans[self.continuous_scan_index]
+            if hasattr(continuous_scan, 'n_max'):
+                if plus_one is False:
+                    if continuous_scan.n_max <= continuous_scan.i:
+                        stop = True
+                elif plus_one is True:
+                    if continuous_scan.n_max <= continuous_scan.i + 1:
+                        stop = True
+
+        return stop
+
     @property
     def scans(self):
         ''' Returns array of all scans
@@ -103,6 +147,10 @@ class RunInfo(ItemAttribute):
                 self.scan2.n,
                 self.scan3.n)
         dims = [n for n in dims if n != 1]
+        if self.continuous:
+            if len(dims) - 1 == self.continuous_scan_index:
+                dims = dims[:-1]
+            dims.append(1)
         self._dims = tuple(dims)
         return self._dims
 
@@ -118,7 +166,7 @@ class RunInfo(ItemAttribute):
     def ndim(self):
         ''' Returns number of non 1 sized scans
         '''
-        self._ndim = len(self.dims)  # why is this stored as a property? It is never used
+        self._ndim = len(self.dims)
         return self._ndim
 
     @property
@@ -138,6 +186,8 @@ class RunInfo(ItemAttribute):
                           self.scan2.i,
                           self.scan3.i)
         self._indicies = self._indicies[:self.ndim]
+        if self.continuous:
+            self._indicies = self._indicies[:-1]
         return tuple(self._indicies)
 
     @property
@@ -181,43 +231,55 @@ class RunInfo(ItemAttribute):
 
         return self._has_average_scan
 
-    # These property's are strictly for backwards compatibility with old pyscan naming convention.
+    ####################### LEGACY SECTION ########################
+    # This section is set up to alert users who try to use legacy nomenclature
+    # of the updated naming convention that they must use instead.
     @property
     def loop0(self):
+        legacy_warning()
         return self.scan0
 
     @loop0.setter
     def loop0(self, value):
+        legacy_warning()
         self.scan0 = value
 
     @property
     def loop1(self):
+        legacy_warning()
         return self.scan1
 
     @loop1.setter
     def loop1(self, value):
+        legacy_warning()
         self.scan1 = value
 
     @property
     def loop2(self):
+        legacy_warning()
         return self.scan2
 
     @loop2.setter
     def loop2(self, value):
+        legacy_warning()
         self.scan2 = value
 
     @property
     def loop3(self):
+        legacy_warning()
         return self.scan3
 
     @loop3.setter
     def loop3(self, value):
+        legacy_warning()
         self.scan3 = value
 
     @property
     def loops(self):
-        ''' Returns array of all scans
         '''
+        Returns array of all scans
+        '''
+        legacy_warning()
         return [self.scan0, self.scan1, self.scan2, self.scan3]
 
 
@@ -238,3 +300,10 @@ def drop(array, index):
     '''
 
     return list(array[0:index]) + list(array[index + 1:])
+
+
+def legacy_warning():
+    warning_msg = ("Use of legacy nomenclature detected but no longer supported.\n"
+                   + "You entered 'loop', use 'scan' instead.")
+    raise DeprecationWarning(f"\033[93m*** WARNING! ***: {warning_msg} \033[0m")
+    assert False, f"\033[93m*** WARNING! ***: {warning_msg} \033[0m"
