@@ -62,7 +62,8 @@ def decay_freq_sweep(expt):
     if runinfo._indicies[0]==(runinfo._dims[0]-1):
         if runinfo.parameters['turn_off']:
             devices.synth.power_off()
-            devices.psu.output = False
+            if runinfo.parameters['use_psu']:
+                devices.psu.output = False
     
     return d
 
@@ -82,7 +83,8 @@ def decay_freq_sweep_onoff(expt):
     if runinfo._indicies[0]==(runinfo._dims[0]-1):
         if runinfo.parameters['turn_off']:
             devices.synth.power_off()
-            devices.psu.output = False
+            if runinfo.parameters['use_psu']:
+                devices.psu.output = False
     
     return d
 
@@ -108,7 +110,8 @@ def decay_field_sweep(expt):
     if runinfo._indicies[0]==(runinfo._dims[0]-1):
         if runinfo.parameters['turn_off']:
             devices.synth.power_off()
-            devices.psu.output = False
+            if runinfo.parameters['use_psu']:
+                devices.psu.output = False
     
     return d
 

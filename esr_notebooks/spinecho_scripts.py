@@ -432,7 +432,8 @@ def measure_echo(expt):
         expt.elapsed_time = expt.current_time-expt.start_time
         if runinfo.parameters['turn_off']:
             devices.synth.power_off()
-            devices.psu.output = False
+            if runinfo.parameters['use_psu']:
+                devices.psu.output = False
         if runinfo.parameters['expt']=='Phase Sweep':
             sigs = list(expt.v1int[:-1])+[d.v1int]
             expt.maxphase = phase_fit(expt.phase_sweep, sigs)
