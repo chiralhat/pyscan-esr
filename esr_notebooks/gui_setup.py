@@ -418,7 +418,8 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
             if 'expt' in sweep.keys():
                 sweep['expt'].runinfo.running = False
             devices.synth.power_off()
-            devices.psu.output = False
+            if parameters['use_psu']:
+                devices.psu.output = False
         
         with output:
             fig = plt.figure(figsize=(8, 5))
@@ -433,6 +434,12 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
             set_pars(btn)
             expt = ps.Sweep(sweep['runinfo'], devices, sweep['name'])
             sweep['expt'] = expt
+            if parameters['expt']=="Hahn Echo":
+                sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
+            elif parameters['expt']=="CPMG":
+                sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
+            else:
+                sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
             run_sweep(sweep, parameters)#, measout, mfig)
             run_ind.value = 0
 
