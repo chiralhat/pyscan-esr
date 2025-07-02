@@ -62,6 +62,10 @@ def quadlorfit(x, b, a, w, f, c, d):
 
 def rabifit(x, a, t, T, phi, b):
     return a*np.exp(-x/t)*np.cos(2*np.pi/T*x+phi)+b
+
+
+def rabifitnophi(x, a, t, T, b):
+    return a*np.exp(-x/t)*np.cos(2*np.pi/T*x)+b
     
 
 # Helper functions
