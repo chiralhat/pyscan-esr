@@ -73,7 +73,7 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
                                                          description='FPGA Addr'),
                             'synth_address': ipw.Dropdown(options=res_list,
                                                           description='RF Addr'),
-                            'psu_address': ipw.Dropdown(options=res_list,
+                            'psu_address': ipw.Text(layout=nwid,
                                                           description='PSU Addr'),
                             'use_psu': ipw.Checkbox(layout=wwid, description='Use PSU? (No magnet if not)')},
                 'synth': {'freq': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
@@ -397,7 +397,7 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
                 waddr = parameters['synth_address'].split('ASRL')[-1].split('::')[0]
                 devices.synth = ps.WindfreakSynthHD(waddr)
             if not hasattr(devices, 'psu') and parameters['use_psu']:
-                devices.psu = ps.MokuGo()
+                devices.psu = ps.MokuGo(parameters['psu_address'])
             if not hasattr(devices, 'ls335'):
                 devices.ls335 = ps.Lakeshore335()
             if (parameters['init'] or btn.description=='Initialize'):
@@ -431,14 +431,17 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
         def start_sweep(btn):
             run_ind.value = 1
             set_pars(btn)
-            expt = ps.Sweep(sweep['runinfo'], devices, sweep['name'])
+            runinfo = sweep['runinfo']
+            expt = ps.Sweep(runinfo, devices, sweep['name'])
             sweep['expt'] = expt
-            if parameters['expt']=="Hahn Echo":
-                sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
-            elif parameters['expt']=="CPMG":
-                sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
-            else:
-                sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
+            if 'expt' in parameters.keys():
+                delay = parameters['delay']
+                if parameters['expt']=="Hahn Echo":
+                    sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*parameters['cpmg']
+                elif parameters['expt']=="CPMG":
+                    sweep['expt'].echo_delay = 2*delay*runinfo.scan0.scan_dict['cpmg_sweep']
+                else:
+                    sweep['expt'].echo_delay = 2*delay*parameters['cpmg']
             run_sweep(sweep, parameters)#, measout, mfig)
             run_ind.value = 0
 
