@@ -1416,7 +1416,7 @@ class ExperimentUI(QMainWindow):
 
         Called when the user clicks the "Initialize" button.
         """
-        self.set_parameters_and_initialize_btn.setEnabled(False)
+        #self.set_parameters_and_initialize_btn.setEnabled(False)
         self.settings_changed = False
 
         print("Reading and setting parameters...\n")
@@ -1500,7 +1500,7 @@ class ExperimentUI(QMainWindow):
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
         self.sweep_start_stop_btn.setEnabled(False)
-        self.set_parameters_and_initialize_btn.setEnabled(False)
+        #self.set_parameters_and_initialize_btn.setEnabled(False)
         self.is_process_running = True
 
         # Focus tab on graph panel
@@ -1541,7 +1541,7 @@ class ExperimentUI(QMainWindow):
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
         self.sweep_start_stop_btn.setEnabled(False)
-        self.set_parameters_and_initialize_btn.setEnabled(False)
+        #self.set_parameters_and_initialize_btn.setEnabled(False)
         self.is_process_running = True
 
         # Focus on processed graph tab
@@ -1579,7 +1579,7 @@ class ExperimentUI(QMainWindow):
             # Start sweep mode
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
-            self.set_parameters_and_initialize_btn.setEnabled(False)
+            #self.set_parameters_and_initialize_btn.setEnabled(False)
             self.is_process_running = True
 
             self.indicator_sweep.setStyleSheet(
