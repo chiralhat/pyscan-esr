@@ -321,15 +321,7 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
             
             if not hasattr(devices, "psu") and parameters["use_psu"]:
                 try:
-                    for inst in res_list:
-                        try:
-                            devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
-                            break
-                        except Exception as e:
-                            try:
-                                devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
-                            except:
-                                pass
+                    devices.psu = ps.MokuGo()
                 except Exception as e:
                     print(f"Error initializing PSU: {e}")
             if not hasattr(devices, 'ls335') and parameters['use_temp']:
