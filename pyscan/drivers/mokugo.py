@@ -5,13 +5,13 @@ Created on June 30 2025
 @author: Charles Collett
 """
 
-
+from .instrument_driver import InstrumentDriver
 from moku.instruments import ArbitraryWaveformGenerator
 import numpy as np
 from time import sleep
 
 
-class MokuGo():
+class MokuGo(InstrumentDriver):
     '''
     Class to control Moku:Go AWG and programmable power supply
     '''
@@ -45,12 +45,17 @@ class MokuGo():
         rate = self.ramp
         assert rate>0, f'Ramp rate needs to be a positive integer, rate: {rate}'
         while np.abs(current_field-target)>2*step:
+            getout = False
             delta = target-current_field
             if delta>rate:
                 delta = rate
             elif delta<-rate:
                 delta = -rate
+            else:
+                getout = True
             self.v2 = (current_field+delta)/self.gauss
+            if getout:
+                break
             sleep(1)
             current_field = self.field
 
