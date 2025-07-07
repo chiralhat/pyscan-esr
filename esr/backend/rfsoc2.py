@@ -392,12 +392,12 @@ def measure_decay(parameters, soc, d=0, ro=0, progress=False):
     pulses = parameters['pulses']
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    iq_list = safe_read(parameters, soc, progress)
+    iq_list = sread(parameters, soc, progress)
 
     d.time, d.i, d.q, d.x = iq_convert(soc, iq_list,
                                      pulses=pulses,
                                      ro=ro,
-                                     single=parameters['single'],
+                                     single=True,
                                      decimated=True)
 
     if reps>1:
@@ -406,7 +406,7 @@ def measure_decay(parameters, soc, d=0, ro=0, progress=False):
             _, i, q, x = iq_convert(soc, iq_list,
                                      pulses=pulses,
                                      ro=ro,
-                                     single=parameters['single'],
+                                     single=True,
                                      decimated=True)
             d.i += i
             d.q += q
