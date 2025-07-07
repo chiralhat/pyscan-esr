@@ -313,6 +313,131 @@ class Worker(QObject):
             print()
 
     @pyqtSlot()
+    def run_sweep(self):
+        try:
+            self.updateStatus.emit("Starting sweep in worker thread…\n")
+            self.stop_requested = False
+            self.running = True
+
+            print("Starting sweep in worker thread…")
+            # Initiate sweep on the server
+            self.experiment.sweep_running = True
+            data = {
+                "parameters": self.experiment.parameters,
+                "experiment type": self.experiment.type,
+                "sweep": self.experiment.sweep,
+            }
+            response = requests.post(globals.server_address + "/start_sweep", json=data)
+            if response.ok:
+                self.running = True
+            else:
+                print("Error:", response.status_code, response.text)
+                return
+
+            last_data_2d = None
+            last_data_1d = None
+
+            # Continuously fetch data until sweep stops or is requested to stop
+            while not self.stop_requested and self.running:
+                response = requests.get(globals.server_address + "/get_sweep_data")
+                if response.ok:
+                    response_data = response.json()
+                    self.experiment.expt = deserialize_obj(
+                        response_data["expt"]["serialized_experiment"]
+                    )
+                    print("Deserialized expt")
+                else:
+                    print("Error:", response.status_code, response.text)
+
+                if not self.experiment.expt.runinfo.running:
+                    self.running = False
+                    break
+
+                # Generate and emit updated plots
+                if self.experiment.expt.runinfo.measured:
+                    if not self.experiment.parameters['integrate']:
+                        data_name_2d = self.combo_2d.currentText()
+                        pg_2D = ps.PlotGenerator(
+                            expt=self.experiment.expt,
+                            d=2,
+                            x_name="t",
+                            y_name=self.experiment.parameters["y_name"],
+                            data_name=data_name_2d,
+                            transpose=1,
+                        )
+
+                    if self.experiment.type == "Spin Echo":
+                        data_name_1d = self.combo_1d.currentText()
+                        pg_1D = ps.PlotGenerator(
+                            expt=self.experiment.expt,
+                            d=1,
+                            x_name=self.experiment.parameters["y_name"],
+                            data_name=data_name_1d,
+                        )
+
+                    if not self.experiment.parameters['integrate']:
+                        if last_data_2d is None or not np.array_equal(
+                            pg_2D.data, last_data_2d
+                        ):
+                            last_data_2d = pg_2D.data.copy()
+                            self.live_plot_2D_update_signal.emit(pg_2D)
+
+                    if self.experiment.type == "Spin Echo":
+                        if last_data_1d is None or not np.array_equal(
+                            pg_1D.data, last_data_1d
+                        ):
+                            last_data_1d = pg_1D.data.copy()
+                            self.live_plot_1D_update_signal.emit(pg_1D)
+                sleep(1)
+
+            # final emitting of plots when sweep is over
+            if self.experiment.expt.runinfo.measured:
+                try:
+                    if not self.experiment.parameters['integrate']:
+                        data_name_2d = self.combo_2d.currentText()
+                        pg_2D = ps.PlotGenerator(
+                            expt=self.experiment.expt,
+                            d=2,
+                            x_name="t",
+                            y_name=self.experiment.parameters["y_name"],
+                            data_name=data_name_2d,
+                            transpose=1,
+                        )
+                    
+                    if self.experiment.type == "Spin Echo":
+                        data_name_1d = self.combo_1d.currentText()
+                        pg_1D = ps.PlotGenerator(
+                            expt=self.experiment.expt,
+                            d=1,
+                            x_name=self.experiment.parameters["y_name"],
+                            data_name=data_name_1d,
+                        )
+
+                    if not self.experiment.parameters['integrate']:
+                        self.live_plot_2D_update_signal.emit(pg_2D)
+
+                    if self.experiment.type == "Spin Echo":
+                        self.live_plot_1D_update_signal.emit(pg_1D)
+
+                except Exception as e:
+                    self.updateStatus.emit(f"Error final plot update: {e}\n")
+
+            # Final status update
+            if self.stop_requested:
+                self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
+            else:
+                self.updateStatus.emit("Done sweeping (normal exit).\n")
+                self.updateStatus.emit(f"Fit Parameters: {self.experiment.expt.out:.3g} +- {self.experiment.expt.outerr}")
+
+            self.finished.emit()
+
+        except Exception as e:
+            print()
+            print("Error running sweep:")
+            print(e)
+            print()
+
+    @pyqtSlot()
     def resume_sweep(self):
         try:
             self.updateStatus.emit("Resuming sweep in worker thread…\n")
