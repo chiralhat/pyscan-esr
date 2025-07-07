@@ -89,9 +89,9 @@ def setup_measure_function(soc, function):
 
         d.current_time = time()
 
-        if runinfo._indicies[0] == (runinfo._dims[0] - 1):
-            end_func(d, expt, runinfo.parameters["psexpt"])
-            expt.elapsed_time = d.current_time - expt.start_time
+        # if runinfo._indicies[0] == (runinfo._dims[0] - 1):
+        #     end_func(d, expt, runinfo.parameters["psexpt"])
+        #     expt.elapsed_time = d.current_time - expt.start_time
 
         return d
 
