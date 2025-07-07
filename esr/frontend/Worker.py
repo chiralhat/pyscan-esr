@@ -313,27 +313,16 @@ class Worker(QObject):
             print()
 
     @pyqtSlot()
-    def run_sweep(self):
+    def resume_sweep(self):
         try:
-            self.updateStatus.emit("Starting sweep in worker thread…\n")
+            self.updateStatus.emit("Resuming sweep in worker thread…\n")
             self.stop_requested = False
             self.running = True
 
-            print("Starting sweep in worker thread…")
+            print("Resuming sweep in worker thread…")
             # Initiate sweep on the server
             self.experiment.sweep_running = True
-            data = {
-                "parameters": self.experiment.parameters,
-                "experiment type": self.experiment.type,
-                "sweep": self.experiment.sweep,
-            }
-            response = requests.post(globals.server_address + "/start_sweep", json=data)
-            if response.ok:
-                self.running = True
-            else:
-                print("Error:", response.status_code, response.text)
-                return
-
+            
             last_data_2d = None
             last_data_1d = None
 
@@ -355,13 +344,13 @@ class Worker(QObject):
 
                 # Generate and emit updated plots
                 if self.experiment.expt.runinfo.measured:
-                    if not self.experiment.parameters['integrate']:
+                    if not self.experiment.expt.runinfo.parameters['integrate']:
                         data_name_2d = self.combo_2d.currentText()
                         pg_2D = ps.PlotGenerator(
                             expt=self.experiment.expt,
                             d=2,
                             x_name="t",
-                            y_name=self.experiment.parameters["y_name"],
+                            y_name=self.experiment.expt.runinfo.parameters["y_name"],
                             data_name=data_name_2d,
                             transpose=1,
                         )
@@ -371,11 +360,11 @@ class Worker(QObject):
                         pg_1D = ps.PlotGenerator(
                             expt=self.experiment.expt,
                             d=1,
-                            x_name=self.experiment.parameters["y_name"],
+                            x_name=self.experiment.expt.runinfo.parameters["y_name"],
                             data_name=data_name_1d,
                         )
 
-                    if not self.experiment.parameters['integrate']:
+                    if not self.experiment.expt.runinfo.parameters['integrate']:
                         if last_data_2d is None or not np.array_equal(
                             pg_2D.data, last_data_2d
                         ):
@@ -393,13 +382,13 @@ class Worker(QObject):
             # final emitting of plots when sweep is over
             if self.experiment.expt.runinfo.measured:
                 try:
-                    if not self.experiment.parameters['integrate']:
+                    if not self.experiment.expt.runinfo.parameters['integrate']:
                         data_name_2d = self.combo_2d.currentText()
                         pg_2D = ps.PlotGenerator(
                             expt=self.experiment.expt,
                             d=2,
                             x_name="t",
-                            y_name=self.experiment.parameters["y_name"],
+                            y_name=self.experiment.expt.runinfo.parameters["y_name"],
                             data_name=data_name_2d,
                             transpose=1,
                         )
@@ -409,11 +398,11 @@ class Worker(QObject):
                         pg_1D = ps.PlotGenerator(
                             expt=self.experiment.expt,
                             d=1,
-                            x_name=self.experiment.parameters["y_name"],
+                            x_name=self.experiment.expt.runinfo.parameters["y_name"],
                             data_name=data_name_1d,
                         )
 
-                    if not self.experiment.parameters['integrate']:
+                    if not self.experiment.expt.runinfo.parameters['integrate']:
                         self.live_plot_2D_update_signal.emit(pg_2D)
 
                     if self.experiment.type == "Spin Echo":
