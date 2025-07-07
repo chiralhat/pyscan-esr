@@ -73,15 +73,16 @@ def initialize_experiment():
     # Initialize PSU if necessary
     if not hasattr(devices, "psu") and parameters["use_psu"]:
         try:
-            for inst in res_list:
-                try:
-                    devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
-                    break
-                except Exception as e:
-                    try:
-                        devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
-                    except:
-                        pass
+            devices.psu = ps.MokuGo()
+        #     for inst in res_list:
+        #         try:
+        #             devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+        #             break
+        #         except Exception as e:
+        #             try:
+        #                 devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+        #             except:
+        #                 pass
         except Exception as e:
             print(f"Error initializing PSU: {e}")
 
