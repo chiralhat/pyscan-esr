@@ -198,9 +198,8 @@ def run_snapshot():
     #print("Received data:", data)
     parameters = data.get("parameters")
     experiment_type = data.get("experiment type")
-    print(experiment_type)
+    
     if experiment_type == "Pulse Frequency Sweep Read Processed":
-        print('decay')
         measure_decay(parameters, soc, sig)
     else:
         measure_phase(parameters, soc, sig)
