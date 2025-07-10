@@ -11,7 +11,7 @@ import struct
 import numpy as np
 from time import sleep
 
-freq = .2
+freq = .1
 tstep = 1/freq
 
 # period_shift = 1 << 16
