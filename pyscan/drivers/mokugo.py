@@ -10,6 +10,8 @@ from moku.instruments import ArbitraryWaveformGenerator
 import numpy as np
 from time import sleep
 
+maxF = 800e3
+
 
 class MokuGo(InstrumentDriver):
     '''
@@ -24,6 +26,7 @@ class MokuGo(InstrumentDriver):
         self._gauss = 278
         self.c_limit = 3.5
         self.ramp = 50
+        self.set_switch_1pulse()
 
 
     def close(self):
@@ -36,6 +39,28 @@ class MokuGo(InstrumentDriver):
     
     def __setitem__(cls, x, val):
         return setattr(cls, x, val)
+    
+    
+    def set_switch_1pulse(self, time=10000, freq=800e3):
+        assert freq<=maxF, f'Frequency exceeds limit, limit: {maxF}, freq: {freq}'
+        ready = False
+        while not ready:
+            t = int(1/freq/100*1e9)
+
+            num_zeros = int(time//t)
+            if num_zeros<100:
+                ready=True
+            else:
+                freq = freq/2
+
+        pulse = np.concatenate((np.zeros(1), -np.ones(num_zeros),np.zeros(99-num_zeros)))
+        pulse2 = (pulse+1)*-1
+        mgo = self.instrument
+        
+        mgo.generate_waveform(channel=1, sample_rate='Auto', lut_data=list(pulse), frequency=freq, amplitude=10)
+        mgo.generate_waveform(channel=2, sample_rate='Auto', lut_data=list(pulse2), frequency=freq, amplitude=10)
+        mgo.burst_modulate(channel=1, trigger_source='Input1', trigger_mode='NCycle', burst_cycles=1, trigger_level=3)
+        mgo.burst_modulate(channel=2, trigger_source='Input1', trigger_mode='NCycle', burst_cycles=1, trigger_level=3)
     
     
     def field_ramp(self, target):
