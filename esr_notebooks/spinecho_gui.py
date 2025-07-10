@@ -97,6 +97,9 @@ def single_shot(sig, parameters, devices, output, fig):
 
 def init_experiment(devices, parameters, sweep):
     parameters['pulse2'] = parameters['pulse1']*parameters['mult']
+    nut_time = parameters['nutation_width']+parameters['nutation_delay']
+    p1_time = parameters['pulse1']+(parameters['delay']*2+parameters['pulse2'])*parameters['cpmg']
+    switch_time = 500 + nut_time + p1_time
     chs = devices.scope.channels
     if len(chs)>2:
         [devices.scope.write('SEL:CH'+str(ch)+' 0') for ch in chs[2:]]
@@ -105,6 +108,7 @@ def init_experiment(devices, parameters, sweep):
     devices.scope.setup_spin_echo(parameters)
     if parameters['use_psu']:
         devices.psu.set_magnet(parameters)
+        devices.psu.set_switch_1pulse(switch_time)
     setup_experiment(parameters, devices, sweep)
     
 
