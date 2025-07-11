@@ -50,8 +50,9 @@ class MokuGo(InstrumentDriver):
         return setattr(cls, x, val)
     
     
-    def set_switch_1pulse(self, time=100):
-        ticks = time//tstep
+    def set_switch_1pulse(self, delay=500):
+        time = delay+1000
+        ticks = int(time//tstep)
         self.cc.set_control(0, ticks)
     # def set_switch_1pulse(self, time=10000, freq=800e3):
     #     assert freq<=maxF, f'Frequency exceeds limit, limit: {maxF}, freq: {freq}'

@@ -28,14 +28,14 @@ pscont_keys = {'devices': [['scope_address', 'fpga_address', 'synth_address'],
 
 def init_experiment(devices, parameters, sweep):
     parameters['pulse2'] = parameters['pulse1']*parameters['mult']
-    p1_time = parameters['pulse1']+(parameters['delay']*2+parameters['pulse2'])*parameters['cpmg']
-    switch_time = 500 + p1_time
+    # p1_time = parameters['pulse1']+(parameters['delay']*2+parameters['pulse2'])*parameters['cpmg']
+    # switch_time = 500 + p1_time
     devices.fpga.pulse_freq_sweep(parameters)
     devices.synth.pulse_freq_sweep(parameters)
     devices.scope.setup_pulse_decay(parameters)
     if parameters['use_psu']:
         devices.psu.set_magnet(parameters)
-        devices.psu.set_switch_1pulse(switch_time)
+        devices.psu.set_switch_1pulse(parameters['delay'])
     setup_experiment(parameters, devices, sweep)
 
 
