@@ -11,14 +11,23 @@ import numpy as np
 from time import sleep
 
 maxF = 800e3
-
+bitstream = "moku_switch.tar"
+clk_freq = 31.25e-3
+tstep = 1/clk_freq
 
 class MokuGo(InstrumentDriver):
     '''
     Class to control Moku:Go AWG and programmable power supply
     '''
     def __init__(self, address='mokugo-005419.hamilton.edu'):
-        self.instrument = ArbitraryWaveformGenerator(address, force_connect=True)
+        self.instrument = MultiInstrument(address, platform_id=2, force_connect=True)
+        self.cc = self.instrument.set_instrument(1, CloudCompile, bitstream=bitstream)
+
+        connections = [dict(source="DIO", destination="Slot1InA"),
+                    dict(source="Slot1OutA", destination="Output1"),
+                    dict(source="Slot1OutB", destination="Output2")]
+        self.instrument.set_connections(connections=connections)
+        self.instrument.set_dio(direction=[0]*16)
         self.instrument.set_power_supply(id=3, enable=True, voltage=5, current=0.15)
         self.instrument.set_power_supply(id=2, enable=True, voltage=0, current=0.15)
         self.instrument.set_power_supply(id=1, enable=False, voltage=0, current=0.15)
@@ -41,26 +50,29 @@ class MokuGo(InstrumentDriver):
         return setattr(cls, x, val)
     
     
-    def set_switch_1pulse(self, time=10000, freq=800e3):
-        assert freq<=maxF, f'Frequency exceeds limit, limit: {maxF}, freq: {freq}'
-        ready = False
-        while not ready:
-            t = int(1/freq/100*1e9)
+    def set_switch_1pulse(self, time=100):
+        ticks = time//tstep
+        self.cc.set_control(0, ticks)
+    # def set_switch_1pulse(self, time=10000, freq=800e3):
+    #     assert freq<=maxF, f'Frequency exceeds limit, limit: {maxF}, freq: {freq}'
+    #     ready = False
+    #     while not ready:
+    #         t = int(1/freq/100*1e9)
 
-            num_zeros = int(time//t)
-            if num_zeros<100:
-                ready=True
-            else:
-                freq = freq/2
+    #         num_zeros = int(time//t)
+    #         if num_zeros<100:
+    #             ready=True
+    #         else:
+    #             freq = freq/2
 
-        pulse = np.concatenate((np.zeros(1), -np.ones(num_zeros),np.zeros(99-num_zeros)))
-        pulse2 = (pulse+1)*-1
-        mgo = self.instrument
+    #     pulse = np.concatenate((np.zeros(1), -np.ones(num_zeros),np.zeros(99-num_zeros)))
+    #     pulse2 = (pulse+1)*-1
+    #     mgo = self.instrument
         
-        mgo.generate_waveform(channel=1, sample_rate='Auto', lut_data=list(pulse), frequency=freq, amplitude=10)
-        mgo.generate_waveform(channel=2, sample_rate='Auto', lut_data=list(pulse2), frequency=freq, amplitude=10)
-        mgo.burst_modulate(channel=1, trigger_source='Input1', trigger_mode='NCycle', burst_cycles=1, trigger_level=3)
-        mgo.burst_modulate(channel=2, trigger_source='Input1', trigger_mode='NCycle', burst_cycles=1, trigger_level=3)
+    #     mgo.generate_waveform(channel=1, sample_rate='Auto', lut_data=list(pulse), frequency=freq, amplitude=10)
+    #     mgo.generate_waveform(channel=2, sample_rate='Auto', lut_data=list(pulse2), frequency=freq, amplitude=10)
+    #     mgo.burst_modulate(channel=1, trigger_source='Input1', trigger_mode='NCycle', burst_cycles=1, trigger_level=3)
+    #     mgo.burst_modulate(channel=2, trigger_source='Input1', trigger_mode='NCycle', burst_cycles=1, trigger_level=3)
     
     
     def field_ramp(self, target):
