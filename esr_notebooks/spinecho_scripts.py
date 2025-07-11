@@ -384,6 +384,75 @@ def max_phase(devices, ave=4, ch=1):
     return ph
 
 
+def try_fit(func, dat, guess):
+    try:
+        fit = np.array(ps.func_fit(func, dat, guess)[:2])
+    except:
+        fit = np.zeros((2, len(guess)))
+    return fit
+
+
+def end_func(d, expt, run, dim=0):
+    if dim == 0:
+        sigs = list(expt.xint[:-1]) + [d.xint]
+    else:
+        sigs = list(expt.xint[:-1, dim[1]]) + [d.xint]
+    if "fit" not in expt.keys() and not dim == 0:
+        expt.fit = np.zeros((dim[0], 2, 4))
+        expt.out = np.zeros(dim[0])
+        expt.outerr = np.zeros(dim[0])
+    if run == "Rabi":  # Rabi sweep
+        rabidat = np.array([expt.rabi_sweep, sigs])
+        guess = [
+            rabidat[1].min(),
+            rabidat[1].max(),
+            rabidat[0][-1] / 2,
+            rabidat[0][-1] / 2,
+        ]
+        fit = try_fit(ps.rabifitnophi, rabidat, guess)
+        if dim == 0:
+            expt.fit, expt.out, expt.outerr = fit, *fit[:, 2] / 2
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = (
+                fit,
+                *fit[:, 2] / 2,
+            )
+    elif run == "Hahn Echo" or run == "CPMG":  # Hahn or CPMG sweep
+        deldat = np.array([expt.echo_delay, sigs])
+        try:
+            fit = np.array(ps.exp_fit_norange(deldat, 1, 1)[:2])
+        except:
+            fit = np.zeros((2, 4))
+        if dim == 0:
+            fit, expt.out, expt.outerr = fit, *fit[:, 2]
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]
+    elif run == "Phase Sweep":  # Phase sweep
+        phasedat = np.array([expt.phase_sweep, sigs])
+        try:
+            fit, maxphase, pherr = phase_fit(phasedat)
+        except:
+            fit, maxphase, pherr = np.zeros((2, 4)), 0, 0
+        if dim == 0:
+            fit, expt.out, expt.outerr = fit, maxphase, pherr
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = (
+                fit,
+                maxphase,
+                pherr,
+            )
+    elif run == "Inversion Sweep":  # Inversion sweep
+        invdat = np.array([expt.inversion_sweep, sigs])
+        try:
+            fit = np.array(ps.exp_fit_norange(invdat, 1, 1)[:2])
+        except:
+            fit = np.zeros((2, 4))
+        if dim == 0:
+            fit, expt.out, expt.outerr = fit, *fit[:, 2]
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]
+
+
 def measure_echo(expt):
     """
     """
@@ -429,14 +498,12 @@ def measure_echo(expt):
     d.current_time = time()
 
     if runinfo._indicies[0]==(runinfo._dims[0]-1):
+        end_func(d, expt, runinfo.parameters["expt"], 0)
         expt.elapsed_time = expt.current_time-expt.start_time
         if runinfo.parameters['turn_off']:
             devices.synth.power_off()
             if runinfo.parameters['use_psu']:
                 devices.psu.output = False
-        if runinfo.parameters['expt']=='Phase Sweep':
-            sigs = list(expt.v1int[:-1])+[d.v1int]
-            expt.maxphase = phase_fit(expt.phase_sweep, sigs)
     return d
 
 
