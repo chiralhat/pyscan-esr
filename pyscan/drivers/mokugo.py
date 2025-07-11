@@ -6,7 +6,7 @@ Created on June 30 2025
 """
 
 from .instrument_driver import InstrumentDriver
-from moku.instruments import ArbitraryWaveformGenerator
+from moku.instruments import MultiInstrument, CloudCompile
 import numpy as np
 from time import sleep
 
