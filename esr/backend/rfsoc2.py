@@ -57,7 +57,10 @@ def plot_mesh(x, y, z, xlab='', ylab='', zlab='', bar=True, ax=False, cax=False,
     return c
 
 
-class CPMGProgram(AveragerProgram):
+pi2_phase_list = [0, 180, 180, 0]
+pi_phase_list = [90, 90, 270, 270]
+
+class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
     def trigger_no_off(self, pins=None, t=0, rp=0, r_out=31, width=0):
         """
         Adapted from qick-dawg. Currently only used for digital I/O pins, so I removed the rest.
@@ -124,12 +127,16 @@ class CPMGProgram(AveragerProgram):
         freq = self.freq2reg(cfg["freq"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
 
         # set our output to be the default pulse register
-        self.default_pulse_registers(ch=res_ch, style="const", freq=freq)
+        self.default_pulse_registers(ch=res_ch, style="const", freq=freq, phase=0)
+        
+        self.res_r_phase = self.get_gen_reg(res_ch, "phase")
+        self.res_r_ph_pi2 = self.new_gen_reg(res_ch, init_val=pi2_phase_list[0], name="pi2_phase") 
+        self.res_r_ph_pi = self.new_gen_reg(res_ch, init_val=pi_phase_list[0], name="pi_phase") 
         
         self.synci(200)  # give processor some time to configure pulses
 
 
-    def cpmg(self, ph1, ph2, phdel=0, pulses=1, tstart=0):
+    def cpmg(self, pulses=1, cycle=0, tstart=0):
         """
         Runs a Carr-Purcell pulse sequence with optional nutation pulse
         """
@@ -157,8 +164,10 @@ class CPMGProgram(AveragerProgram):
         # If the nutation pulse width is greater than the minimum number of cycles, add it in
         nut_length = self.us2cycles(nutwidth, gen_ch=res_ch)
         if nut_length>2:
-            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, phase=90, length=nut_length)
+            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, phase=self.deg2reg(90), length=nut_length)
             self.pulse(ch=self.cfg["res_ch"])
+        
+        self.res_r_phase.set_to(self.deg2reg(pi2_phase_list[cycle], gen_ch=res_ch))
         
         # Wait the nutation delay time
         self.synci(nutdelay)
@@ -170,9 +179,11 @@ class CPMGProgram(AveragerProgram):
                     adc_trig_offset=trig_offset)
 
         # pi/2 pulse
-        self.set_pulse_registers(ch=res_ch, gain=gain2, phase=ph1,
+        self.set_pulse_registers(ch=res_ch, gain=gain2,
                                  length=self.us2cycles(tpi2, gen_ch=res_ch))
         self.pulse(ch=res_ch)
+        
+        self.res_r_phase.set_to(self.deg2reg(pi_phase_list[cycle], gen_ch=res_ch))
         
         # Delay between pi/2 and pi pulses
         self.synci(self.us2cycles(delay_pi2))
@@ -180,7 +191,7 @@ class CPMGProgram(AveragerProgram):
         # Add a configurable number of pi pulses, along with delays.
         # delay_pi is roughly twice delay_pi2, as the delay between pi pulses should be
         for n in np.arange(pulses):
-            self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
+            self.set_pulse_registers(ch=res_ch, gain=gain,
                                      length=self.us2cycles(tpi, gen_ch=res_ch))
             self.pulse(ch=self.cfg["res_ch"])
 
@@ -193,6 +204,7 @@ class CPMGProgram(AveragerProgram):
         
 
     def body(self):
+        res_ch = self.cfg["res_ch"]
         nutwidth = self.cfg["nutation_length"]/1000
         nutdelay = self.cfg["nutation_delay"]/1000
         delay = self.cfg["delay"]/1000
@@ -209,7 +221,11 @@ class CPMGProgram(AveragerProgram):
         self.trigger_no_off(t=trig_offset, pins=[1])
         self.synci(self.us2cycles(0.1))
         
-        self.cpmg(0, 0, 0, self.cfg["pulses"])
+        if self.cfg["single"]:
+            self.cpmg(self.cfg["pulses"])
+        else:
+            for n in np.arange(4):
+                self.cpmg(self.cfg["pulses"], n)
 
 
 class DEERProgram(CPMGProgram):
