@@ -134,6 +134,7 @@ class CPMGProgram(AveragerProgram):
         Runs a Carr-Purcell pulse sequence with optional nutation pulse
         """
         # Set relevant times
+        period = self.us2cycles(self.cfg["period"])
         res_ch = self.cfg["res_ch"]
         tpi2 = self.cfg["pulse1_1"]/1000
         tpi = self.cfg["pulse1_2"]/1000
@@ -141,7 +142,7 @@ class CPMGProgram(AveragerProgram):
         delay_pi2 = delay-tpi2
         delay_pi = 2*delay-tpi
         nutwidth = self.cfg["nutation_length"]/1000
-        nutdelay = self.cfg["nutation_delay"]/1000
+        nutdelay = self.us2cycles(self.cfg["nutation_delay"]/1000)
         gain = self.cfg["gain"]
         
         # We want half the power for our pi/2 pulse, and this achieves that
@@ -160,7 +161,7 @@ class CPMGProgram(AveragerProgram):
             self.pulse(ch=self.cfg["res_ch"])
         
         # Wait the nutation delay time
-        self.synci(self.us2cycles(nutdelay))
+        self.synci(nutdelay)
         
         # Tell the ADC when to trigger readout, based on the trigger offset defined above
         # If you uncomment the pins argument, it will also send a pulse on an I/O pin
@@ -188,7 +189,7 @@ class CPMGProgram(AveragerProgram):
         self.synci(self.us2cycles(delay_pi))
         
         self.wait_all()
-        self.sync_all(self.us2cycles(self.cfg["period"]))
+        self.sync_all(period-trig_offset-nutdelay)
         
 
     def body(self):

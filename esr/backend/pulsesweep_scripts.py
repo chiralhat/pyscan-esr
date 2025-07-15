@@ -89,9 +89,13 @@ def setup_measure_function(soc, function):
 
         d.current_time = time()
 
-        # if runinfo._indicies[0] == (runinfo._dims[0] - 1):
-        #     end_func(d, expt, runinfo.parameters["psexpt"])
-        #     expt.elapsed_time = d.current_time - expt.start_time
+        if runinfo._indicies[0]==(runinfo._dims[0]-1):
+            if runinfo.parameters['turn_off']:
+                soc.reset_gens()
+                if runinfo.parameters['use_psu']:
+                    devices.psu.field = 0
+                # end_func(d, expt, runinfo.parameters["psexpt"])
+                expt.elapsed_time = d.current_time - expt.start_time
 
         return d
 
@@ -121,10 +125,6 @@ def setup_experiment(parameters, devices, sweep, soc):
     runinfo = ps.RunInfo()
     runinfo.loop0 = setup_vars["loop"][run_n]
 
-    def progfunc(parameters):
-        return CPMGProgram(soc, parameters)
-
-    runinfo.progfunc = progfunc
     runinfo.measure_function = setup_measure_function(soc, run_n)
 
     runinfo.parameters = parameters

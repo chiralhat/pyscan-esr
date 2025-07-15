@@ -3,7 +3,7 @@ sys.path.append('../')
 import pyscan as ps
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import date, datetime
+from datetime import date
 from time import time, sleep
 from IPython.display import display, clear_output
 from pathlib import Path
@@ -371,6 +371,7 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
                 sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan1.scan_dict['cpmg_sweep']
             else:
                 sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.parameters['pulses']
+            expt.start_time = time()
             run_sweep(sweep, parameters)#, measout, mfig)
             run_ind.value = 0
 

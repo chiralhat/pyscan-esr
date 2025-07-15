@@ -205,6 +205,8 @@ def setup_measure_function(soc, integrate):
                 pass
             else:
                 expt.elapsed_time = expt.current_time - expt.start_time
+                if runinfo.parameters['turn_off'] and runinfo.parameters['use_psu']:
+                    devices.psu.field = 0
 
         return d
 
@@ -309,10 +311,6 @@ def setup_experiment(parameters, devices, sweep, soc):
         runinfo.scan1 = setup_vars["scan"][1][run_2]
         fname = setup_vars["file"][run_2] + "_" + fname
 
-    def progfunc(parameters):
-        return CPMGProgram(soc, parameters)
-
-    runinfo.progfunc = progfunc
     runinfo.measure_function = setup_measure_function(soc, parameters["integrate"])
 
     runinfo.parameters = parameters
