@@ -848,7 +848,7 @@ class ExperimentUI(QMainWindow):
         # Enable/disable buttons initially
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
-        self.sweep_start_stop_btn.setEnabled(False)
+        self.sweep_start_stop_btn.setEnabled(True)
         self.set_parameters_and_initialize_btn.setEnabled(True)
 
         # Redirect stdout and stderr to GUI log
@@ -1201,11 +1201,11 @@ class ExperimentUI(QMainWindow):
         read_processed_layout.addWidget(self.indicator_read_processed)
         top_menu.addWidget(read_processed_widget)
 
-        # ----- Toggle Start/Stop Sweep -----
+        # ----- Toggle Start/Stop/Resume Sweep -----
         sweep_widget = QWidget()
         sweep_layout = QHBoxLayout(sweep_widget)
         sweep_layout.setContentsMargins(0, 0, 0, 0)
-        self.sweep_start_stop_btn = QPushButton("Start Sweep")
+        self.sweep_start_stop_btn = QPushButton("Resume Sweep")
         self.sweep_start_stop_btn.setMinimumHeight(40)
         self.sweep_start_stop_btn.setStyleSheet("font-size: 10pt; padding: 2px 4px;")
         self.sweep_start_stop_btn.clicked.connect(self.toggle_start_stop_sweep_frontend)
@@ -1221,7 +1221,7 @@ class ExperimentUI(QMainWindow):
         # Initial button state
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
-        self.sweep_start_stop_btn.setEnabled(False)
+        #self.sweep_start_stop_btn.setEnabled(True)
 
         # ----- Hardware Off -----
         off_widget = QWidget()
@@ -1349,7 +1349,7 @@ class ExperimentUI(QMainWindow):
             # Reset button state
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
-            self.sweep_start_stop_btn.setEnabled(False)
+            #self.sweep_start_stop_btn.setEnabled(False)
             self.set_parameters_and_initialize_btn.setEnabled(True)
 
         except Exception as e:
@@ -1416,7 +1416,7 @@ class ExperimentUI(QMainWindow):
 
         Called when the user clicks the "Initialize" button.
         """
-        self.set_parameters_and_initialize_btn.setEnabled(False)
+        #self.set_parameters_and_initialize_btn.setEnabled(False)
         self.settings_changed = False
 
         print("Reading and setting parameters...\n")
@@ -1480,6 +1480,7 @@ class ExperimentUI(QMainWindow):
         self.read_unprocessed_btn.setEnabled(True)
         self.read_processed_btn.setEnabled(True)
         self.sweep_start_stop_btn.setEnabled(True)
+        self.sweep_start_stop_btn.setText("Start Sweep")
 
         print("Initialized experiment with parameters:")
         for k, v in new_params.items():
@@ -1500,7 +1501,7 @@ class ExperimentUI(QMainWindow):
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
         self.sweep_start_stop_btn.setEnabled(False)
-        self.set_parameters_and_initialize_btn.setEnabled(False)
+        #self.set_parameters_and_initialize_btn.setEnabled(False)
         self.is_process_running = True
 
         # Focus tab on graph panel
@@ -1541,7 +1542,7 @@ class ExperimentUI(QMainWindow):
         self.read_unprocessed_btn.setEnabled(False)
         self.read_processed_btn.setEnabled(False)
         self.sweep_start_stop_btn.setEnabled(False)
-        self.set_parameters_and_initialize_btn.setEnabled(False)
+        #self.set_parameters_and_initialize_btn.setEnabled(False)
         self.is_process_running = True
 
         # Focus on processed graph tab
@@ -1579,7 +1580,7 @@ class ExperimentUI(QMainWindow):
             # Start sweep mode
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
-            self.set_parameters_and_initialize_btn.setEnabled(False)
+            #self.set_parameters_and_initialize_btn.setEnabled(False)
             self.is_process_running = True
 
             self.indicator_sweep.setStyleSheet(
@@ -1628,6 +1629,55 @@ class ExperimentUI(QMainWindow):
             # Start background sweep
             self.worker_thread.start()
 
+        elif self.sweep_start_stop_btn.text() == "Resume Sweep":
+            # Start sweep mode
+            self.read_unprocessed_btn.setEnabled(False)
+            self.read_processed_btn.setEnabled(False)
+            #self.set_parameters_and_initialize_btn.setEnabled(False)
+            self.is_process_running = True
+
+            self.indicator_sweep.setStyleSheet(
+                "background-color: red; border: 1px solid black; border-radius: 5px;"
+            )
+            self.sweep_start_stop_btn.setText("Stop Sweep")
+
+            self.graph_tabs.setCurrentIndex(2)
+
+            # Choose appropriate worker config depending on experiment type
+            if self.current_experiment.type == "Pulse Frequency Sweep":
+                self.worker_thread = QThread(self)
+                self.worker = Worker(
+                    self.current_experiment,
+                    "sweep",
+                    combo_2d=self.combo_2d,
+                )
+            elif self.current_experiment.type == "Spin Echo":
+                self.worker_thread = QThread(self)
+                self.worker = Worker(
+                    self.current_experiment,
+                    "sweep",
+                    combo_2d=self.combo_2d,
+                    combo_1d=self.combo_1d,
+                )
+            
+            self.worker.moveToThread(self.worker_thread)
+
+            # Connect sweep update signals
+            self.worker_thread.started.connect(self.worker.resume_sweep)
+            self.worker.live_plot_2D_update_signal.connect(
+                self.current_experiment.sweep_graph_2D.on_live_plot_2D
+            )
+            self.worker.live_plot_1D_update_signal.connect(
+                self.current_experiment.sweep_graph_1D.on_live_plot_1D
+            )
+            self.worker.updateStatus.connect(self.on_worker_status_update)
+            #self.worker.finished.connect(self.worker_thread.quit)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+            self.worker.finished.connect(self.on_finished_sweep)
+
+            # Start background sweep
+            self.worker_thread.start()
         else:
             # Stop sweep mode
             if hasattr(self, "worker"):
