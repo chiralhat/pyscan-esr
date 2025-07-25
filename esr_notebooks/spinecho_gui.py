@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from IPython.display import display, clear_output
-from spinecho_scripts import *
+from esr.backend.spinecho_scripts import *
 import gui_setup as gs
 
 # Set up the plots to be pretty

@@ -57,7 +57,10 @@ def plot_mesh(x, y, z, xlab='', ylab='', zlab='', bar=True, ax=False, cax=False,
     return c
 
 
-class CPMGProgram(AveragerProgram):
+pi2_phase_list = [0, 180, 180, 0]
+pi_phase_list = [90, 90, 270, 270]
+
+class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
     def trigger_no_off(self, pins=None, t=0, rp=0, r_out=31, width=0):
         """
         Adapted from qick-dawg. Currently only used for digital I/O pins, so I removed the rest.
@@ -124,16 +127,21 @@ class CPMGProgram(AveragerProgram):
         freq = self.freq2reg(cfg["freq"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
 
         # set our output to be the default pulse register
-        self.default_pulse_registers(ch=res_ch, style="const", freq=freq)
+        self.default_pulse_registers(ch=res_ch, style="const", freq=freq, phase=0)
+        
+        self.res_r_phase = self.get_gen_reg(res_ch, "phase")
+        self.res_r_ph_pi2 = self.new_gen_reg(res_ch, init_val=pi2_phase_list[0], name="pi2_phase") 
+        self.res_r_ph_pi = self.new_gen_reg(res_ch, init_val=pi_phase_list[0], name="pi_phase") 
         
         self.synci(200)  # give processor some time to configure pulses
 
 
-    def cpmg(self, ph1, ph2, phdel=0, pulses=1, tstart=0):
+    def cpmg(self, pulses=1, cycle=0, tstart=0):
         """
         Runs a Carr-Purcell pulse sequence with optional nutation pulse
         """
         # Set relevant times
+        period = self.us2cycles(self.cfg["period"])
         res_ch = self.cfg["res_ch"]
         tpi2 = self.cfg["pulse1_1"]/1000
         tpi = self.cfg["pulse1_2"]/1000
@@ -141,7 +149,7 @@ class CPMGProgram(AveragerProgram):
         delay_pi2 = delay-tpi2
         delay_pi = 2*delay-tpi
         nutwidth = self.cfg["nutation_length"]/1000
-        nutdelay = self.cfg["nutation_delay"]/1000
+        nutdelay = self.us2cycles(self.cfg["nutation_delay"]/1000)
         gain = self.cfg["gain"]
         
         # We want half the power for our pi/2 pulse, and this achieves that
@@ -156,11 +164,14 @@ class CPMGProgram(AveragerProgram):
         # If the nutation pulse width is greater than the minimum number of cycles, add it in
         nut_length = self.us2cycles(nutwidth, gen_ch=res_ch)
         if nut_length>2:
-            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, phase=90, length=nut_length)
+            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, phase=self.deg2reg(90), length=nut_length)
             self.pulse(ch=self.cfg["res_ch"])
         
+        # self.res_r_phase.set_to(self.deg2reg(pi2_phase_list[cycle], gen_ch=res_ch))
+        self.res_r_phase.set_to(pi2_phase_list[cycle])
+        
         # Wait the nutation delay time
-        self.synci(self.us2cycles(nutdelay))
+        self.synci(nutdelay)
         
         # Tell the ADC when to trigger readout, based on the trigger offset defined above
         # If you uncomment the pins argument, it will also send a pulse on an I/O pin
@@ -169,9 +180,12 @@ class CPMGProgram(AveragerProgram):
                     adc_trig_offset=trig_offset)
 
         # pi/2 pulse
-        self.set_pulse_registers(ch=res_ch, gain=gain2, phase=ph1,
+        self.set_pulse_registers(ch=res_ch, gain=gain2,
                                  length=self.us2cycles(tpi2, gen_ch=res_ch))
         self.pulse(ch=res_ch)
+        
+        # self.res_r_phase.set_to(self.deg2reg(pi_phase_list[cycle], gen_ch=res_ch))
+        self.res_r_phase.set_to(pi_phase_list[cycle])
         
         # Delay between pi/2 and pi pulses
         self.synci(self.us2cycles(delay_pi2))
@@ -179,7 +193,7 @@ class CPMGProgram(AveragerProgram):
         # Add a configurable number of pi pulses, along with delays.
         # delay_pi is roughly twice delay_pi2, as the delay between pi pulses should be
         for n in np.arange(pulses):
-            self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
+            self.set_pulse_registers(ch=res_ch, gain=gain,
                                      length=self.us2cycles(tpi, gen_ch=res_ch))
             self.pulse(ch=self.cfg["res_ch"])
 
@@ -188,10 +202,11 @@ class CPMGProgram(AveragerProgram):
         self.synci(self.us2cycles(delay_pi))
         
         self.wait_all()
-        self.sync_all(self.us2cycles(self.cfg["period"]))
+        self.sync_all(period-trig_offset-nutdelay)
         
 
     def body(self):
+        res_ch = self.cfg["res_ch"]
         nutwidth = self.cfg["nutation_length"]/1000
         nutdelay = self.cfg["nutation_delay"]/1000
         delay = self.cfg["delay"]/1000
@@ -208,7 +223,11 @@ class CPMGProgram(AveragerProgram):
         self.trigger_no_off(t=trig_offset, pins=[1])
         self.synci(self.us2cycles(0.1))
         
-        self.cpmg(0, 0, 0, self.cfg["pulses"])
+        if self.cfg["single"]:
+            self.cpmg(self.cfg["pulses"])
+        else:
+            for n in np.arange(4):
+                self.cpmg(self.cfg["pulses"], n)
 
 
 class DEERProgram(CPMGProgram):
@@ -335,30 +354,15 @@ def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):
     """
     if decimated:
         if single:
-            # if pulses<2:
             i, q = iq_list[:2]
-            time = soc.cycles2us(np.arange(len(i)), ro_ch=ro)
-            # else:
-            #     i, q = iq_list[:][:2]
-            #     time = soc.cycles2us(np.arange(len(i[0])), ro_ch=ro)
-            x = np.abs(i+1j*q)
         else:
-            # if pulses<2:
             i, q = iq_list[0]+iq_list[3]-iq_list[1]-iq_list[2]
-            time = soc.cycles2us(np.arange(len(i)), ro_ch=ro)
-            # else:
-            #     ns = [[(0+n),(3*pulses+n),(pulses+n),(2*pulses+n)] for n in np.arange(pulses)]
-            #     i, q = np.transpose([iq_list[n[0]]+iq_list[n[1]]-iq_list[n[2]]-iq_list[n[3]] for n in ns], axes=(1, 0, 2))
-            #     time = soc.cycles2us(np.arange(len(i[0])), ro_ch=ro)
-            x = np.abs(i+1j*q)
+        x = np.abs(i+1j*q)
+
+        time = soc.cycles2us(np.arange(len(i)), ro_ch=ro)
         return time, i, q, x
     else:
-        # if pulses<2:
         imean, qmean = [iqs[0][0]+iqs[0][3]-iqs[0][1]-iqs[0][2] for iqs in iq_list]
-        # else:
-        #     ns = [[n*pulses, (n+1)*pulses] for n in [0, 3, 1, 2]]
-        #     imean, qmean = [iqs[0][ns[0][0]:ns[0][1]]+iqs[0][ns[1][0]:ns[1][1]]-iqs[0][ns[2][0]:ns[2][1]]-iqs[0][ns[3][0]:ns[3][1]]
-        #                      for iqs in iq_list]
         xmean = np.abs(imean+1j*qmean)
         return imean, qmean, xmean
     
@@ -501,25 +505,11 @@ def acquire_phase(parameters, soc, d=0, ro=0, progress=False):
     return d
 
 
-def sread(parameters, soc, progress):
+def safe_read(parameters, soc, progress):
     prog = CPMGProgram(soc, parameters)
     try:
         iq_list = prog.acquire_decimated(soc, progress=progress)[0]
     except RuntimeError:
         soc.__init__()
         iq_list = prog.acquire_decimated(soc, progress=progress)[0]
-    return iq_list
-
-
-# def safe_read(prog, soc, progress=False):
-def safe_read(parameters, soc, progress=False):
-    if parameters['single']:
-        iq_list = sread(parameters, soc, progress)
-    else:
-        iq_list = []
-        # TODO: Look into using a QickSweep object for doing this phase sweeping
-        for n in np.arange(4):
-            parameters['pi2_phase'] = pi2_phase_list[n]
-            parameters['pi_phase'] = pi_phase_list[n]
-            iq_list.append(sread(parameters, soc, progress))
     return iq_list

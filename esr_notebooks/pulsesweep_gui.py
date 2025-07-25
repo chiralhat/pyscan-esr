@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from IPython.display import display, clear_output
 import gui_setup as gs
-from pulsesweep_scripts import *
+from esr.backend.pulsesweep_scripts import *
 
 plt.rc('lines', lw=2)
 plotfont = {'family': 'serif', 'size': 16}
