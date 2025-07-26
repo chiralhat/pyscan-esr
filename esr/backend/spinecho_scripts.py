@@ -240,6 +240,9 @@ def setup_experiment(parameters, devices, sweep, soc):
     def cpmg_sweep(pulses):
         parameters["pulses"] = pulses
 
+    def cpmg_sweep(gain):
+        parameters["gain"] = gain
+
     expt_select = {
         "Pulse Sweep": 0,
         "Rabi": 1,
@@ -269,6 +272,7 @@ def setup_experiment(parameters, devices, sweep, soc):
             "phase_sweep",
             "inversion_sweep",
             "echo_delay",
+            "gain_sweep",
         ],
         "scan": [
             [
@@ -281,6 +285,7 @@ def setup_experiment(parameters, devices, sweep, soc):
                 ps.FunctionScan(phase_sweep, s_range, dt=wait),
                 ps.FunctionScan(inversion_sweep, s_range, dt=wait),
                 ps.FunctionScan(cpmg_sweep, s_range, dt=wait),
+                ps.FunctionScan(gain_sweep, s_range, dt=wait),
             ]
             for s_range in [sweep_range, sweep2_range]
         ],
@@ -294,6 +299,7 @@ def setup_experiment(parameters, devices, sweep, soc):
             "PhiSweep",
             "T1",
             "CPMG",
+            "Gain",
         ],
     }
     run_1 = expt_select[parameters["expt"]]
