@@ -388,7 +388,8 @@ class Worker(QObject):
                         ):
                             last_data_1d = pg_1D.data.copy()
                             self.live_plot_1D_update_signal.emit(pg_1D)
-                sleep(1)
+                #sleep(1)
+                sleep(self.experiment.parameters["subtime"]/10)
 
             # final emitting of plots when sweep is over
             if self.experiment.expt.runinfo.measured:
