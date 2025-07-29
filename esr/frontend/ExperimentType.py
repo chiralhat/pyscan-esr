@@ -39,6 +39,7 @@ expt_select = {
     "Phase Sweep": 6,
     "Inversion Sweep": 7,
     "CPMG": 8,
+    "Gain": 9,
 }
 y_names = [
     "pulse_time",
