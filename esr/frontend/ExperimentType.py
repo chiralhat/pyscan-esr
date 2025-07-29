@@ -53,6 +53,15 @@ y_names = [
     "gain_sweep",
 ]
 
+psexpt_select = {
+    'Freq Sweep': 0,
+    'Field Sweep': 1
+}
+psy_names = [
+    'freq_sweep',
+    'psu_field'
+]
+
 
 class ExperimentType(QObject):
     """Handles backend logic, configuration, and hardware interaction for a specific experiment type.
@@ -112,7 +121,12 @@ class ExperimentType(QObject):
             tmult = period / 1e6 * 4 * reps
             self.parameters["subtime"] = self.parameters["soft_avgs"] * tmult
 
-            self.parameters["y_name"] = y_names[expt_select[self.parameters["expt"]]]
+            if self.type == "Spin Echo":
+                yname = y_names[expt_select[self.parameters["expt"]]]
+            else:
+                yname = psy_names[psexpt_select[self.parameters["psexpt"]]]
+
+            self.parameters["y_name"] = yname
 
             # Build output file name with today's date
             datestr = date.today().strftime("%y%m%d")
