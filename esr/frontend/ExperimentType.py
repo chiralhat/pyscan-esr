@@ -118,7 +118,10 @@ class ExperimentType(QObject):
                 period = 500
 
             # Compute subtime for each acquisition
-            tmult = period / 1e6 * 4 * reps
+            per = period/1e6
+            if not self.parameters['integrate']:
+                per += 1e-3
+            tmult = per * 4 * reps
             self.parameters["subtime"] = self.parameters["soft_avgs"] * tmult
 
             if self.type == "Spin Echo":
