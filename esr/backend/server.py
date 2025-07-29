@@ -268,6 +268,16 @@ def start_sweep():
         return jsonify({"status": "sweep started"})
 
 
+@app.route("/get_parameters", methods=["GET"])
+def get_parameters():
+    global expt
+    try:
+        return jsonify({"parameters": parameters})
+    except Exception as e:
+        print("Error in get_parameters:", e)
+        return make_response(jsonify({"error": serialize_object(e)}), 500)
+
+
 @app.route("/get_sweep_data", methods=["GET"])
 def get_sweep_data():
     global expt
