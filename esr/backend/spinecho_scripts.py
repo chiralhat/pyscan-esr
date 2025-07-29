@@ -253,6 +253,7 @@ def setup_experiment(parameters, devices, sweep, soc):
         "Phase Sweep": 6,
         "Inversion Sweep": 7,
         "CPMG": 8,
+        "Gain": 9,
     }
     wait = parameters["wait"]
     sweep_range = ps.drange(
