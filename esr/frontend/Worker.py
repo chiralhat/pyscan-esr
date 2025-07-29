@@ -243,6 +243,7 @@ class Worker(QObject):
                         "experiment type": "Spin Echo Read Processed",
                     }
                 elif self.experiment.type == "Pulse Frequency Sweep":
+                    self.experiment.parameters["single"] = True
                     data = {
                         "parameters": self.experiment.parameters,
                         "experiment type": "Pulse Frequency Sweep Read Processed",
