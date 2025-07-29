@@ -240,7 +240,7 @@ def setup_experiment(parameters, devices, sweep, soc):
     def cpmg_sweep(pulses):
         parameters["pulses"] = pulses
 
-    def cpmg_sweep(gain):
+    def gain_sweep(gain):
         parameters["gain"] = gain
 
     expt_select = {
