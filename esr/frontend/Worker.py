@@ -461,6 +461,12 @@ class Worker(QObject):
             last_data_2d = None
             last_data_1d = None
 
+            response = requests.get(globals.server_address + "/get_parameters")
+            if response.ok:
+                self.experiment.parameters = response.json()["parameters"]
+            else:
+                print("Error:", response.status_code, response.text)
+
             # Continuously fetch data until sweep stops or is requested to stop
             while not self.stop_requested and self.running:
                 response = requests.get(globals.server_address + "/get_sweep_data")
@@ -512,7 +518,7 @@ class Worker(QObject):
                         ):
                             last_data_1d = pg_1D.data.copy()
                             self.live_plot_1D_update_signal.emit(pg_1D)
-                sleep(1)
+                sleep(self.experiment.parameters['subtime']/10)
 
             # final emitting of plots when sweep is over
             if self.experiment.expt.runinfo.measured:
