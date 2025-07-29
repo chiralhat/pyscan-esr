@@ -127,7 +127,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         freq = self.freq2reg(cfg["freq"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
 
         # set our output to be the default pulse register
-        self.default_pulse_registers(ch=res_ch, style="const", freq=freq, phase=0)
+        self.default_pulse_registers(ch=res_ch, style="const", freq=freq, phase=90)
         
         self.res_r_phase = self.get_gen_reg(res_ch, "phase")
         self.res_r_ph_pi2 = self.new_gen_reg(res_ch, init_val=pi2_phase_list[0], name="pi2_phase") 
@@ -157,14 +157,15 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         
         # In Loopback mode we want to start readout at the beginning of the pi/2 pulse
         # Otherwise we want to delay readout until the echo location
-        offset = 0 if self.cfg["loopback"] else delay+(2*pulses-1)*delay#+(pulses-1)*(delay_pi)
+#        offset = 0 if self.cfg["loopback"] else delay+(2*pulses-1)*delay#+(pulses-1)*(delay_pi)
+        offset = 0 if self.cfg["loopback"] else (tpi+tpi2)/2+2*delay+(pulses-1)*(delay_pi)
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
         trig_offset = self.us2cycles(0.25+nutwidth+self.cfg["h_offset"]+offset)
         
         # If the nutation pulse width is greater than the minimum number of cycles, add it in
         nut_length = self.us2cycles(nutwidth, gen_ch=res_ch)
         if nut_length>2:
-            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, phase=self.deg2reg(90), length=nut_length)
+            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, length=nut_length)
             self.pulse(ch=self.cfg["res_ch"])
         
         # self.res_r_phase.set_to(self.deg2reg(pi2_phase_list[cycle], gen_ch=res_ch))
@@ -217,16 +218,21 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
         trig_offset = self.us2cycles(nutwidth+nutdelay+self.cfg["h_offset"]+offset)
         
-        # Trigger the switch-controlling pulse
-        self.trigger_no_off(pins=[0])
-        # Trigger the scope sync pulse
-        self.trigger_no_off(t=trig_offset, pins=[1])
-        self.synci(self.us2cycles(0.1))
-        
-        if self.cfg["single"]:
+        if self.cfg["single"]:        
+            # Trigger the switch-controlling pulse
+            self.trigger_no_off(pins=[0])#, width=trig_offset+self.us2cycles(4))
+            # Trigger the scope sync pulse
+            #self.trigger_no_off(t=trig_offset, pins=[1])
+            self.synci(self.us2cycles(2))
+
             self.cpmg(self.cfg["pulses"])
         else:
-            for n in np.arange(4):
+            for n in np.arange(4):        
+                # Trigger the switch-controlling pulse
+                self.trigger_no_off(pins=[0])#, width=trig_offset+self.us2cycles(4))
+                # Trigger the scope sync pulse
+                #self.trigger_no_off(t=trig_offset, pins=[1])
+                self.synci(self.us2cycles(2))
                 self.cpmg(self.cfg["pulses"], n)
 
 
@@ -394,9 +400,10 @@ def fourier_signal(d, fstart=1, fstop=50):
 def measure_decay(parameters, soc, d=0, ro=0, progress=False):
     reps = parameters['ave_reps']
     pulses = parameters['pulses']
+    parameters['single'] = True
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    iq_list = sread(parameters, soc, progress)
+    iq_list = safe_read(parameters, soc, progress)
 
     d.time, d.i, d.q, d.x = iq_convert(soc, iq_list,
                                      pulses=pulses,
@@ -437,6 +444,7 @@ def measure_phase(parameters, soc, d=0, ro=0, progress=False):
     if isinstance(d, int):
         d = ps.ItemAttribute()
     iq_list = safe_read(parameters, soc, progress)
+    # d.iq = iq_list
 
     d.time, d.i, d.q, d.x = iq_convert(soc, iq_list,
                                      pulses=pulses,
