@@ -29,6 +29,30 @@ sys.path.append("../")
 
 from pathlib import Path
 
+expt_select = {
+    "Pulse Sweep": 0,
+    "Rabi": 1,
+    "Period Sweep": 2,
+    "Hahn Echo": 3,
+    "EDFS": 4,
+    "Freq Sweep": 5,
+    "Phase Sweep": 6,
+    "Inversion Sweep": 7,
+    "CPMG": 8,
+}
+y_names = [
+    "pulse_time",
+    "rabi_sweep",
+    "period_sweep",
+    "echo_delay",
+    "psu_field",
+    "freq_sweep",
+    "phase_sweep",
+    "inversion_sweep",
+    "echo_delay",
+    "gain_sweep",
+]
+
 
 class ExperimentType(QObject):
     """Handles backend logic, configuration, and hardware interaction for a specific experiment type.
@@ -87,6 +111,8 @@ class ExperimentType(QObject):
             # Compute subtime for each acquisition
             tmult = period / 1e6 * 4 * reps
             self.parameters["subtime"] = self.parameters["soft_avgs"] * tmult
+
+            self.parameters["y_name"] = y_names[expt_select[self.parameters["expt"]]]
 
             # Build output file name with today's date
             datestr = date.today().strftime("%y%m%d")

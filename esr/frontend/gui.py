@@ -88,6 +88,7 @@ sweep_list = [
     "EDFS",
     "Freq Sweep",
     "CPMG",
+    "Gain",
 ]
 
 bimod_sweep_list = [
@@ -175,6 +176,12 @@ EXPERIMENT_TEMPLATES = {
                     "type": "check",
                     "default": False,
                 },
+                {
+                    "display": "Integral only",
+                    "key": "integrate",
+                    "type": "check",
+                    "default": True,
+                },
             ],
             "Uncommon Settings": [
                 {
@@ -214,12 +221,6 @@ EXPERIMENT_TEMPLATES = {
                     "min": 0.0,
                     "max": 20.0,
                     "default": 0.3,
-                },
-                {
-                    "display": "Integral only",
-                    "key": "integrate",
-                    "type": "check",
-                    "default": True,
                 },
             ],
             "Utility Settings": [
@@ -356,27 +357,6 @@ EXPERIMENT_TEMPLATES = {
                     "default": 0.0,
                 },
             ],
-            "Second Sweep Settings": [
-                {
-                    "display": "Second sweep?",
-                    "key": "sweep2",
-                    "type": "check",
-                    "default": False,
-                },
-                {
-                    "display": "Experiment 2",
-                    "key": "expt2",
-                    "type": "combo",
-                    "options": sweep_list,
-                    "default": "Hahn Echo",
-                },
-                {
-                    "display": "Sweep 2 start, end, step",
-                    "key": ["sweep2_start", "sweep2_end", "sweep2_step"],
-                    "type": "composite",
-                    "default": [0, 0, 0],
-                },
-            ],
             "Readout Settings": [
                 {
                     "display": "Time Offset (us)",
@@ -399,6 +379,33 @@ EXPERIMENT_TEMPLATES = {
                     "key": "loopback",
                     "type": "check",
                     "default": False,
+                },
+                {
+                    "display": "Integral only",
+                    "key": "integrate",
+                    "type": "check",
+                    "default": True,
+                },
+            ],
+            "Second Sweep Settings": [
+                {
+                    "display": "Second sweep?",
+                    "key": "sweep2",
+                    "type": "check",
+                    "default": False,
+                },
+                {
+                    "display": "Experiment 2",
+                    "key": "expt2",
+                    "type": "combo",
+                    "options": sweep_list,
+                    "default": "Hahn Echo",
+                },
+                {
+                    "display": "Sweep 2 start, end, step",
+                    "key": ["sweep2_start", "sweep2_end", "sweep2_step"],
+                    "type": "composite",
+                    "default": [0, 0, 0],
                 },
             ],
             "Uncommon Settings": [
@@ -441,12 +448,6 @@ EXPERIMENT_TEMPLATES = {
                     "min": 0.0,
                     "max": 20.0,
                     "default": 0.2,
-                },
-                {
-                    "display": "Integral only",
-                    "key": "integrate",
-                    "type": "check",
-                    "default": False,
                 },
             ],
             "Utility Settings": [
