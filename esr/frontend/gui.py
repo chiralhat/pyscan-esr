@@ -735,6 +735,7 @@ class DynamicSettingsPanel(QWidget):
             widget.setMinimum(float(setting.get("min", 0.0)))
             widget.setMaximum(float(setting.get("max", 1e9)))
             widget.setValue(float(setting.get("default", 0.0)))
+            widget.setDecimals(setting.get("decimals", 3))
 
         # Text input field
         elif stype == "line_edit":
