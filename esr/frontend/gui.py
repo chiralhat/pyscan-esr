@@ -236,6 +236,12 @@ EXPERIMENT_TEMPLATES = {
                     "type": "check",
                     "default": False,
                 },
+                {
+                    "display": "Turn field off after sweep?",
+                    "key": "turn_off",
+                    "type": "check",
+                    "default": True,
+                },
             ],
             "Never Change": [
                 {
@@ -356,6 +362,14 @@ EXPERIMENT_TEMPLATES = {
                     "max": 655360,
                     "default": 0.0,
                 },
+                {
+                    "display": "# 180 Pulses",
+                    "key": "pulses",
+                    "type": "spin",
+                    "min": 1,
+                    "max": 256,
+                    "default": 1,
+                },
             ],
             "Readout Settings": [
                 {
@@ -463,16 +477,14 @@ EXPERIMENT_TEMPLATES = {
                     "type": "check",
                     "default": False,
                 },
+                {
+                    "display": "Turn field off after sweep?",
+                    "key": "turn_off",
+                    "type": "check",
+                    "default": True,
+                },
             ],
             "Never Change": [
-                {
-                    "display": "# 180 Pulses",
-                    "key": "pulses",
-                    "type": "spin",
-                    "min": 1,
-                    "max": 256,
-                    "default": 1,
-                },
                 {
                     "display": "Phase",
                     "key": "phase",
