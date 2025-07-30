@@ -436,8 +436,8 @@ EXPERIMENT_TEMPLATES = {
                     "key": "field",
                     "type": "double_spin",
                     "min": 0.0,
-                    "max": 0.0,
-                    "default": 2500.0,
+                    "max": 10000,
+                    "default": 0.0,
                 },
                 {
                     "display": "Magnet Scale (G/A)",
