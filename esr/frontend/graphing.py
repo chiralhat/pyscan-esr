@@ -54,71 +54,83 @@ class GraphWidget(QWidget):
     def update_canvas_se(self, sig, task_name):
         """Clears the current plot and renders new data traces for CH1, CH2, and amplitude."""
 
-        time = sig.time
-        i = sig.i
-        q = sig.q
-        x = sig.x
+        try:
+            time = sig.time
+            i = sig.i
+            q = sig.q
+            x = sig.x
 
-        self.ax.clear()
-        self.ax.plot(time, i, label="CH1", color="yellow")
-        self.ax.plot(time, q, label="CH2", color="blue")
-        self.ax.plot(time, x, label="AMP", color="green")
-        self.ax.set_xlabel("Time (μs)")
-        self.ax.set_ylabel("Signal (a.u.)")
-        self.ax.legend()
-        self.canvas.draw()
+            self.ax.clear()
+            self.ax.plot(time, i, label="CH1", color="yellow")
+            self.ax.plot(time, q, label="CH2", color="blue")
+            self.ax.plot(time, x, label="AMP", color="green")
+            self.ax.set_xlabel("Time (μs)")
+            self.ax.set_ylabel("Signal (a.u.)")
+            self.ax.legend()
+            self.canvas.draw()
+        except Exception as e:
+            print()
+            print("Error when updating SE canvas:")
+            print(e)
+            print()
 
     def update_canvas_psweep(self, sig, task_name):
-        self.ax.clear()
         print("Updating pulse sweep canvas")
+        try:
+            self.ax.clear()
 
-        if task_name == "read_processed":
-            try:
-                # Fit and plot expected signal model
-                fit, err = ps.plot_exp_fit_norange(
-                    np.array([sig.time, sig.x]), sig.freq, 1, plt=self.ax
-                )
-                sig.fit = fit
-                self.ax.plot(
-                    sig.time, sig.x, label="Signal"
-                )  # This line is crucial for legend
-                # Display fit parameters on plot
-                fitstr = (
-                    f"A={sig.fit[1]:.3g} V, t={sig.fit[2]:.3g} μs, Q={sig.fit[-1]:.3g}"
-                )
-                freqstr = f"freq (MHz): {sig.freq}"
+            if task_name == "read_processed":
+                try:
+                    # Fit and plot expected signal model
+                    fit, err = ps.plot_exp_fit_norange(
+                        np.array([sig.time, sig.x]), sig.freq, 1, plt=self.ax
+                    )
+                    sig.fit = fit
+                    self.ax.plot(
+                        sig.time, sig.x, label="Signal"
+                    )  # This line is crucial for legend
+                    # Display fit parameters on plot
+                    fitstr = (
+                        f"A={sig.fit[1]:.3g} V, t={sig.fit[2]:.3g} μs, Q={sig.fit[-1]:.3g}"
+                    )
+                    freqstr = f"freq (MHz): {sig.freq}"
 
-                self.ax.text(
-                    0.5,
-                    0.95,
-                    fitstr,
-                    transform=self.ax.transAxes,
-                    ha="center",
-                    va="top",
-                )  # Near the top, inside
-                self.ax.text(
-                    0.5,
-                    0.90,
-                    freqstr,
-                    transform=self.ax.transAxes,
-                    ha="center",
-                    va="top",
-                )  # Slightly below the fitstr
-            except Exception as e:
-                self.updateStatus.emit(
-                    f"Error in plotting read_processed pulse frequency sweep: {e}\n"
-                )
+                    self.ax.text(
+                        0.5,
+                        0.95,
+                        fitstr,
+                        transform=self.ax.transAxes,
+                        ha="center",
+                        va="top",
+                    )  # Near the top, inside
+                    self.ax.text(
+                        0.5,
+                        0.90,
+                        freqstr,
+                        transform=self.ax.transAxes,
+                        ha="center",
+                        va="top",
+                    )  # Slightly below the fitstr
+                except Exception as e:
+                    self.updateStatus.emit(
+                        f"Error in plotting read_processed pulse frequency sweep: {e}\n"
+                    )
 
-        elif task_name == "read_unprocessed":
-            # Plot raw signal components
-            self.ax.plot(sig.time, sig.i, color="yellow", label="CH1")
-            self.ax.plot(sig.time, sig.q, color="b", label="CH2")
-            self.ax.plot(sig.time, sig.x, color="g", label="AMP")
+            elif task_name == "read_unprocessed":
+                # Plot raw signal components
+                self.ax.plot(sig.time, sig.i, color="yellow", label="CH1")
+                self.ax.plot(sig.time, sig.q, color="b", label="CH2")
+                self.ax.plot(sig.time, sig.x, color="g", label="AMP")
 
-        self.ax.set_xlabel("Time (μs)")
-        self.ax.set_ylabel("Signal (a.u.)")
-        self.ax.legend()
-        self.canvas.draw()
+            self.ax.set_xlabel("Time (μs)")
+            self.ax.set_ylabel("Signal (a.u.)")
+            self.ax.legend()
+            self.canvas.draw()
+        except Exception as e:
+            print()
+            print("Error when updating PS canvas:")
+            print(e)
+            print()
 
     def show_context_menu(self, pos):
         menu = QMenu()
@@ -164,51 +176,63 @@ class SweepPlotWidget(QWidget):
     @pyqtSlot(object)
     def on_live_plot_2D(self, pg):
         print("Updating 2D plot\n")
-        if pg is None or pg.data.size == 0:
-            return
+        try:
+            if pg is None or pg.data.size == 0:
+                return
 
-        if self.mesh is None:
-            # Initial draw of the pcolormesh
-            self.mesh = self.ax.pcolormesh(
-                pg.x,
-                pg.y,
-                pg.data.T,
-                shading="auto",
-                vmin=pg.get_data_range()[0],
-                vmax=pg.get_data_range()[1],
-            )
-            self.colorbar = self.figure.colorbar(self.mesh, ax=self.ax)
-        else:
-            # Update existing mesh with new data
-            self.mesh.set_array(pg.data.T.ravel())
-            vmin, vmax = pg.get_data_range()
-            self.mesh.set_clim(vmin, vmax)
+            if self.mesh is None:
+                # Initial draw of the pcolormesh
+                self.mesh = self.ax.pcolormesh(
+                    pg.x,
+                    pg.y,
+                    pg.data.T,
+                    shading="auto",
+                    vmin=pg.get_data_range()[0],
+                    vmax=pg.get_data_range()[1],
+                )
+                self.colorbar = self.figure.colorbar(self.mesh, ax=self.ax)
+            else:
+                # Update existing mesh with new data
+                self.mesh.set_array(pg.data.T.ravel())
+                vmin, vmax = pg.get_data_range()
+                self.mesh.set_clim(vmin, vmax)
 
-        # Update plot labels and title
-        self.ax.set_title(pg.get_title())
-        self.ax.set_xlabel(pg.get_xlabel())
-        self.ax.set_ylabel(pg.get_ylabel())
+            # Update plot labels and title
+            self.ax.set_title(pg.get_title())
+            self.ax.set_xlabel(pg.get_xlabel())
+            self.ax.set_ylabel(pg.get_ylabel())
 
-        self.canvas.draw_idle()
+            self.canvas.draw_idle()
+        except Exception as e:
+            print()
+            print("Error when updating 2D plot:")
+            print(e)
+            print()
 
     @pyqtSlot(object)
     def on_live_plot_1D(self, pg):
         print("Updating 1D plot\n")
-        if pg is None or pg.data is None or pg.x is None or pg.data.size == 0:
-            return
+        try:
+            if pg is None or pg.data is None or pg.x is None or pg.data.size == 0:
+                return
 
-        self.line.set_data(pg.x, pg.data)
+            self.line.set_data(pg.x, pg.data)
 
-        # Rescale axes to fit new data
-        self.ax.relim()
-        self.ax.autoscale_view()
+            # Rescale axes to fit new data
+            self.ax.relim()
+            self.ax.autoscale_view()
 
-        # Set labels and title
-        self.ax.set_title(pg.get_title())
-        self.ax.set_xlabel(pg.get_xlabel())
-        self.ax.set_ylabel(pg.get_ylabel())
+            # Set labels and title
+            self.ax.set_title(pg.get_title())
+            self.ax.set_xlabel(pg.get_xlabel())
+            self.ax.set_ylabel(pg.get_ylabel())
 
-        self.canvas.draw_idle()
+            self.canvas.draw_idle()
+        except Exception as e:
+            print()
+            print("Error when updating 1D plot:")
+            print(e)
+            print()
 
     def show_context_menu(self, pos):
         menu = QMenu()
