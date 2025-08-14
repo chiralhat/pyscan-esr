@@ -158,7 +158,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         # In Loopback mode we want to start readout at the beginning of the pi/2 pulse
         # Otherwise we want to delay readout until the echo location
 #        offset = 0 if self.cfg["loopback"] else delay+(2*pulses-1)*delay#+(pulses-1)*(delay_pi)
-        offset = 0 if self.cfg["loopback"] else (tpi+tpi2)/2+2*delay+(pulses-1)*(delay_pi)
+        offset = 0 if self.cfg["loopback"] else (tpi+tpi2)/2+2*delay+(pulses-1)*(delay_pi+.03)
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
         trig_offset = self.us2cycles(0.25+nutwidth+self.cfg["h_offset"]+offset)
         
