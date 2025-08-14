@@ -270,7 +270,8 @@ def start_sweep():
 
 @app.route("/get_parameters", methods=["GET"])
 def get_parameters():
-    global expt
+    global sweep
+    parameters = sweep["runinfo"].parameters
     try:
         return jsonify({"parameters": parameters})
     except Exception as e:
