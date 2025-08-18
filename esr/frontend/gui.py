@@ -1920,7 +1920,10 @@ class ExperimentUI(QMainWindow):
         else:
             print("Error:", response.status_code, response.text)
         
-        self.load_parameters(parameters, type_map)
+        try:
+            self.settings_panel.load_parameters(parameters, type_map)
+        except Exception as e:
+            print(e)
 
 
 class QueueRunnerWorker(QThread):
