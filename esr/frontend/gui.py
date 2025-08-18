@@ -666,7 +666,11 @@ class DynamicSettingsPanel(QWidget):
                 defaults = {}
         else:
             defaults = {}
+        
+        self.load_parameters(defaults, type_map)
 
+
+    def load_parameters(self, defaults, type_map):
         # Apply default values to each widget in the tree
         tree = self.settings_tree
         root = tree.invisibleRootItem()
@@ -1133,6 +1137,13 @@ class ExperimentUI(QMainWindow):
         add_queue_btn.setStyleSheet("font-size: 10pt; padding: 4px;")
         add_queue_btn.clicked.connect(self.add_to_queue)
         top_menu.addWidget(add_queue_btn)
+
+        # ----- Load from Server Button -----
+        server_load_btn = QPushButton("Load from Server")
+        server_load_btn.setMinimumHeight(40)
+        server_load_btn.setStyleSheet("font-size: 10pt; padding: 4px;")
+        server_load_btn.clicked.connect(self.load_from_server)
+        top_menu.addWidget(server_load_btn)
 
         # ----- Experiment-specific buttons: Init, Read, Sweep -----
         top_menu = self.init_experiment_specific_buttons(top_menu)
@@ -1883,6 +1894,33 @@ class ExperimentUI(QMainWindow):
 
         except Exception as e:
             print(e)
+
+    def load_from_server(self):
+        """Loads settings into the panel using the experiment template structure.
+        It uses the parameters currently loaded into the server.
+        """
+
+        settings = self.experiment_templates[self.current_experiment.type]
+        
+        # Create a type lookup map to interpret each setting key
+        type_map = {}
+        for group in settings.get("groups", {}).values():
+            for setting in group:
+                stype = setting.get("type")
+                key = setting.get("key")
+                if isinstance(key, list):
+                    for subkey in key:
+                        type_map[subkey] = stype
+                else:
+                    type_map[key] = stype
+        
+        response = requests.get(globals.server_address + "/get_parameters")
+        if response.ok:
+            parameters = response.json()["parameters"]
+        else:
+            print("Error:", response.status_code, response.text)
+        
+        self.load_parameters(parameters, type_map)
 
 
 class QueueRunnerWorker(QThread):
