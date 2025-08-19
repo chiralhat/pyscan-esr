@@ -243,19 +243,19 @@ def start_sweep():
                 expt.echo_delay = (
                     2
                     * runinfo.parameters["delay"]
-                    * runinfo.scan0.scan_dict["cpmg_sweep"]
+                    * np.array(runinfo.scan0.scan_dict["cpmg_sweep"])
                 )
             elif parameters["sweep2"] and parameters["expt2"] == "Hahn Echo":
                 expt.echo_delay = (
                     2
-                    * runinfo.scan1.scan_dict["delay_sweep"]
+                    * np.array(runinfo.scan1.scan_dict["delay_sweep"])
                     * runinfo.parameters["pulses"]
                 )
             elif parameters["sweep2"] and parameters["expt2"] == "CPMG":
                 expt.echo_delay = (
                     2
                     * runinfo.parameters["delay"]
-                    * runinfo.scan1.scan_dict["cpmg_sweep"]
+                    * np.array(runinfo.scan1.scan_dict["cpmg_sweep"])
                 )
             else:
                 expt.echo_delay = (
