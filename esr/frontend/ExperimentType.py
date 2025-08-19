@@ -134,7 +134,7 @@ class ExperimentType(QObject):
 
             # Build output file name with today's date
             datestr = date.today().strftime("%y%m%d")
-            fname = datestr + str(self.parameters["file_name"]) + "_"
+            fname = datestr + "_" + str(self.parameters["file_name"]) + "_"
             self.parameters["outfile"] = str(Path(self.parameters["save_dir"]) / fname)
 
             # Save default parameters locally
