@@ -393,7 +393,8 @@ class Worker(QObject):
                 self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
             else:
                 self.updateStatus.emit("Done sweeping (normal exit).\n")
-                self.updateStatus.emit(f"Fit Parameters: {self.experiment.expt.out:.3g} +- {self.experiment.expt.outerr}")
+                if not do_sweep2:
+                    self.updateStatus.emit(f"Fit Parameters: {self.experiment.expt.out:.3g} +- {self.experiment.expt.outerr}")
 
             self.finished.emit()
         except Exception as e:

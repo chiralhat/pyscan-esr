@@ -1038,7 +1038,7 @@ class ExperimentUI(QMainWindow):
         hdr3.addWidget(QLabel("Variable:"))
         combo_2d = QComboBox()
         combo_2d.currentTextChanged.connect(self.update_2d_plot)
-        combo_2d.addItems(["x", "i", "q"])
+        combo_2d.addItems(["x", "i", "q", "xmean", "imean", "qmean"])
         hdr3.addWidget(combo_2d)
         hdr3.addStretch()
         tab3_layout.addLayout(hdr3)
