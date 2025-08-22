@@ -1385,11 +1385,16 @@ class ExperimentUI(QMainWindow):
         try:
             if self.current_experiment.expt:
                 data_name_2d = self.combo_2d.currentText()
+                if self.current_experiment.parameters['sweep2']:
+                    xname = self.current_experiment.parameters["y_name2"]
+                else:
+                    xname = "t"
+                yname = self.current_experiment.parameters["y_name"]
                 pg_2D = ps.PlotGenerator(
                     expt=self.current_experiment.expt,
                     d=2,
-                    x_name="t",
-                    y_name=self.current_experiment.parameters["y_name"],
+                    x_name=xname,
+                    y_name=yname,
                     data_name=data_name_2d,
                     transpose=1,
                 )

@@ -325,6 +325,8 @@ class Worker(QObject):
             if self.experiment.expt.runinfo.measured:
                 if (not do_int) or do_sweep2:
                     data_name_2d = self.combo_2d.currentText()
+                    if do_sweep2 and len(data_name_2d)==1:
+                        data_name_2d = "xmean"
                     pg_2D = ps.PlotGenerator(
                         expt=self.experiment.expt,
                         d=2,
