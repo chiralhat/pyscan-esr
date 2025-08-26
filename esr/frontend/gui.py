@@ -914,7 +914,7 @@ class ExperimentUI(QMainWindow):
         if not self.is_process_running:
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
-            self.sweep_start_stop_btn.setEnabled(False)
+            # self.sweep_start_stop_btn.setEnabled(False)
             self.set_parameters_and_initialize_btn.setEnabled(True)
 
     def init_layout(self):
@@ -1374,7 +1374,7 @@ class ExperimentUI(QMainWindow):
             # Reset button state
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
-            #self.sweep_start_stop_btn.setEnabled(False)
+            # self.sweep_start_stop_btn.setEnabled(False)
             self.set_parameters_and_initialize_btn.setEnabled(True)
 
         except Exception as e:
