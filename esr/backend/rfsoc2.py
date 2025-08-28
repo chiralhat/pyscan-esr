@@ -259,14 +259,16 @@ class DEERProgram(CPMGProgram):
         # configure the readout lengths and downconversion frequencies (ensuring it is an available DAC frequency)
         for n, ch in enumerate(cfg["ro_chs"]):
             self.declare_readout(ch=ch, length=readout_length[n],
-                                 freq=cfg["freq"], gen_ch=res_ch)
+                                 freq=cfg["freq1"], gen_ch=res_ch)
 
         # convert frequency to DAC frequency (ensuring it is an available ADC frequency)
-        freq1 = self.freq2reg(cfg["freq1"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
-        freq2 = self.freq2reg(cfg["freq2"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
+        self.freq1 = self.freq2reg(cfg["freq1"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
+        self.freq2 = self.freq2reg(cfg["freq2"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
 
         # set our output to be the default pulse register
-        self.default_pulse_registers(ch=res_ch, style="const", freq=freq1)
+        self.default_pulse_registers(ch=res_ch, style="const", freq=self.freq1)
+
+        self.res_r_freq = self.get_gen_reg(res_ch, "freq")
         
         self.synci(200)  # give processor some time to configure pulses
 
@@ -279,6 +281,7 @@ class DEERProgram(CPMGProgram):
         res_ch = self.cfg["res_ch"]
         tpi2 = self.cfg["pulse1_1"]/1000
         tpi = self.cfg["pulse1_2"]/1000
+        tpid = self.cfg["pulse2_2"]/1000
         delay = self.cfg["delay"]/1000
         delay_pi2 = delay-tpi2
         delay_pi = 2*delay-tpi
@@ -287,9 +290,6 @@ class DEERProgram(CPMGProgram):
 
         T = self.cfg["DEER_delay"]/1000
         first_tau = tau-T
-        
-        # convert second frequency to DAC frequency (ensuring it is an available ADC frequency)
-        freq2 = self.freq2reg(cfg["freq2"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
 
         # We want half the power for our pi/2 pulse, and this achieves that
         gain2 = gain if gain<10000 else gain-10000
@@ -318,20 +318,25 @@ class DEERProgram(CPMGProgram):
         self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
                                  length=self.us2cycles(tpi, gen_ch=res_ch))
         self.pulse(ch=self.cfg["res_ch"])
+        self.res_r_freq.set_to(self.cfg['freq2'])
 
         # Wait until first echo
-        self.synci(self.us2cycles(delay_pi))
+        self.synci(self.us2cycles(delay_pi2))
+
+        # Wait until DEER pulse
+        self.synci(self.us2cycles(T))
 
         # Send DEER pulse for second spin
-        self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2, freq=freq2,
-                                 length=self.us2cycles(tpi, gen_ch=res_ch))
+        self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
+                                 length=self.us2cycles(tpid, gen_ch=res_ch))
         self.pulse(ch=self.cfg["res_ch"])
+        self.res_r_freq.set_to(self.cfg['freq1'])
 
         # Delay between DEER pulse and second pi pulse
         self.synci(self.us2cycles(first_tau))
 
         # Second pi pulse
-        self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2, freq=freq1,
+        self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
                                  length=self.us2cycles(tpi, gen_ch=res_ch))
         self.pulse(ch=self.cfg["res_ch"])
 
