@@ -158,7 +158,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         # In Loopback mode we want to start readout at the beginning of the pi/2 pulse
         # Otherwise we want to delay readout until the echo location
 #        offset = 0 if self.cfg["loopback"] else delay+(2*pulses-1)*delay#+(pulses-1)*(delay_pi)
-        offset = 0 if self.cfg["loopback"] else (tpi+tpi2)/2+2*delay+(pulses-1)*(delay_pi+.03)
+        offset = 0 if self.cfg["loopback"] else (tpi+tpi2)/2+2*delay+(pulses-1)*(2*delay)
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
         trig_offset = self.us2cycles(0.25+nutwidth+self.cfg["h_offset"]+offset)
         
@@ -259,10 +259,10 @@ class DEERProgram(CPMGProgram):
         # configure the readout lengths and downconversion frequencies (ensuring it is an available DAC frequency)
         for n, ch in enumerate(cfg["ro_chs"]):
             self.declare_readout(ch=ch, length=readout_length[n],
-                                 freq=cfg["freq1"], gen_ch=res_ch)
+                                 freq=cfg["freq"], gen_ch=res_ch)
 
         # convert frequency to DAC frequency (ensuring it is an available ADC frequency)
-        self.freq1 = self.freq2reg(cfg["freq1"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
+        self.freq1 = self.freq2reg(cfg["freq"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
         self.freq2 = self.freq2reg(cfg["freq2"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
 
         # set our output to be the default pulse register
@@ -277,7 +277,7 @@ class DEERProgram(CPMGProgram):
         self.synci(200)  # give processor some time to configure pulses
 
 
-    def deer(self, pulses=1, cycle=0, tstart=0):
+    def deer(self, pulses=1, cycle=0, dphase=90, tstart=0):
         """
         Runs a four-pulse DEER sequence with optional nutation pulse
         """
@@ -299,7 +299,7 @@ class DEERProgram(CPMGProgram):
         
         # In Loopback mode we want to start readout at the beginning of the pi/2 pulse
         # Otherwise we want to delay readout until the second echo location
-        offset = 0 if self.cfg["loopback"] else 2*delay+(2*tau)
+        offset = 0 if self.cfg["loopback"] else (tpi+tpi2)/2+2*delay+(2*tau)
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
         trig_offset = self.us2cycles(0.25+self.cfg["h_offset"]+offset)
         
@@ -342,6 +342,7 @@ class DEERProgram(CPMGProgram):
                                     length=deer_length)
             self.pulse(ch=self.cfg["res_ch"])
             self.res_r_freq.set_to(self.cfg['freq1'])
+            self.res_r_phase.set_to(pi_phase_list[cycle]+dphase)
 
             # Delay between DEER pulse and second pi pulse
             self.synci(self.us2cycles(first_tau))
@@ -371,7 +372,7 @@ class DEERProgram(CPMGProgram):
             self.synci(self.us2cycles(2))
 
             n = 0 if type(sing)==bool else sing-1
-            self.deer(self.cfg["pulses"], n)
+            self.deer(self.cfg["pulses"], n, self.cfg["dphase"])
         else:
             for n in np.arange(4):        
                 # Trigger the switch-controlling pulse
@@ -379,7 +380,7 @@ class DEERProgram(CPMGProgram):
                 # Trigger the scope sync pulse
                 #self.trigger_no_off(t=trig_offset, pins=[1])
                 self.synci(self.us2cycles(2))
-                self.deer(self.cfg["pulses"], n)
+                self.deer(self.cfg["pulses"], n, self.cfg["dphase"]*n)
 
 
 def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):
