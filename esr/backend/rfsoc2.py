@@ -266,14 +266,18 @@ class DEERProgram(CPMGProgram):
         self.freq2 = self.freq2reg(cfg["freq2"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
 
         # set our output to be the default pulse register
-        self.default_pulse_registers(ch=res_ch, style="const", freq=self.freq1)
+        self.default_pulse_registers(ch=res_ch, style="const", freq=self.freq1, phase=90)
+        
+        self.res_r_phase = self.get_gen_reg(res_ch, "phase")
+        self.res_r_ph_pi2 = self.new_gen_reg(res_ch, init_val=pi2_phase_list[0], name="pi2_phase") 
+        self.res_r_ph_pi = self.new_gen_reg(res_ch, init_val=pi_phase_list[0], name="pi_phase") 
 
         self.res_r_freq = self.get_gen_reg(res_ch, "freq")
         
         self.synci(200)  # give processor some time to configure pulses
 
 
-    def deer(self, ph1, ph2, tstart=0):
+    def deer(self, pulses=1, cycle=0, tstart=0):
         """
         Runs a four-pulse DEER sequence with optional nutation pulse
         """
@@ -299,6 +303,8 @@ class DEERProgram(CPMGProgram):
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
         trig_offset = self.us2cycles(0.25+self.cfg["h_offset"]+offset)
         
+        self.res_r_phase.set_to(pi2_phase_list[cycle])
+        
         # Tell the ADC when to trigger readout, based on the trigger offset defined above
         # If you uncomment the pins argument, it will also send a pulse on an I/O pin
         self.trigger(adcs=self.ro_chs,
@@ -306,15 +312,17 @@ class DEERProgram(CPMGProgram):
                     adc_trig_offset=trig_offset)
 
         # pi/2 pulse
-        self.set_pulse_registers(ch=res_ch, gain=gain2, phase=ph1,
+        self.set_pulse_registers(ch=res_ch, gain=gain2,
                                  length=self.us2cycles(tpi2, gen_ch=res_ch))
         self.pulse(ch=res_ch)
+        
+        self.res_r_phase.set_to(pi_phase_list[cycle])
         
         # Delay between pi/2 and pi pulses
         self.synci(self.us2cycles(delay_pi2))
         
         # First pi pulse
-        self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
+        self.set_pulse_registers(ch=res_ch, gain=gain,
                                  length=self.us2cycles(tpi, gen_ch=res_ch))
         self.pulse(ch=self.cfg["res_ch"])
         deer_length = self.us2cycles(tpid, gen_ch=res_ch)
@@ -330,7 +338,7 @@ class DEERProgram(CPMGProgram):
             self.synci(self.us2cycles(T))
 
             # Send DEER pulse for second spin
-            self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
+            self.set_pulse_registers(ch=res_ch, gain=gain,
                                     length=deer_length)
             self.pulse(ch=self.cfg["res_ch"])
             self.res_r_freq.set_to(self.cfg['freq1'])
@@ -341,7 +349,7 @@ class DEERProgram(CPMGProgram):
             self.synci(self.us2cycles(tau))
 
         # Second pi pulse
-        self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
+        self.set_pulse_registers(ch=res_ch, gain=gain,
                                  length=self.us2cycles(tpi, gen_ch=res_ch))
         self.pulse(ch=self.cfg["res_ch"])
 
@@ -353,11 +361,25 @@ class DEERProgram(CPMGProgram):
         
 
     def body(self):
-        self.trigger_no_off(pins=[0])
-        self.synci(self.us2cycles(0.1))
-        
-        #if self.cfg['single']:
-        self.deer(0, 0)
+        # Currently "pulses" isn't controlling anything
+        sing = self.cfg["single"]
+        if sing:        
+            # Trigger the switch-controlling pulse
+            self.trigger_no_off(pins=[0])#, width=trig_offset+self.us2cycles(4))
+            # Trigger the scope sync pulse
+            #self.trigger_no_off(t=trig_offset, pins=[1])
+            self.synci(self.us2cycles(2))
+
+            n = 0 if type(sing)==bool else sing-1
+            self.deer(self.cfg["pulses"], n)
+        else:
+            for n in np.arange(4):        
+                # Trigger the switch-controlling pulse
+                self.trigger_no_off(pins=[0])#, width=trig_offset+self.us2cycles(4))
+                # Trigger the scope sync pulse
+                #self.trigger_no_off(t=trig_offset, pins=[1])
+                self.synci(self.us2cycles(2))
+                self.deer(self.cfg["pulses"], n)
 
 
 def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):
@@ -448,12 +470,12 @@ def measure_decay(parameters, soc, d=0, ro=0, progress=False):
     return d
 
 
-def measure_phase(parameters, soc, d=0, ro=0, progress=False):
+def measure_phase(parameters, soc, d=0, ro=0, deer=False, progress=False):
     reps = parameters['ave_reps']
     pulses = parameters['pulses']
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    iq_list = safe_read(parameters, soc, progress)
+    iq_list = safe_read(parameters, soc, deer, progress)
     # d.iq = iq_list
 
     d.time, d.i, d.q, d.x = iq_convert(soc, iq_list,
@@ -464,7 +486,7 @@ def measure_phase(parameters, soc, d=0, ro=0, progress=False):
 
     if reps>1:
         for n in np.arange(reps-1):
-            iq_list = safe_read(parameters, soc, progress)
+            iq_list = safe_read(parameters, soc, deer, progress)
             _, i, q, x = iq_convert(soc, iq_list,
                                      pulses=pulses,
                                      ro=ro,
@@ -484,7 +506,7 @@ def measure_phase(parameters, soc, d=0, ro=0, progress=False):
     return d
 
 
-def acquire_phase(parameters, soc, d=0, ro=0, progress=False):
+def acquire_phase(parameters, soc, d=0, ro=0, deer=False, progress=False):
     reps = parameters['ave_reps']
     pulses = parameters['pulses']
     parameters['single'] = False
@@ -493,7 +515,10 @@ def acquire_phase(parameters, soc, d=0, ro=0, progress=False):
     parameters['soft_avgs'] = 1
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    prog = CPMGProgram(soc, parameters)
+    if deer:
+        prog = DEERProgram(soc, parameters)
+    else:
+        prog = CPMGProgram(soc, parameters)
     iq_lists = prog.acquire(soc, progress=progress)
 
     d.imean, d.qmean, d.xmean = iq_convert(soc, iq_lists,
@@ -523,8 +548,11 @@ def acquire_phase(parameters, soc, d=0, ro=0, progress=False):
     return d
 
 
-def safe_read(parameters, soc, progress):
-    prog = CPMGProgram(soc, parameters)
+def safe_read(parameters, soc, deer, progress):
+    if deer:
+        prog = DEERProgram(soc, parameters)
+    else:
+        prog = CPMGProgram(soc, parameters)
     try:
         iq_list = prog.acquire_decimated(soc, progress=progress)[0]
     except RuntimeError:
