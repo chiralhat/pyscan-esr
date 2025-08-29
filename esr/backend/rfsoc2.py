@@ -284,12 +284,11 @@ class DEERProgram(CPMGProgram):
         tpid = self.cfg["pulse2_2"]/1000
         delay = self.cfg["delay"]/1000
         delay_pi2 = delay-tpi2
-        delay_pi = 2*delay-tpi
-        tau = self.cfg["tau"]/1000-tpi
+        tau = self.cfg["tau"]/1000-tpi/2
         gain = self.cfg["gain"]
 
         T = self.cfg["DEER_delay"]/1000
-        first_tau = tau-T
+        first_tau = tau-T-tpid
 
         # We want half the power for our pi/2 pulse, and this achieves that
         gain2 = gain if gain<10000 else gain-10000
@@ -318,22 +317,28 @@ class DEERProgram(CPMGProgram):
         self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
                                  length=self.us2cycles(tpi, gen_ch=res_ch))
         self.pulse(ch=self.cfg["res_ch"])
-        self.res_r_freq.set_to(self.cfg['freq2'])
+        deer_length = self.us2cycles(tpid, gen_ch=res_ch)
 
         # Wait until first echo
         self.synci(self.us2cycles(delay_pi2))
+        
+        if deer_length>2:
+            # Note: changing the frequency randomizes the phase
+            self.res_r_freq.set_to(self.cfg['freq2'])
 
-        # Wait until DEER pulse
-        self.synci(self.us2cycles(T))
+            # Wait until DEER pulse
+            self.synci(self.us2cycles(T))
 
-        # Send DEER pulse for second spin
-        self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
-                                 length=self.us2cycles(tpid, gen_ch=res_ch))
-        self.pulse(ch=self.cfg["res_ch"])
-        self.res_r_freq.set_to(self.cfg['freq1'])
+            # Send DEER pulse for second spin
+            self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
+                                    length=deer_length)
+            self.pulse(ch=self.cfg["res_ch"])
+            self.res_r_freq.set_to(self.cfg['freq1'])
 
-        # Delay between DEER pulse and second pi pulse
-        self.synci(self.us2cycles(first_tau))
+            # Delay between DEER pulse and second pi pulse
+            self.synci(self.us2cycles(first_tau))
+        else:
+            self.synci(self.us2cycles(tau))
 
         # Second pi pulse
         self.set_pulse_registers(ch=res_ch, gain=gain, phase=ph2,
