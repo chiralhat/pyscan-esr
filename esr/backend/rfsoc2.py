@@ -301,7 +301,10 @@ class DEERProgram(CPMGProgram):
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
         trig_offset = self.us2cycles(0.25+self.cfg["h_offset"]+offset)
         
+        self.res_r_freq.set_to(self.cfg['freq'])
         self.res_r_phase.set_to(pi2_phase_list[cycle])
+
+        self.synci(self.us2cycles(1))
         
         # Tell the ADC when to trigger readout, based on the trigger offset defined above
         # If you uncomment the pins argument, it will also send a pulse on an I/O pin
@@ -367,7 +370,7 @@ class DEERProgram(CPMGProgram):
             self.trigger_no_off(pins=[0])#, width=trig_offset+self.us2cycles(4))
             # Trigger the scope sync pulse
             #self.trigger_no_off(t=trig_offset, pins=[1])
-            self.synci(self.us2cycles(2))
+            self.synci(self.us2cycles(1))
 
             n = 0 if type(sing)==bool else sing-1
             self.deer(self.cfg["pulses"], n, self.cfg["dphase"])
@@ -377,7 +380,7 @@ class DEERProgram(CPMGProgram):
                 self.trigger_no_off(pins=[0])#, width=trig_offset+self.us2cycles(4))
                 # Trigger the scope sync pulse
                 #self.trigger_no_off(t=trig_offset, pins=[1])
-                self.synci(self.us2cycles(2))
+                self.synci(self.us2cycles(1))
                 self.deer(self.cfg["pulses"], n, self.cfg["dphase"]*n)
 
 
