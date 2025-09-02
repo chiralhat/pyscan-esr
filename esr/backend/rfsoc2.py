@@ -130,8 +130,8 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         self.default_pulse_registers(ch=res_ch, style="const", freq=freq, phase=90)
         
         self.res_r_phase = self.get_gen_reg(res_ch, "phase")
-        self.res_r_ph_pi2 = self.new_gen_reg(res_ch, init_val=pi2_phase_list[0], name="pi2_phase") 
-        self.res_r_ph_pi = self.new_gen_reg(res_ch, init_val=pi_phase_list[0], name="pi_phase") 
+        # self.res_r_ph_pi2 = self.new_gen_reg(res_ch, init_val=pi2_phase_list[0], name="pi2_phase") 
+        # self.res_r_ph_pi = self.new_gen_reg(res_ch, init_val=pi_phase_list[0], name="pi_phase") 
         
         self.synci(200)  # give processor some time to configure pulses
 
@@ -262,15 +262,13 @@ class DEERProgram(CPMGProgram):
                                  freq=cfg["freq"], gen_ch=res_ch)
 
         # convert frequency to DAC frequency (ensuring it is an available ADC frequency)
+        # NOTE: This is only necessary when initializing the pulse register, NOT when changing the freq
         self.freq1 = self.freq2reg(cfg["freq"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
-        self.freq2 = self.freq2reg(cfg["freq2"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
 
         # set our output to be the default pulse register
         self.default_pulse_registers(ch=res_ch, style="const", freq=self.freq1, phase=90)
         
         self.res_r_phase = self.get_gen_reg(res_ch, "phase")
-        self.res_r_ph_pi2 = self.new_gen_reg(res_ch, init_val=pi2_phase_list[0], name="pi2_phase") 
-        self.res_r_ph_pi = self.new_gen_reg(res_ch, init_val=pi_phase_list[0], name="pi_phase") 
 
         self.res_r_freq = self.get_gen_reg(res_ch, "freq")
         
@@ -341,7 +339,7 @@ class DEERProgram(CPMGProgram):
             self.set_pulse_registers(ch=res_ch, gain=gain,
                                     length=deer_length)
             self.pulse(ch=self.cfg["res_ch"])
-            self.res_r_freq.set_to(self.cfg['freq1'])
+            self.res_r_freq.set_to(self.cfg['freq'])
             self.res_r_phase.set_to(pi_phase_list[cycle]+dphase)
 
             # Delay between DEER pulse and second pi pulse
@@ -364,7 +362,7 @@ class DEERProgram(CPMGProgram):
     def body(self):
         # Currently "pulses" isn't controlling anything
         sing = self.cfg["single"]
-        if sing:        
+        if sing:
             # Trigger the switch-controlling pulse
             self.trigger_no_off(pins=[0])#, width=trig_offset+self.us2cycles(4))
             # Trigger the scope sync pulse
