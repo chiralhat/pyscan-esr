@@ -330,7 +330,7 @@ class DEERProgram(CPMGProgram):
         self.set_pulse_registers(ch=res_ch, gain=gain,
                                  length=self.us2cycles(tpi, gen_ch=res_ch))
         self.pulse(ch=self.cfg["res_ch"])
-        deer_length = self.us2cycles(tpid, gen_ch=res_ch)
+        deer_length = self.us2cycles(tpid, gen_ch=deer_ch)
 
         # Wait until first echo
         self.synci(self.us2cycles(delay_pi2))
