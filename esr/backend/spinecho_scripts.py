@@ -243,6 +243,9 @@ def setup_experiment(parameters, devices, sweep, soc):
     def gain_sweep(gain):
         parameters["gain"] = gain
 
+    def deer_sweep(T):
+        parameters["DEER_delay"] = T
+
     expt_select = {
         "Pulse Sweep": 0,
         "Rabi": 1,
@@ -254,6 +257,7 @@ def setup_experiment(parameters, devices, sweep, soc):
         "Inversion Sweep": 7,
         "CPMG": 8,
         "Gain": 9,
+        "DEER": 10,
     }
     wait = parameters["wait"]
     sweep_range = ps.drange(
@@ -274,6 +278,7 @@ def setup_experiment(parameters, devices, sweep, soc):
             "inversion_sweep",
             "echo_delay",
             "gain_sweep",
+            "deer_sweep"
         ],
         "scan": [
             [
@@ -287,6 +292,7 @@ def setup_experiment(parameters, devices, sweep, soc):
                 ps.FunctionScan(inversion_sweep, s_range, dt=wait),
                 ps.FunctionScan(cpmg_sweep, s_range, dt=wait),
                 ps.FunctionScan(gain_sweep, s_range, dt=wait),
+                ps.FunctionScan(deer_sweep, s_range, dt=wait),
             ]
             for s_range in [sweep_range, sweep2_range]
         ],
@@ -301,6 +307,7 @@ def setup_experiment(parameters, devices, sweep, soc):
             "T1",
             "CPMG",
             "Gain",
+            "DEER",
         ],
     }
     run_1 = expt_select[parameters["expt"]]

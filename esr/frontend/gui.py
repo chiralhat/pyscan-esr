@@ -89,6 +89,7 @@ sweep_list = [
     "Freq Sweep",
     "CPMG",
     "Gain",
+    "DEER",
 ]
 
 bimod_sweep_list = [
@@ -462,6 +463,15 @@ EXPERIMENT_TEMPLATES = {
                     "min": 0.0,
                     "max": 20.0,
                     "default": 0.2,
+                },
+                {
+                    "display": "DEER Freq",
+                    "key": "freq2",
+                    "type": "double_spin",
+                    "min": 50.0,
+                    "max": 14999.0,
+                    "default": 3902.0,
+                    "tool tip": "Helpful information",
                 },
             ],
             "Utility Settings": [
