@@ -40,6 +40,7 @@ expt_select = {
     "Inversion Sweep": 7,
     "CPMG": 8,
     "Gain": 9,
+    "DEER": 10,
 }
 y_names = [
     "pulse_time",
@@ -52,6 +53,7 @@ y_names = [
     "inversion_sweep",
     "echo_delay",
     "gain_sweep",
+    "deer_sweep",
 ]
 
 psexpt_select = {

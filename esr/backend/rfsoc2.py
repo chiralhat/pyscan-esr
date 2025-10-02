@@ -464,7 +464,7 @@ class DEERProgram(CPMGProgram):
             self.synci(self.us2cycles(1))
 
             n = 0 if type(sing)==bool else sing-1
-            self.deer(self.cfg["pulses"], n, self.cfg["dphase"])
+            self.deer(self.cfg["pulses"], n)
         else:
             for n in np.arange(4):        
                 # Trigger the switch-controlling pulse
@@ -472,7 +472,7 @@ class DEERProgram(CPMGProgram):
                 # Trigger the scope sync pulse
                 #self.trigger_no_off(t=trig_offset, pins=[1])
                 self.synci(self.us2cycles(1))
-                self.deer(self.cfg["pulses"], n, self.cfg["dphase"]*n)
+                self.deer(self.cfg["pulses"], n)
 
 
 def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):

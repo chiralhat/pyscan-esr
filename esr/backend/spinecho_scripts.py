@@ -174,7 +174,7 @@ def end_func(d, expt, run, dim=0):
             expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]
 
 
-def setup_measure_function(soc, integrate):
+def setup_measure_function(soc, integrate, deer=False):
     def measure_echo(expt):
         """ """
 
@@ -182,9 +182,9 @@ def setup_measure_function(soc, integrate):
         devices = expt.devices
 
         if integrate:
-            d = acquire_phase(runinfo.parameters, soc)
+            d = acquire_phase(runinfo.parameters, soc, deer=deer)
         else:
-            d = measure_phase(runinfo.parameters, soc)
+            d = measure_phase(runinfo.parameters, soc, deer=deer)
 
             expt.t = d.time
 
@@ -324,8 +324,9 @@ def setup_experiment(parameters, devices, sweep, soc):
         parameters["y_name2"] = setup_vars["y_name"][run_2]
         runinfo.scan1 = setup_vars["scan"][1][run_2]
         fname = setup_vars["file"][run_2] + "_" + fname
+    deer = True if parameters["expt"]=="DEER" else False
 
-    runinfo.measure_function = setup_measure_function(soc, parameters["integrate"])
+    runinfo.measure_function = setup_measure_function(soc, parameters["integrate"], deer)
 
     runinfo.parameters = parameters
     runinfo.wait_time = wait

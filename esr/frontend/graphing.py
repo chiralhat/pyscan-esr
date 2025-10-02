@@ -12,7 +12,10 @@ Key Interactions:
 - Updated by signals emitted from `Worker.py` during background experiment execution.
 """
 
-import pyscan_non_soc_version as ps
+import sys
+sys.path.append("../../")
+# import pyscan_non_soc_version as ps
+import pyscan as ps
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QMenu
 from PyQt5.QtGui import QPixmap
