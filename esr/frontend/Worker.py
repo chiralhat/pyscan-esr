@@ -26,11 +26,12 @@ import globals
 
 import sys
 
-sys.path.append("../")
+sys.path.append("../../")
 # from rfsoc2 import *
 import numpy as np
 from time import sleep
-import pyscan_non_soc_version as ps
+# import pyscan_non_soc_version as ps
+import pyscan as ps
 
 
 def deserialize_obj(data):
