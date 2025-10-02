@@ -1644,6 +1644,7 @@ class ExperimentUI(QMainWindow):
 
             # Connect sweep update signals
             self.worker_thread.started.connect(self.worker.run_sweep)
+            self.current_experiment.sweep_graph_2D.mesh = None
             self.worker.live_plot_2D_update_signal.connect(
                 self.current_experiment.sweep_graph_2D.on_live_plot_2D
             )
