@@ -174,7 +174,7 @@ def end_func(d, expt, run, dim=0):
             expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]
 
 
-def setup_measure_function(soc, integrate):
+def setup_measure_function(soc, integrate, deer=False):
     def measure_echo(expt):
         """ """
 
@@ -182,9 +182,9 @@ def setup_measure_function(soc, integrate):
         devices = expt.devices
 
         if integrate:
-            d = acquire_phase(runinfo.parameters, soc)
+            d = acquire_phase(runinfo.parameters, soc, deer=deer)
         else:
-            d = measure_phase(runinfo.parameters, soc)
+            d = measure_phase(runinfo.parameters, soc, deer=deer)
 
             expt.t = d.time
 
@@ -243,6 +243,9 @@ def setup_experiment(parameters, devices, sweep, soc):
     def gain_sweep(gain):
         parameters["gain"] = gain
 
+    def deer_sweep(T):
+        parameters["DEER_delay"] = T
+
     expt_select = {
         "Pulse Sweep": 0,
         "Rabi": 1,
@@ -254,6 +257,7 @@ def setup_experiment(parameters, devices, sweep, soc):
         "Inversion Sweep": 7,
         "CPMG": 8,
         "Gain": 9,
+        "DEER": 10,
     }
     wait = parameters["wait"]
     sweep_range = ps.drange(
@@ -274,6 +278,7 @@ def setup_experiment(parameters, devices, sweep, soc):
             "inversion_sweep",
             "echo_delay",
             "gain_sweep",
+            "deer_sweep"
         ],
         "scan": [
             [
@@ -287,6 +292,7 @@ def setup_experiment(parameters, devices, sweep, soc):
                 ps.FunctionScan(inversion_sweep, s_range, dt=wait),
                 ps.FunctionScan(cpmg_sweep, s_range, dt=wait),
                 ps.FunctionScan(gain_sweep, s_range, dt=wait),
+                ps.FunctionScan(deer_sweep, s_range, dt=wait),
             ]
             for s_range in [sweep_range, sweep2_range]
         ],
@@ -301,6 +307,7 @@ def setup_experiment(parameters, devices, sweep, soc):
             "T1",
             "CPMG",
             "Gain",
+            "DEER",
         ],
     }
     run_1 = expt_select[parameters["expt"]]
@@ -317,8 +324,9 @@ def setup_experiment(parameters, devices, sweep, soc):
         parameters["y_name2"] = setup_vars["y_name"][run_2]
         runinfo.scan1 = setup_vars["scan"][1][run_2]
         fname = setup_vars["file"][run_2] + "_" + fname
+    deer = True if parameters["expt"]=="DEER" else False
 
-    runinfo.measure_function = setup_measure_function(soc, parameters["integrate"])
+    runinfo.measure_function = setup_measure_function(soc, parameters["integrate"], deer)
 
     runinfo.parameters = parameters
     runinfo.wait_time = wait

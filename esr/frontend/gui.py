@@ -56,12 +56,13 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import sys, os
 
-sys.path.append("../")
+sys.path.append("../../")
 from time import sleep
 from datetime import date, datetime
 import pickle
 import requests
-import pyscan_non_soc_version as ps
+#import pyscan_non_soc_version as ps
+import pyscan as ps
 
 import globals
 from Worker import *
@@ -89,6 +90,7 @@ sweep_list = [
     "Freq Sweep",
     "CPMG",
     "Gain",
+    "DEER",
 ]
 
 bimod_sweep_list = [
@@ -462,6 +464,39 @@ EXPERIMENT_TEMPLATES = {
                     "min": 0.0,
                     "max": 20.0,
                     "default": 0.2,
+                },
+                {
+                    "display": "DEER Freq",
+                    "key": "freq2",
+                    "type": "double_spin",
+                    "min": 50.0,
+                    "max": 14999.0,
+                    "default": 3902.0,
+                    "tool tip": "Helpful information",
+                },
+                {
+                    "display": "Second Delay",
+                    "key": "tau",
+                    "type": "double_spin",
+                    "min": 0,
+                    "max": 652100,
+                    "default": 150.0,
+                },
+                {
+                    "display": "DEER Delay",
+                    "key": "DEER_delay",
+                    "type": "double_spin",
+                    "min": 0,
+                    "max": 652100,
+                    "default": 150.0,
+                },
+                {
+                    "display": "DEER Pulse",
+                    "key": "pulse2_2",
+                    "type": "double_spin",
+                    "min": 0,
+                    "max": 652100,
+                    "default": 50.0,
                 },
             ],
             "Utility Settings": [
@@ -1644,10 +1679,16 @@ class ExperimentUI(QMainWindow):
 
             # Connect sweep update signals
             self.worker_thread.started.connect(self.worker.run_sweep)
+            try:
+                self.current_experiment.sweep_graph_2D.colorbar.remove()
+            except:
+                pass
             self.current_experiment.sweep_graph_2D.mesh = None
+            self.current_experiment.sweep_graph_2D.ax.clear()
             self.worker.live_plot_2D_update_signal.connect(
                 self.current_experiment.sweep_graph_2D.on_live_plot_2D
             )
+            self.current_experiment.sweep_graph_1D.ax.clear()
             self.worker.live_plot_1D_update_signal.connect(
                 self.current_experiment.sweep_graph_1D.on_live_plot_1D
             )

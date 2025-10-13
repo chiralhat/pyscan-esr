@@ -464,7 +464,7 @@ class DEERProgram(CPMGProgram):
             self.synci(self.us2cycles(1))
 
             n = 0 if type(sing)==bool else sing-1
-            self.deer(self.cfg["pulses"], n, self.cfg["dphase"])
+            self.deer(self.cfg["pulses"], n)
         else:
             for n in np.arange(4):        
                 # Trigger the switch-controlling pulse
@@ -472,7 +472,7 @@ class DEERProgram(CPMGProgram):
                 # Trigger the scope sync pulse
                 #self.trigger_no_off(t=trig_offset, pins=[1])
                 self.synci(self.us2cycles(1))
-                self.deer(self.cfg["pulses"], n, self.cfg["dphase"]*n)
+                self.deer(self.cfg["pulses"], n)
 
 
 def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):
@@ -528,7 +528,7 @@ def measure_decay(parameters, soc, d=0, ro=0, progress=False):
     parameters['single'] = True
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    iq_list = safe_read(parameters, soc, progress)
+    iq_list = safe_read(parameters, soc, False, progress)
 
     d.time, d.i, d.q, d.x = iq_convert(soc, iq_list,
                                      pulses=pulses,
@@ -538,7 +538,7 @@ def measure_decay(parameters, soc, d=0, ro=0, progress=False):
 
     if reps>1:
         for n in np.arange(reps-1):
-            iq_list = safe_read(parameters, soc, progress)
+            iq_list = safe_read(parameters, soc, False, progress)
             _, i, q, x = iq_convert(soc, iq_list,
                                      pulses=pulses,
                                      ro=ro,
