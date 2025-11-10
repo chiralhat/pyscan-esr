@@ -30,8 +30,7 @@ sys.path.append("../../")
 # from rfsoc2 import *
 import numpy as np
 from time import sleep
-# import pyscan_non_soc_version as ps
-import pyscan as ps
+from pyscan import FunctionScan, PropertyScan, RunInfo, ItemAttribute, Sweep, Experiment, PlotGenerator
 
 
 def deserialize_obj(data):
@@ -60,7 +59,7 @@ def deserialize_obj(data):
                     "function", lambda x: x
                 )  # fallback if no function
                 values = list(temp_data.get("scan_dict", {}).values())[0]
-                obj = ps.FunctionScan(function=function, values=values)
+                obj = FunctionScan(function=function, values=values)
                 for k, v in temp_data.items():
                     setattr(obj, k, v)
                 return obj
@@ -70,7 +69,7 @@ def deserialize_obj(data):
                 input_dict = temp_data.get("input_dict", {})
 
                 # Create PropertyScan object with valid arguments
-                obj = ps.PropertyScan(prop=prop, input_dict=input_dict)
+                obj = PropertyScan(prop=prop, input_dict=input_dict)
 
                 for k, v in temp_data.items():
                     if k not in ["prop", "input_dict"]:  # Only pass valid arguments
@@ -79,7 +78,7 @@ def deserialize_obj(data):
                 return obj
 
             elif clsname == "RunInfo":
-                obj = ps.RunInfo()  # Create a new RunInfo object
+                obj = RunInfo()  # Create a new RunInfo object
                 for k, v in temp_data.items():
                     # Avoid unexpected arguments that don't belong in the constructor
                     if k not in [
@@ -89,7 +88,7 @@ def deserialize_obj(data):
                 return obj
 
             elif clsname == "ItemAttribute":
-                obj = ps.ItemAttribute()  # Instantiate the ItemAttribute object
+                obj = ItemAttribute()  # Instantiate the ItemAttribute object
                 for k, v in temp_data.items():
                     setattr(obj, k, v)
                 return obj
@@ -112,7 +111,7 @@ def deserialize_obj(data):
                 )
 
                 # Create the Sweep object directly
-                obj = ps.Sweep(runinfo=runinfo, devices=devices)
+                obj = Sweep(runinfo=runinfo, devices=devices)
 
                 # Now set the remaining attributes for the Sweep object
                 for k, v in temp_data.items():
@@ -142,7 +141,7 @@ def deserialize_obj(data):
                 )
 
                 # Create the Experiment object directly
-                obj = ps.Experiment(runinfo=runinfo, devices=devices)
+                obj = Experiment(runinfo=runinfo, devices=devices)
 
                 # Now set the remaining attributes for the Experiment object
                 for k, v in temp_data.items():
@@ -154,7 +153,7 @@ def deserialize_obj(data):
 
                 return obj  # Directly return the Experiment object
             elif clsname == "Signal":
-                obj = ps.ItemAttribute()  # or however the Signal object is instantiated
+                obj = ItemAttribute()  # or however the Signal object is instantiated
                 for k, v in temp_data.items():
                     if k in ["x", "time"] and isinstance(v, list):
                         setattr(obj, k, np.array(v, dtype=np.float64))
@@ -328,7 +327,7 @@ class Worker(QObject):
                     data_name_2d = self.combo_2d.currentText()
                     if do_sweep2 and len(data_name_2d)==1:
                         data_name_2d = "xmean"
-                    pg_2D = ps.PlotGenerator(
+                    pg_2D = PlotGenerator(
                         expt=self.experiment.expt,
                         d=2,
                         x_name=xname,
@@ -344,7 +343,7 @@ class Worker(QObject):
 
                 if self.experiment.type == "Spin Echo" and (not do_sweep2):
                     data_name_1d = self.combo_1d.currentText()
-                    pg_1D = ps.PlotGenerator(
+                    pg_1D = PlotGenerator(
                         expt=self.experiment.expt,
                         d=1,
                         x_name=yname,

@@ -62,7 +62,7 @@ from datetime import date, datetime
 import pickle
 import requests
 #import pyscan_non_soc_version as ps
-import pyscan as ps
+from pyscan import PlotGenerator
 
 import globals
 from Worker import *
@@ -1425,7 +1425,7 @@ class ExperimentUI(QMainWindow):
                 else:
                     xname = "t"
                 yname = self.current_experiment.parameters["y_name"]
-                pg_2D = ps.PlotGenerator(
+                pg_2D = PlotGenerator(
                     expt=self.current_experiment.expt,
                     d=2,
                     x_name=xname,
@@ -1444,7 +1444,7 @@ class ExperimentUI(QMainWindow):
         """
         if self.current_experiment.expt:
             data_name_1d = self.combo_1d.currentText()
-            pg_1D = ps.PlotGenerator(
+            pg_1D = PlotGenerator(
                 expt=self.current_experiment.expt,
                 d=1,
                 x_name=self.current_experiment.parameters["y_name"],
