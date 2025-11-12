@@ -1688,7 +1688,7 @@ class ExperimentUI(QMainWindow):
             self.worker.live_plot_2D_update_signal.connect(
                 self.current_experiment.sweep_graph_2D.on_live_plot_2D
             )
-            self.current_experiment.sweep_graph_1D.ax.clear()
+            # self.current_experiment.sweep_graph_1D.ax.clear()
             self.worker.live_plot_1D_update_signal.connect(
                 self.current_experiment.sweep_graph_1D.on_live_plot_1D
             )
