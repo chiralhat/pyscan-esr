@@ -219,18 +219,18 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         
         if self.cfg["single"]:        
             # Trigger the switch-controlling pulse
-            self.trigger_no_off(pins=[0])#, width=trig_offset+self.us2cycles(4))
+            self.trigger_no_off(pins=[2])
             # Trigger the scope sync pulse
-            #self.trigger_no_off(t=trig_offset, pins=[1])
+            self.trigger_no_off(t=trig_offset, pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
             self.synci(self.us2cycles(2))
 
             self.cpmg(self.cfg["pulses"])
         else:
             for n in np.arange(4):        
                 # Trigger the switch-controlling pulse
-                self.trigger_no_off(pins=[0])#, width=trig_offset+self.us2cycles(4))
+                self.trigger_no_off(pins=[2])
                 # Trigger the scope sync pulse
-                #self.trigger_no_off(t=trig_offset, pins=[1])
+                self.trigger_no_off(t=trig_offset, pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
                 self.synci(self.us2cycles(2))
                 self.cpmg(self.cfg["pulses"], n)
 
@@ -457,9 +457,9 @@ class DEERProgram(CPMGProgram):
         sing = self.cfg["single"]
         if sing:
             # Trigger the switch-controlling pulse
-            self.trigger_no_off(pins=[0])#, width=trig_offset+self.us2cycles(4))
+            self.trigger_no_off(pins=[2])
             # Trigger the scope sync pulse
-            #self.trigger_no_off(t=trig_offset, pins=[1])
+            self.trigger_no_off(t=trig_offset, pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
             self.synci(self.us2cycles(1))
 
             n = 0 if type(sing)==bool else sing-1
@@ -467,9 +467,9 @@ class DEERProgram(CPMGProgram):
         else:
             for n in np.arange(4):        
                 # Trigger the switch-controlling pulse
-                self.trigger_no_off(pins=[0])#, width=trig_offset+self.us2cycles(4))
+                self.trigger_no_off(pins=[2])
                 # Trigger the scope sync pulse
-                #self.trigger_no_off(t=trig_offset, pins=[1])
+                self.trigger_no_off(t=trig_offset, pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
                 self.synci(self.us2cycles(1))
                 self.deer(self.cfg["pulses"], n)
 
