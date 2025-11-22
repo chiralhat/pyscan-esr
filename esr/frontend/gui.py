@@ -507,6 +507,13 @@ EXPERIMENT_TEMPLATES = {
                     "default": False,
                 },
                 {
+                    "display": "Moku Setup",
+                    "key": "moku",
+                    "type": "combo",
+                    "options": ['Cryostat', 'Bench'],
+                    "default": "Cryostat",
+                },
+                {
                     "display": "Use Lakeshore?",
                     "key": "use_temp",
                     "type": "check",
@@ -515,6 +522,12 @@ EXPERIMENT_TEMPLATES = {
                 {
                     "display": "Turn field off after sweep?",
                     "key": "turn_off",
+                    "type": "check",
+                    "default": True,
+                },
+                {
+                    "display": "Turn laser on?",
+                    "key": "laser_on",
                     "type": "check",
                     "default": True,
                 },
