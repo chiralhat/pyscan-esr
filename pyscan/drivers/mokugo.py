@@ -31,12 +31,13 @@ class MokuGo(InstrumentDriver):
                     dict(source="Slot1OutB", destination="Output2")]
         self.instrument.set_connections(connections=connections)
         self.instrument.set_dio(direction=[0]*16)
-        self.laser_port = laser_port
+        self.laser_port = 0
         if moku=='Cryostat':
             self.instrument.set_power_supply(id=3, enable=True, voltage=5, current=0.15)
             self.instrument.set_power_supply(id=2, enable=True, voltage=0, current=0.15)
             self.instrument.set_power_supply(id=1, enable=False, voltage=0, current=0.15)
         elif moku=='Bench':
+            self.laser_port = laser_port
             self.instrument.set_power_supply(id=self.laser_port, enable=True, voltage=3.7, current=1)
         self._gauss = 278
         self.c_limit = 3.5
@@ -170,7 +171,18 @@ class MokuGo(InstrumentDriver):
     
     @laser.setter
     def laser(self, on):
-        self.instrument.get_power_supply(id=3)['enabled'] = on
+        self.instrument.set_power_supply(id=self.laser_port, enable=on, voltage=3.7, current=1)
+        
+        
+    @property
+    def output(self):
+        return self.instrument.get_power_supply(id=2)['enabled']
+    
+    @output.setter
+    def output(self, on):
+        psns = [self.laser_port] if self.laser_port else [1, 2]
+        for n in psns:
+            self.instrument.get_power_supply(id=n)['enabled'] = on
         
         
     def set_magnet(self, p):
