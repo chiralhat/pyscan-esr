@@ -16,6 +16,13 @@ Key Interactions:
 - Uses `rfsoc2.py` to interact with Qick RFSoC hardware.
 """
 
+import sys, os
+
+sys.path.append("../../")
+nopath = '/home/xilinx/jupyter_notebooks/pyscan-esr-UI'
+if nopath in sys.path:
+    sys.path.remove(nopath)
+
 from flask import Flask, request, jsonify, make_response
 import spinecho_scripts
 import pulsesweep_scripts
@@ -24,9 +31,6 @@ import pyvisa
 from time import sleep, time
 import numpy as np
 
-import sys, os
-
-sys.path.append("../../")
 from rfsoc2 import *
 
 if not hasattr(ps, "rm"):
@@ -73,16 +77,7 @@ def initialize_experiment():
     # Initialize PSU if necessary
     if not hasattr(devices, "psu") and parameters["use_psu"]:
         try:
-            devices.psu = ps.MokuGo()
-        #     for inst in res_list:
-        #         try:
-        #             devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
-        #             break
-        #         except Exception as e:
-        #             try:
-        #                 devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
-        #             except:
-        #                 pass
+            devices.psu = ps.MokuGo(parameters['moku'])
         except Exception as e:
             print(f"Error initializing PSU: {e}")
 
