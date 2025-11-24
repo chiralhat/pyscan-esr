@@ -19,7 +19,7 @@ from time import sleep, time
 import requests
 from Worker import PyscanObject
 
-import globals
+#import globals
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -75,9 +75,10 @@ class ExperimentType(QObject):
     # Signal emitted when data is ready to be plotted (used to notify GUI)
     plot_update_signal = pyqtSignal()
 
-    def __init__(self, exp_type):
+    def __init__(self, exp_type, server_address):
         super().__init__()
         self.type = exp_type  # Experiment type string
+        self.server_address = server_address
 
         # Parameter dictionaries to be populated by the UI or script
         self.parameters = {}
@@ -152,7 +153,7 @@ class ExperimentType(QObject):
 
             print("about to send parameters to the server")
             response = requests.post(
-                globals.server_address + "/initialize_experiment", json=data
+                self.server_address + "/initialize_experiment", json=data
             )
             print("parameters sent to server")
             print()
@@ -173,7 +174,7 @@ class ExperimentType(QObject):
         # Stop experiment loop
         #print("about to send sweep stop to server")
         response = requests.post(
-            globals.server_address + "/stop"#, json=data
+            self.server_address + "/stop"#, json=data
         )
        #print("parameters sent to server")
         print()
@@ -186,7 +187,7 @@ class ExperimentType(QObject):
         # Stop experiment loop
         #print("about to send hardware off to server")
         response = requests.post(
-            globals.server_address + "/off"#, json=data
+            self.server_address + "/off"#, json=data
         )
        # print("parameters sent to server")
         print()

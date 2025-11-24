@@ -22,7 +22,7 @@ matplotlib.use("Qt5Agg")  # Must be done before importing pyplot!
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 import requests
 
-import globals
+#import globals
 
 import sys
 
@@ -211,11 +211,12 @@ class Worker(QObject):
     live_plot_2D_update_signal = pyqtSignal(object)
     live_plot_1D_update_signal = pyqtSignal(object)
 
-    def __init__(self, experiment, task_name, combo_2d=None, combo_1d=None):
+    def __init__(self, experiment, task_name, server_address, combo_2d=None, combo_1d=None):
         super().__init__()
         self.experiment = experiment
         self.task_name = task_name
         self.stop_requested = False
+        self.server_address = server_address
         self.combo_2d = combo_2d
         self.combo_1d = combo_1d
 
@@ -261,7 +262,7 @@ class Worker(QObject):
                     }
                     print("about to ask server")
                     response = requests.post(
-                        globals.server_address + "/run_snapshot", json=data
+                        self.server_address + "/run_snapshot", json=data
                     )
                     print("asked server")
                     if response.ok:
@@ -284,7 +285,7 @@ class Worker(QObject):
             # Send request to server
             try:
                 response = requests.post(
-                    globals.server_address + "/run_snapshot", json=data
+                    self.server_address + "/run_snapshot", json=data
                 )
             except Exception as e:
                 self.updateStatus.emit(f"Error in connecting to server: {e}\n")
@@ -368,7 +369,7 @@ class Worker(QObject):
             do_sweep2 = self.experiment.parameters['sweep2']
             # Continuously fetch data until sweep stops or is requested to stop
             while not self.stop_requested and self.running:
-                response = requests.get(globals.server_address + "/get_sweep_data")
+                response = requests.get(self.server_address + "/get_sweep_data")
                 if response.ok:
                     response_data = response.json()
                     self.experiment.expt = deserialize_obj(
@@ -417,7 +418,7 @@ class Worker(QObject):
                 "experiment type": self.experiment.type,
                 "sweep": self.experiment.sweep,
             }
-            response = requests.post(globals.server_address + "/start_sweep", json=data)
+            response = requests.post(self.server_address + "/start_sweep", json=data)
             if response.ok:
                 self.running = True
             else:
@@ -443,7 +444,7 @@ class Worker(QObject):
             # Initiate sweep on the server
             self.experiment.sweep_running = True
 
-            response = requests.get(globals.server_address + "/get_parameters")
+            response = requests.get(self.server_address + "/get_parameters")
             if response.ok:
                 self.experiment.parameters = response.json()["parameters"]
             else:
