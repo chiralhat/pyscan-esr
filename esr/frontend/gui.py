@@ -62,9 +62,9 @@ from datetime import date, datetime
 import pickle
 import requests
 #import pyscan_non_soc_version as ps
-import pyscan as ps
+from pyscan import PlotGenerator
 
-import globals
+# import globals
 from Worker import *
 from graphing import *
 from ExperimentType import *
@@ -507,6 +507,13 @@ EXPERIMENT_TEMPLATES = {
                     "default": False,
                 },
                 {
+                    "display": "Moku Setup",
+                    "key": "moku",
+                    "type": "combo",
+                    "options": ['Cryostat', 'Bench'],
+                    "default": "Cryostat",
+                },
+                {
                     "display": "Use Lakeshore?",
                     "key": "use_temp",
                     "type": "check",
@@ -515,6 +522,12 @@ EXPERIMENT_TEMPLATES = {
                 {
                     "display": "Turn field off after sweep?",
                     "key": "turn_off",
+                    "type": "check",
+                    "default": True,
+                },
+                {
+                    "display": "Turn laser on?",
+                    "key": "laser_on",
                     "type": "check",
                     "default": True,
                 },
@@ -869,10 +882,16 @@ class ExperimentUI(QMainWindow):
         super().__init__()
         self.setWindowIcon(QIcon("icon.png"))
 
+        # Create spectrometer options
+        self.spectrometers = {
+            "Cryostat": "http://pynq.hamilton.edu:5000",
+            "Bench": "http://pynq2.hamilton.edu:5000",
+        }
+
         # Create experiment logic handlers
         self.experiments = {
-            "Spin Echo": ExperimentType("Spin Echo"),
-            "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep"),
+            "Spin Echo": ExperimentType("Spin Echo", self.spectrometers["Cryostat"]),
+            "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep", self.spectrometers["Cryostat"]),
         }
 
         # Core application state flags
@@ -884,6 +903,7 @@ class ExperimentUI(QMainWindow):
         self.current_experiment = self.experiments["Spin Echo"]
         self.experiment_templates = EXPERIMENT_TEMPLATES
         self.temp_parameters = {}
+        self.server_address = self.spectrometers["Cryostat"]
 
         # Initialize key panels
         self.settings_panel = DynamicSettingsPanel()
@@ -920,7 +940,7 @@ class ExperimentUI(QMainWindow):
         """
         try:
             response = requests.get(
-                globals.server_address + "/get_scopes", json=data, timeout=2
+                self.server_address + "/get_scopes", json=data, timeout=2
             )
             response.raise_for_status()
             data = response.json()
@@ -1150,6 +1170,21 @@ class ExperimentUI(QMainWindow):
         top_menu_container = QWidget()
         top_menu_container.setLayout(top_menu)
 
+        # ----- Dropdown for spectrometer selection -----
+        spec_widget = QWidget()
+        spec_layout = QVBoxLayout(spec_widget)
+        spec_layout.setSpacing(0)
+        spec_layout.setContentsMargins(0, 0, 0, 0)
+
+        spec_dropdown = QComboBox()
+        spec_dropdown.addItems(list(self.spectrometers.keys()))
+        spec_dropdown.setStyleSheet("font-size: 10pt;")
+        spec_dropdown.currentTextChanged.connect(self.change_spectrometer)
+        spec_dropdown.setMinimumHeight(40)
+        spec_layout.addWidget(spec_dropdown)
+
+        top_menu.addWidget(spec_widget)
+        
         # ----- Dropdown for experiment type selection -----
         exp_widget = QWidget()
         exp_layout = QVBoxLayout(exp_widget)
@@ -1309,6 +1344,90 @@ class ExperimentUI(QMainWindow):
 
         return top_menu
 
+    def change_spectrometer(self, spectrometer):
+        """Handles switching between spectrometers (Cryostat vs Bench).
+
+        - Stops any running sweep
+        - Resets parameters, graphs, and tab views
+        - Reconnects to the newly selected spectrometer
+        """
+        if hasattr(self, "worker"):
+            self.worker.stop_sweep()
+            self.indicator_sweep.setStyleSheet(
+                "background-color: grey; border: 1px solid black; border-radius: 5px;"
+            )
+
+        print(f"Changing spectrometer to {spectrometer}...\n")
+
+        try:
+            # Update server address
+            self.server_address = self.spectrometers[spectrometer]
+
+            # Change experiment logic handlers
+            self.experiments = {
+                "Spin Echo": ExperimentType("Spin Echo", self.spectrometers[spectrometer]),
+                "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep", self.spectrometers[spectrometer]),
+            }
+            self.current_experiment = self.experiments[self.current_experiment.type]
+            
+            # Refresh graph contents for the new experiment
+            for idx in range(self.graph_tabs.count()):
+                tab = self.graph_tabs.widget(idx)
+                layout = tab.layout()
+                if not layout:
+                    layout = QVBoxLayout(tab)
+                    tab.setLayout(layout)
+
+                # Clear layout contents
+                while layout.count():
+                    item = layout.takeAt(0)
+                    if item.widget():
+                        item.widget().setParent(None)
+                    elif item.layout():
+                        nested_layout = item.layout()
+                        while nested_layout.count():
+                            sub_item = nested_layout.takeAt(0)
+                            if sub_item.widget():
+                                sub_item.widget().setParent(None)
+                        layout.removeItem(nested_layout)
+
+                # Rebuild each tab
+                if idx == 0:
+                    layout.addWidget(self.current_experiment.read_unprocessed_graph)
+                elif idx == 1:
+                    layout.addWidget(self.current_experiment.read_processed_graph)
+                elif idx == 2:
+                    hdr3 = QHBoxLayout()
+                    hdr3.addWidget(QLabel("Variable:"))
+                    combo_2d = QComboBox()
+                    combo_2d.currentTextChanged.connect(self.update_2d_plot)
+                    combo_2d.addItems(["x", "i", "q"])
+                    hdr3.addWidget(combo_2d)
+                    hdr3.addStretch()
+                    layout.addLayout(hdr3)
+                    layout.addWidget(self.current_experiment.sweep_graph_2D)
+                    self.combo_2d = combo_2d
+                elif self.graph_tabs.tabText(idx) == "1D Sweep":
+                    hdr4 = QHBoxLayout()
+                    hdr4.addWidget(QLabel("Variable:"))
+                    combo_1d = QComboBox()
+                    combo_1d.currentTextChanged.connect(self.update_1d_plot)
+                    combo_1d.addItems(["xmean", "imean", "qmean"])
+                    hdr4.addWidget(combo_1d)
+                    hdr4.addStretch()
+                    layout.addLayout(hdr4)
+                    layout.addWidget(self.current_experiment.sweep_graph_1D)
+                    self.combo_1d = combo_1d
+
+            # Reset button state
+            self.read_unprocessed_btn.setEnabled(False)
+            self.read_processed_btn.setEnabled(False)
+            # self.sweep_start_stop_btn.setEnabled(False)
+            self.set_parameters_and_initialize_btn.setEnabled(True)
+
+        except Exception as e:
+            print(f"Error switching spectrometer: {e}")
+
     def change_experiment_type(self, experiment_type):
         """Handles switching between experiment modes (Spin Echo vs Pulse Frequency Sweep).
 
@@ -1425,7 +1544,7 @@ class ExperimentUI(QMainWindow):
                 else:
                     xname = "t"
                 yname = self.current_experiment.parameters["y_name"]
-                pg_2D = ps.PlotGenerator(
+                pg_2D = PlotGenerator(
                     expt=self.current_experiment.expt,
                     d=2,
                     x_name=xname,
@@ -1444,7 +1563,7 @@ class ExperimentUI(QMainWindow):
         """
         if self.current_experiment.expt:
             data_name_1d = self.combo_1d.currentText()
-            pg_1D = ps.PlotGenerator(
+            pg_1D = PlotGenerator(
                 expt=self.current_experiment.expt,
                 d=1,
                 x_name=self.current_experiment.parameters["y_name"],
@@ -1574,7 +1693,7 @@ class ExperimentUI(QMainWindow):
 
         # Setup worker thread and task
         self.worker_thread = QThread(self)
-        self.worker = Worker(self.current_experiment, "read_unprocessed")
+        self.worker = Worker(self.current_experiment, "read_unprocessed", self.server_address)
         self.worker.moveToThread(self.worker_thread)
 
         # Connect signals
@@ -1615,7 +1734,7 @@ class ExperimentUI(QMainWindow):
 
         # Setup worker and thread
         self.worker_thread = QThread(self)
-        self.worker = Worker(self.current_experiment, "read_processed")
+        self.worker = Worker(self.current_experiment, "read_processed", self.server_address)
         self.worker.moveToThread(self.worker_thread)
 
         # Setup worker and thread
@@ -1665,6 +1784,7 @@ class ExperimentUI(QMainWindow):
                 self.worker = Worker(
                     self.current_experiment,
                     "sweep",
+                    self.server_address,
                     combo_2d=self.combo_2d,
                 )
             elif self.current_experiment.type == "Spin Echo":
@@ -1672,6 +1792,7 @@ class ExperimentUI(QMainWindow):
                 self.worker = Worker(
                     self.current_experiment,
                     "sweep",
+                    self.server_address,
                     combo_2d=self.combo_2d,
                     combo_1d=self.combo_1d,
                 )
@@ -1688,7 +1809,7 @@ class ExperimentUI(QMainWindow):
             self.worker.live_plot_2D_update_signal.connect(
                 self.current_experiment.sweep_graph_2D.on_live_plot_2D
             )
-            self.current_experiment.sweep_graph_1D.ax.clear()
+            # self.current_experiment.sweep_graph_1D.ax.clear()
             self.worker.live_plot_1D_update_signal.connect(
                 self.current_experiment.sweep_graph_1D.on_live_plot_1D
             )
@@ -1721,6 +1842,7 @@ class ExperimentUI(QMainWindow):
                 self.worker = Worker(
                     self.current_experiment,
                     "sweep",
+                    self.server_address,
                     combo_2d=self.combo_2d,
                 )
             elif self.current_experiment.type == "Spin Echo":
@@ -1728,6 +1850,7 @@ class ExperimentUI(QMainWindow):
                 self.worker = Worker(
                     self.current_experiment,
                     "sweep",
+                    self.server_address,
                     combo_2d=self.combo_2d,
                     combo_1d=self.combo_1d,
                 )
@@ -1925,7 +2048,7 @@ class ExperimentUI(QMainWindow):
         """
         try:
             # Clone the current experiment backend logic
-            new_experiment = ExperimentType(self.current_experiment.type)
+            new_experiment = ExperimentType(self.current_experiment.type, self.server_address)
 
             # Create a QueuedExperiment wrapper (includes settings + metadata)
             queue_item = QueuedExperiment(
@@ -1961,7 +2084,7 @@ class ExperimentUI(QMainWindow):
                 else:
                     type_map[key] = stype
         
-        response = requests.get(globals.server_address + "/get_parameters")
+        response = requests.get(self.server_address + "/get_parameters")
         if response.ok:
             parameters = response.json()["parameters"]
         else:
@@ -2026,7 +2149,7 @@ class QueueRunnerWorker(QThread):
 
         Connects appropriate update and plotting signals to the GUI.
         """
-        worker = Worker(experiment.experiment, task)
+        worker = Worker(experiment.experiment, task, self.server_address)
         thread = QThread()
 
         worker.moveToThread(thread)

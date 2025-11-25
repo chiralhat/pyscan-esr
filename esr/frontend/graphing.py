@@ -15,7 +15,7 @@ Key Interactions:
 import sys
 sys.path.append("../../")
 # import pyscan_non_soc_version as ps
-import pyscan as ps
+from pyscan import plot_exp_fit_norange
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QMenu
 from PyQt5.QtGui import QPixmap
@@ -85,7 +85,7 @@ class GraphWidget(QWidget):
             if task_name == "read_processed":
                 try:
                     # Fit and plot expected signal model
-                    fit, err = ps.plot_exp_fit_norange(
+                    fit, err = plot_exp_fit_norange(
                         np.array([sig.time, sig.x]), sig.freq, 1, plt=self.ax
                     )
                     sig.fit = fit
