@@ -207,6 +207,8 @@ def setup_measure_function(soc, integrate, deer=False):
                 expt.elapsed_time = expt.current_time - expt.start_time
                 if runinfo.parameters['turn_off']:
                     soc.reset_gens()
+                    if runinfo.parameters['use_psu']:
+                        devices.psu.output = False
                     if runinfo.parameters['moku']=="Cryostat":
                         devices.moku.field = 0
 
@@ -274,7 +276,7 @@ def setup_experiment(parameters, devices, sweep, soc):
             "rabi_sweep",
             "period_sweep",
             "echo_delay",
-            "psu_field",
+            "moku_field",
             "freq_sweep",
             "phase_sweep",
             "inversion_sweep",
@@ -288,7 +290,7 @@ def setup_experiment(parameters, devices, sweep, soc):
                 ps.FunctionScan(rabi_sweep, s_range, dt=wait),
                 ps.FunctionScan(period_sweep, s_range, dt=wait),
                 ps.FunctionScan(delay_sweep, s_range, dt=wait),
-                ps.PropertyScan({"psu": s_range}, prop="field", dt=wait),
+                ps.PropertyScan({"moku": s_range}, prop="field", dt=wait),
                 ps.FunctionScan(freq_sweep, s_range, dt=wait),
                 ps.FunctionScan(phase_sweep, s_range, dt=wait),
                 ps.FunctionScan(inversion_sweep, s_range, dt=wait),
