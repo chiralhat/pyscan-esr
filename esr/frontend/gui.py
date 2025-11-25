@@ -501,7 +501,7 @@ EXPERIMENT_TEMPLATES = {
             ],
             "Utility Settings": [
                 {
-                    "display": "Use PSU? (no magnet if not)",
+                    "display": "Use PSU?",
                     "key": "use_psu",
                     "type": "check",
                     "default": False,
@@ -510,7 +510,7 @@ EXPERIMENT_TEMPLATES = {
                     "display": "Moku Setup",
                     "key": "moku",
                     "type": "combo",
-                    "options": ['Cryostat', 'Bench'],
+                    "options": ['Cryostat', 'Bench', 'None'],
                     "default": "Cryostat",
                 },
                 {
@@ -526,7 +526,7 @@ EXPERIMENT_TEMPLATES = {
                     "default": True,
                 },
                 {
-                    "display": "Turn laser on?",
+                    "display": "Turn laser on? (Bench Moku)",
                     "key": "laser_on",
                     "type": "check",
                     "default": True,
