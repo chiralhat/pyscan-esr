@@ -205,8 +205,10 @@ def setup_measure_function(soc, integrate, deer=False):
                 pass
             else:
                 expt.elapsed_time = expt.current_time - expt.start_time
-                if runinfo.parameters['turn_off'] and runinfo.parameters['use_psu']:
-                    devices.psu.field = 0
+                if runinfo.parameters['turn_off']:
+                    soc.reset_gens()
+                    if runinfo.parameters['moku']=="Cryostat":
+                        devices.moku.field = 0
 
         return d
 
