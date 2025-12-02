@@ -213,16 +213,17 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         tpi = self.cfg["pulse1_2"]/1000
         tpi2 = self.cfg["pulse1_1"]/1000
 
-        offset = 0 if self.cfg["loopback"] else (tpi2+delay+self.cfg["pulses"]*tpi+2*self.cfg["pulses"]-1)*(delay)
+        offset = 0 if self.cfg["loopback"] else (tpi2+self.cfg["pulses"]*tpi)/2 + (2*self.cfg["pulses"]-1)*(delay)
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
-        trig_offset = self.us2cycles(nutwidth+nutdelay+self.cfg["h_offset"]+offset)
+        trig_offset = self.us2cycles(nutwidth+nutdelay+self.cfg["h_offset"]+offset+self.cfg['myvar'])
+        self.trigoffset = self.cycles2us(trig_offset)
         
         if self.cfg["single"]:        
             # Trigger the switch-controlling pulse
             self.trigger_no_off(pins=[2])
             # Trigger the scope sync pulse
             self.trigger_no_off(t=trig_offset, pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
-            self.synci(self.us2cycles(2))
+            self.synci(self.us2cycles(0.1))
 
             self.cpmg(self.cfg["pulses"])
         else:
@@ -231,7 +232,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
                 self.trigger_no_off(pins=[2])
                 # Trigger the scope sync pulse
                 self.trigger_no_off(t=trig_offset, pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
-                self.synci(self.us2cycles(2))
+                self.synci(self.us2cycles(0.1))
                 self.cpmg(self.cfg["pulses"], n)
 
 
