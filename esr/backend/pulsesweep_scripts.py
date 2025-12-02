@@ -93,9 +93,11 @@ def setup_measure_function(soc, function):
             if runinfo.parameters['turn_off']:
                 soc.reset_gens()
                 if runinfo.parameters['use_psu']:
-                    devices.psu.field = 0
+                    devices.psu.output = False
+                if runinfo.parameters['moku']=="Cryostat":
+                    devices.moku.field = 0
                 # end_func(d, expt, runinfo.parameters["psexpt"])
-                expt.elapsed_time = d.current_time - expt.start_time
+            expt.elapsed_time = d.current_time - expt.start_time
 
         return d
 
@@ -112,10 +114,10 @@ def setup_experiment(parameters, devices, sweep, soc):
         parameters["sweep_start"], parameters["sweep_step"], parameters["sweep_end"]
     )
     setup_vars = {
-        "y_name": ["freq_sweep", "psu_field"],
+        "y_name": ["freq_sweep", "moku_field"],
         "loop": [
             ps.FunctionScan(freq_sweep, sweep_range, dt=wait),
-            ps.PropertyScan({"psu": sweep_range}, prop="field", dt=wait),
+            ps.PropertyScan({"moku": sweep_range}, prop="field", dt=wait),
         ],
         "file": ["PulseFreqSweep", "PulseBSweep"],
     }

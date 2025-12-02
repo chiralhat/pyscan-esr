@@ -21,6 +21,7 @@ class GPD3303S():
         self.instrument.selectIndependentMode()
         self.instrument.enableBeep(False)
         self.instrument.setVoltage(1, 14.5)
+        self.instrument.setCurrent(1, 2.5)
         self.instrument.setVoltage(2, 0)
 #        self.instrument.enableOutput(False)
         self._gauss = 278
