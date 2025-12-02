@@ -59,8 +59,8 @@ class MokuGo(InstrumentDriver):
     
     
     def set_switch_1pulse(self, delay=500):
-        time = delay+1000
-        ticks = int(time//tstep)
+        # time = delay+1000
+        ticks = int(delay//tstep)
         self.instrument.cc.set_control(0, ticks)
     # def set_switch_1pulse(self, time=10000, freq=800e3):
     #     assert freq<=maxF, f'Frequency exceeds limit, limit: {maxF}, freq: {freq}'
@@ -168,7 +168,7 @@ class MokuGo(InstrumentDriver):
         
     @property
     def laser(self):
-        return self.instrument.get_power_supply(id=3)['enabled']
+        return self.instrument.get_power_supply(id=self.laser_port)['enabled']
     
     @laser.setter
     def laser(self, on):
