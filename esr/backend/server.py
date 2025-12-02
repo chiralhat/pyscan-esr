@@ -75,7 +75,7 @@ def initialize_experiment():
     inst = ps.ItemAttribute()
 
     # Initialize PSU if necessary
-    if not hasattr(devices, "psu") and (parameters["use_psu"] or parameters['moku']=='Bench'):
+    if not hasattr(devices, "psu") and (parameters["use_psu"]):
         try:
             for inst in res_list:
                 try:
@@ -106,8 +106,8 @@ def initialize_experiment():
         experiment type scripts and GUI files."""
 
     if parameters['moku']=='Bench':
-        devices.psu.laser = parameters['laser_on']
-        print(devices.psu.instrument.get_power_supply(id=devices.psu.laser_port))
+        devices.moku.laser = parameters['laser_on']
+        # print(devices.moku.laser)
 
     if experiment_type == "Spin Echo":
         # Initialize the experiment by setting up the parameters and devices.
@@ -122,6 +122,8 @@ def initialize_experiment():
         parameters["single"] = parameters["loopback"]
 
         if not parameters['loopback']:
+            if not parameters['moku']=="None":
+                devices.moku.set_switch_1pulse(parameters['delay']) 
             if parameters["use_psu"]:
                 devices.psu.output = True
             if parameters['moku']=='Cryostat':
