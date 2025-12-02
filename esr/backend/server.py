@@ -75,7 +75,7 @@ def initialize_experiment():
     inst = ps.ItemAttribute()
 
     # Initialize PSU if necessary
-    if not hasattr(devices, "psu") and parameters["use_psu"]:
+    if not hasattr(devices, "psu") and (parameters["use_psu"] or parameters['moku']=='Bench'):
         try:
             devices.psu = ps.MokuGo(parameters['moku'])
         except Exception as e:
@@ -88,6 +88,11 @@ def initialize_experiment():
 
     """This initializes a pyscan experiment with functions from the correct 
         experiment type scripts and GUI files."""
+
+    if parameters['moku']=='Bench':
+        devices.psu.laser = parameters['laser_on']
+        print(devices.psu.instrument.get_power_supply(id=devices.psu.laser_port))
+
     if experiment_type == "Spin Echo":
         # Initialize the experiment by setting up the parameters and devices.
         parameters["pulse1_2"] = parameters["pulse1_1"] * parameters["mult1"]
