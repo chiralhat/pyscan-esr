@@ -498,6 +498,14 @@ EXPERIMENT_TEMPLATES = {
                     "max": 652100,
                     "default": 50.0,
                 },
+                {
+                    "display": "Switch Offset (us)",
+                    "key": "sw_offset",
+                    "type": "double_spin",
+                    "min": -1e5,
+                    "max": 1e5,
+                    "default": -0.3,
+                },
             ],
             "Utility Settings": [
                 {
