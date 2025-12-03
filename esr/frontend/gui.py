@@ -224,16 +224,31 @@ EXPERIMENT_TEMPLATES = {
                     "max": 20.0,
                     "default": 0.3,
                 },
+                {
+                    "display": "Switch Offset (us)",
+                    "key": "sw_offset",
+                    "type": "double_spin",
+                    "min": -1e5,
+                    "max": 1e5,
+                    "default": -0.3,
+                },
             ],
             "Utility Settings": [
                 {
-                    "display": "Use PSU",
+                    "display": "Use PSU?",
                     "key": "use_psu",
                     "type": "check",
                     "default": False,
                 },
                 {
-                    "display": "Use Lakeshore",
+                    "display": "Moku Setup",
+                    "key": "moku",
+                    "type": "combo",
+                    "options": ['Cryostat', 'Bench', 'None'],
+                    "default": "Cryostat",
+                },
+                {
+                    "display": "Use Lakeshore?",
                     "key": "use_temp",
                     "type": "check",
                     "default": False,
@@ -241,6 +256,12 @@ EXPERIMENT_TEMPLATES = {
                 {
                     "display": "Turn field off after sweep?",
                     "key": "turn_off",
+                    "type": "check",
+                    "default": True,
+                },
+                {
+                    "display": "Turn laser on? (Bench Moku)",
+                    "key": "laser_on",
                     "type": "check",
                     "default": True,
                 },
