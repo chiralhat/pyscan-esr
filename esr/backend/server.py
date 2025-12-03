@@ -123,7 +123,7 @@ def initialize_experiment():
 
         if not parameters['loopback']:
             if not parameters['moku']=="None":
-                devices.moku.set_switch_1pulse(parameters['delay']) 
+                devices.moku.set_switch_1pulse(2*parameters['delay']) 
             if parameters["use_psu"]:
                 devices.psu.output = True
             if parameters['moku']=='Cryostat':

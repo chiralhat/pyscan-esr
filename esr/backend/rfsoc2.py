@@ -215,7 +215,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
 
         offset = 0 if self.cfg["loopback"] else (tpi2+self.cfg["pulses"]*tpi)/2 + (2*self.cfg["pulses"]-1)*(delay)
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
-        trig_offset = self.us2cycles(nutwidth+nutdelay+self.cfg["h_offset"]+offset+self.cfg['myvar'])
+        trig_offset = self.us2cycles(nutwidth+nutdelay+offset+self.cfg['sw_offset'])
         self.trigoffset = self.cycles2us(trig_offset)
         
         if self.cfg["single"]:        
