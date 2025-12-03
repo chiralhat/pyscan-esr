@@ -106,6 +106,11 @@ def initialize_experiment():
         experiment type scripts and GUI files."""
 
     if parameters['moku']=='Bench':
+        if parameters['laser_on'] and not devices.moku.laser:
+            try:
+                devices.moku = ps.MokuGo(parameters['moku'])
+            except Exception as e:
+                print(f"Error initializing Moku: {e}")
         devices.moku.laser = parameters['laser_on']
         # print(devices.moku.laser)
 
