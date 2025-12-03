@@ -75,9 +75,18 @@ def initialize_experiment():
     inst = ps.ItemAttribute()
 
     # Initialize PSU if necessary
-    if not hasattr(devices, "psu") and parameters["use_psu"]:
+    if not hasattr(devices, "psu") and (parameters["use_psu"]):
         try:
-            devices.psu = ps.MokuGo(parameters['moku'])
+            for inst in res_list:
+                try:
+                    devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                    break
+                except Exception as e:
+                    try:
+                        devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                        break
+                    except:
+                        pass
         except Exception as e:
             print(f"Error initializing PSU: {e}")
 
@@ -95,6 +104,11 @@ def initialize_experiment():
 
     """This initializes a pyscan experiment with functions from the correct 
         experiment type scripts and GUI files."""
+
+    if parameters['moku']=='Bench':
+        devices.moku.laser = parameters['laser_on']
+        # print(devices.moku.laser)
+
     if experiment_type == "Spin Echo":
         # Initialize the experiment by setting up the parameters and devices.
         parameters["pulse1_2"] = parameters["pulse1_1"] * parameters["mult1"]
@@ -107,8 +121,13 @@ def initialize_experiment():
         parameters["reps"] = 1
         parameters["single"] = parameters["loopback"]
 
-        if parameters["use_psu"] and not parameters["loopback"]:
-            devices.moku.set_magnet(parameters)
+        if not parameters['loopback']:
+            if not parameters['moku']=="None":
+                devices.moku.set_switch_1pulse(2*parameters['delay']) 
+            if parameters["use_psu"]:
+                devices.psu.output = True
+            if parameters['moku']=='Cryostat':
+                devices.moku.set_magnet(parameters)
 
         spinecho_scripts.setup_experiment(
             parameters, devices, sweep, soc
@@ -131,8 +150,12 @@ def initialize_experiment():
         parameters["reps"] = 1
         parameters["sweep2"] = 0
         parameters["single"] = parameters["loopback"]  # ADDED THIS LINE
-        if parameters["use_psu"]:
-            devices.moku.set_magnet(parameters)
+
+        if not parameters['loopback']:
+            if parameters["use_psu"]:
+                devices.psu.output = True
+            if parameters['moku']=='Cryostat':
+                devices.moku.set_magnet(parameters)
 
         pulsesweep_scripts.setup_experiment(parameters, devices, sweep, soc)
 
@@ -321,9 +344,10 @@ def hardware_off():
     # Turn off power supply unit if enabled
     if sweep['runinfo'].parameters["use_psu"]:
         devices.psu.output = False
-    if not parameters['moku']=="None":
+    if not sweep['runinfo'].parameters['moku']=="None":
         devices.moku.field = 0
-        devices.moku.laser = False
+        if devices.moku.laser_port:
+            devices.moku.laser = False
     print("Turning off hardware...")
     # insert your real code here to stop sweep
     return jsonify({"status": "off"})
