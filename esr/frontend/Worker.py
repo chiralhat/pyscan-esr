@@ -261,15 +261,18 @@ class Worker(QObject):
                         "experiment type": "Spin Echo Read Unprocessed",
                     }
                     print("about to ask server")
-                    response = requests.post(
-                        self.server_address + "/run_snapshot", json=data
-                    )
-                    print("asked server")
-                    if response.ok:
-                        response_data = response.json()
-                        self.experiment.sig = deserialize_obj(response_data["sig"])
-                    else:
-                        print("Error:", response.status_code, response.text)
+                    try:
+                        response = requests.post(
+                            self.server_address + "/run_snapshot", json=data
+                        )
+                        print("asked server")
+                        if response.ok:
+                            response_data = response.json()
+                            self.experiment.sig = deserialize_obj(response_data["sig"])
+                        else:
+                            print("Error:", response.status_code, response.text)
+                    except Exception as e:
+                        print(f"Error reading unprocessed: {e}")
 
                 elif self.experiment.type == "Pulse Frequency Sweep":
                     self.experiment.parameters["single"] = True
@@ -281,22 +284,22 @@ class Worker(QObject):
 
                 self.updateStatus.emit("Done reading unprocessed data.\n")
 
-            print("about to ask server")
-            # Send request to server
-            try:
-                response = requests.post(
-                    self.server_address + "/run_snapshot", json=data
-                )
-            except Exception as e:
-                self.updateStatus.emit(f"Error in connecting to server: {e}\n")
-            print("asked server")
+            # print("about to ask server")
+            # # Send request to server
+            # try:
+            #     response = requests.post(
+            #         self.server_address + "/run_snapshot", json=data
+            #     )
+            # except Exception as e:
+            #     self.updateStatus.emit(f"Error in connecting to server: {e}\n")
+            # print("asked server")
 
-            # Handle server response
-            if response.ok:
-                response_data = response.json()
-                self.experiment.sig = deserialize_obj(response_data["sig"])
-            else:
-                print("Error:", response.status_code, response.text)
+            # # Handle server response
+            # if response.ok:
+            #     response_data = response.json()
+            #     self.experiment.sig = deserialize_obj(response_data["sig"])
+            # else:
+            #     print("Error:", response.status_code, response.text)
             self.experiment.parameters["single"] = single
             self.experiment.parameters["soft_avgs"] = avgs
             self.experiment.sig.freq = self.experiment.parameters["freq"]
