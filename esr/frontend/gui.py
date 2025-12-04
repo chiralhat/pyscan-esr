@@ -230,7 +230,7 @@ EXPERIMENT_TEMPLATES = {
                     "type": "double_spin",
                     "min": -1e5,
                     "max": 1e5,
-                    "default": -0.3,
+                    "default": -0.45,
                 },
             ],
             "Utility Settings": [
@@ -525,7 +525,7 @@ EXPERIMENT_TEMPLATES = {
                     "type": "double_spin",
                     "min": -1e5,
                     "max": 1e5,
-                    "default": -0.3,
+                    "default": -0.45,
                 },
             ],
             "Utility Settings": [
