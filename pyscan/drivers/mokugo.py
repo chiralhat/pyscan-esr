@@ -40,6 +40,7 @@ class MokuGo(InstrumentDriver):
         elif moku=='Bench':
             self.laser_port = laser_port
             self.instrument.set_power_supply(id=self.laser_port, enable=True, voltage=self.laser_V, current=1)
+            self.instrument.set_power_supply(id=2, enable=True, voltage=0, current=0.15)
             self.instrument.set_power_supply(id=1, enable=True, voltage=5, current=0.15)
         self._gauss = 278
         self.c_limit = 3.5
