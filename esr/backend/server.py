@@ -129,10 +129,9 @@ def initialize_experiment():
         if not parameters['loopback']:
             if not parameters['moku']=="None":
                 devices.moku.set_switch_1pulse(2*parameters['delay']) 
+                devices.moku.set_magnet(parameters)
             if parameters["use_psu"]:
                 devices.psu.output = True
-            if parameters['moku']=='Cryostat':
-                devices.moku.set_magnet(parameters)
 
         spinecho_scripts.setup_experiment(
             parameters, devices, sweep, soc
