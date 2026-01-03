@@ -94,7 +94,7 @@ def setup_measure_function(soc, function):
                 soc.reset_gens()
                 if runinfo.parameters['use_psu']:
                     devices.psu.output = False
-                if runinfo.parameters['moku']=="Cryostat":
+                if not runinfo.parameters['moku']=="None":
                     devices.moku.field = 0
                 # end_func(d, expt, runinfo.parameters["psexpt"])
             expt.elapsed_time = d.current_time - expt.start_time

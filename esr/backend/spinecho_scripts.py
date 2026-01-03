@@ -209,7 +209,7 @@ def setup_measure_function(soc, integrate, deer=False):
                     soc.reset_gens()
                     if runinfo.parameters['use_psu']:
                         devices.psu.output = False
-                    if runinfo.parameters['moku']=="Cryostat":
+                    if not runinfo.parameters['moku']=="None":
                         devices.moku.field = 0
 
         return d
