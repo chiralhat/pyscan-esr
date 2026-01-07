@@ -94,7 +94,7 @@ class GraphWidget(QWidget):
                     )  # This line is crucial for legend
                     # Display fit parameters on plot
                     fitstr = (
-                        f"A={sig.fit[1]:.3g} V, t={sig.fit[2]:.3g} μs, Q={sig.fit[-1]:.3g}"
+                        f"Q={sig.fit[-1]:.3g}, t={sig.fit[2]:.3g} μs, A={sig.fit[1]:.3g} V"
                     )
                     freqstr = f"freq (MHz): {sig.freq}"
 
@@ -144,6 +144,7 @@ class GraphWidget(QWidget):
 
     def copy_to_clipboard(self):
         buf = io.BytesIO()
+        self.figure.set_size_inches(5, 3)
         self.figure.savefig(buf, format="png")
         buf.seek(0)
         image = QPixmap()
