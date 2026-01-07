@@ -34,8 +34,8 @@ class MokuGo(InstrumentDriver):
         self.laser_port = 0
         self.laser_V = 3
         # Keep the magnet voltage at whatever it currently is
-        fvolt = self.instrument.get_power_supply(2)['actual_voltage']
-        self.instrument.set_power_supply(id=2, enable=True, voltage=fvolt, current=0.15)
+        # fvolt = self.instrument.get_power_supply(2)['actual_voltage']
+        self.instrument.set_power_supply(id=2, enable=True, voltage=0, current=0.15)
         if moku=='Cryostat':
             self.instrument.set_power_supply(id=3, enable=True, voltage=5, current=0.15)
             self.instrument.set_power_supply(id=1, enable=False, voltage=0, current=0.15)
