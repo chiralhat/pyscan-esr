@@ -211,6 +211,7 @@ def setup_measure_function(soc, integrate, deer=False):
                         devices.psu.output = False
                     if not runinfo.parameters['moku']=="None":
                         devices.moku.field = 0
+                        devices.moku.laser = 0
 
         return d
 
