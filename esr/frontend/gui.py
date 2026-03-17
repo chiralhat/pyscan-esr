@@ -232,6 +232,13 @@ EXPERIMENT_TEMPLATES = {
                     "max": 1e5,
                     "default": -0.45,
                 },
+                {
+                    "display": "DAC Ch",
+                    "key": "dac_ch",
+                    "type": "combo",
+                    "options": ["B", "A"],
+                    "default": "B",
+                },
             ],
             "Utility Settings": [
                 {
@@ -526,6 +533,13 @@ EXPERIMENT_TEMPLATES = {
                     "min": -1e5,
                     "max": 1e5,
                     "default": -0.45,
+                },
+                {
+                    "display": "DAC Ch",
+                    "key": "dac_ch",
+                    "type": "combo",
+                    "options": ["B", "A"],
+                    "default": "B",
                 },
             ],
             "Utility Settings": [

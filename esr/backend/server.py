@@ -120,7 +120,7 @@ def initialize_experiment():
         parameters["pi2_phase"] = 0
         parameters["pi_phase"] = 90
         parameters["cpmg_phase"] = 0
-        channel = 1 if parameters["loopback"] else 0
+        channel = 1 if (parameters["loopback"] or parameters['dac_ch']=="A") else 0
         parameters["res_ch"] = channel
         parameters["ro_chs"] = [channel]
         parameters["reps"] = 1
@@ -146,7 +146,7 @@ def initialize_experiment():
         parameters["pi_phase"] = 90
         parameters["delay"] = 300
         parameters["cpmg_phase"] = 0
-        channel = 1 if parameters["loopback"] else 0
+        channel = 1 if (parameters["loopback"] or parameters['dac_ch']=="A") else 0
         parameters["res_ch"] = channel
         parameters["ro_chs"] = [channel]
         parameters["nutation_delay"] = 5000
