@@ -229,6 +229,7 @@ class Worker(QObject):
         try:
             single = self.experiment.parameters["single"]
             avgs = self.experiment.parameters["soft_avgs"]
+            areps = self.experiment.parameters["ave_reps"]
             if self.task_name == "read_processed":
                 self.updateStatus.emit("Reading processed data...\n")
 
@@ -256,6 +257,7 @@ class Worker(QObject):
                 if self.experiment.type == "Spin Echo":
                     self.experiment.parameters["single"] = True
                     self.experiment.parameters["soft_avgs"] = 1
+                    self.experiment.parameters["ave_reps"] = 1
                     data = {
                         "parameters": self.experiment.parameters,
                         "experiment type": "Spin Echo Read Unprocessed",
@@ -277,6 +279,7 @@ class Worker(QObject):
                 elif self.experiment.type == "Pulse Frequency Sweep":
                     self.experiment.parameters["single"] = True
                     self.experiment.parameters["soft_avgs"] = 1
+                    self.experiment.parameters["ave_reps"] = 1
                     data = {
                         "parameters": self.experiment.parameters,
                         "experiment type": "Pulse Frequency Sweep Read Unprocessed",
@@ -302,6 +305,7 @@ class Worker(QObject):
                 print("Error:", response.status_code, response.text)
             self.experiment.parameters["single"] = single
             self.experiment.parameters["soft_avgs"] = avgs
+            self.experiment.parameters["ave_reps"] = areps
             self.experiment.sig.freq = self.experiment.parameters["freq"]
 
             # Emit signals based on experiment type for plotting
