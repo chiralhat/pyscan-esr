@@ -122,7 +122,7 @@ def initialize_experiment():
         parameters["cpmg_phase"] = 0
         channel = 1 if (parameters["loopback"] or parameters['dac_ch']=="A") else 0
         parameters["res_ch"] = channel
-        parameters["ro_chs"] = [channel]
+        parameters["ro_chs"] = [1] if parameters["loopback"] else [0]
         parameters["reps"] = 1
         parameters["single"] = parameters["loopback"]
 
@@ -148,7 +148,7 @@ def initialize_experiment():
         parameters["cpmg_phase"] = 0
         channel = 1 if (parameters["loopback"] or parameters['dac_ch']=="A") else 0
         parameters["res_ch"] = channel
-        parameters["ro_chs"] = [channel]
+        parameters["ro_chs"] = [1] if parameters["loopback"] else [0]
         parameters["nutation_delay"] = 5000
         parameters["nutation_length"] = 0
         parameters["reps"] = 1
@@ -231,7 +231,8 @@ def run_snapshot():
     if experiment_type == "Pulse Frequency Sweep Read Processed":
         measure_decay(parameters, soc, sig)
     else:
-        measure_phase(parameters, soc, sig)
+        deer = True if parameters["expt"]=="DEER" else False
+        measure_phase(parameters, soc, sig, deer=deer)
 
     # Serialize all public attributes of `sig`
     serialized_sig = serialize_object(sig)
