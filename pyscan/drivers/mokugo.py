@@ -21,7 +21,7 @@ class MokuGo(InstrumentDriver):
     '''
     def __init__(self, address='mokugo-005419.hamilton.edu'):
         self.instrument = MultiInstrument(address, platform_id=2, force_connect=True)
-        self.cc = self.instrument.set_instrument(1, CloudCompile, bitstream=bitstream)
+        self.instrument.cc = self.instrument.set_instrument(1, CloudCompile, bitstream=bitstream)
 
         connections = [dict(source="DIO", destination="Slot1InA"),
                     dict(source="Slot1OutA", destination="Output1"),
@@ -53,7 +53,7 @@ class MokuGo(InstrumentDriver):
     def set_switch_1pulse(self, delay=500):
         time = delay+1000
         ticks = int(time//tstep)
-        self.cc.set_control(0, ticks)
+        self.instrument.cc.set_control(0, ticks)
     # def set_switch_1pulse(self, time=10000, freq=800e3):
     #     assert freq<=maxF, f'Frequency exceeds limit, limit: {maxF}, freq: {freq}'
     #     ready = False
