@@ -38,7 +38,7 @@ class ecp5evn(InstrumentDriver):
         self._p2start = 0
         self._pump = 1
         self._block = 1
-        self._pulse_block = 250
+        self._pulse_block = 100
         self._pulse_block_off = 500
         self._nutation_width = 0
         self._nutation_delay = 0
@@ -153,13 +153,12 @@ class ecp5evn(InstrumentDriver):
 
     @property
     def pulse_block(self):
-        return self._pulse_block*self.tstep
+        return self._pulse_block
 
     @pulse_block.setter
     def pulse_block(self, pulse_block):
-        num = int(np.round(pulse_block/self.tstep))
         self.toggle(self._phase_sub, self._block, pulse_block, self._pulse_block_off)
-        self._pulse_block = num
+        self._pulse_block = pulse_block
 
     @property
     def pulse_block_off(self):
