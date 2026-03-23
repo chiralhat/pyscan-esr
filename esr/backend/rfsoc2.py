@@ -245,7 +245,8 @@ class DEERProgram(CPMGProgram):
     def initialize(self):
         cfg=self.cfg   
         res_ch = cfg["res_ch"]
-        deer_ch = res_ch+1
+        deer_ch = 0 if res_ch else 1
+        print('init', res_ch, deer_ch)
         
         # Convert frequently-used times from us to cycles
         readout_length = [self.us2cycles(cfg["readout_length"], ro_ch=ch) for ch in cfg["ro_chs"]]
@@ -266,15 +267,15 @@ class DEERProgram(CPMGProgram):
         # convert frequency to DAC frequency (ensuring it is an available ADC frequency)
         # NOTE: This is only necessary when initializing the pulse register, NOT when changing the freq
         self.freq1 = self.freq2reg(cfg["freq"],gen_ch=res_ch, ro_ch=cfg["ro_chs"][0])
-        self.freq2 = self.freq2reg(cfg["freq"],gen_ch=deer_ch)
+        self.freq2 = self.freq2reg(cfg["freq2"],gen_ch=deer_ch)
 
         # set our output to be the default pulse register
         self.default_pulse_registers(ch=res_ch, style="const", freq=self.freq1, phase=90)
         self.default_pulse_registers(ch=deer_ch, style="const", freq=self.freq2, phase=0)
         
         self.res_r_phase = self.get_gen_reg(res_ch, "phase")
-
-        # self.res_r_freq = self.get_gen_reg(res_ch, "freq")
+        # self.res_r_ph_pi2 = self.new_gen_reg(res_ch, init_val=pi2_phase_list[0], name="pi2_phase") 
+        # self.res_r_ph_pi = self.new_gen_reg(res_ch, init_val=pi_phase_list[0], name="pi_phase") 
         
         self.synci(200)  # give processor some time to configure pulses
 
@@ -284,15 +285,20 @@ class DEERProgram(CPMGProgram):
         Runs a four-pulse DEER sequence with optional nutation pulse
         """
         # Set relevant times
+        period = self.us2cycles(self.cfg["period"])
         res_ch = self.cfg["res_ch"]
-        deer_ch = res_ch+1
+        deer_ch = 0 if res_ch else 1
+        print('deer', res_ch, deer_ch)
         tpi2 = self.cfg["pulse1_1"]/1000
         tpi = self.cfg["pulse1_2"]/1000
         tpid = self.cfg["pulse2_2"]/1000
         delay = self.cfg["delay"]/1000
         delay_pi2 = delay-tpi2
+        delay_pi = 2*delay-tpi
         tau = self.cfg["tau"]/1000-tpi/2
         gain = self.cfg["gain"]
+        nutwidth = self.cfg["nutation_length"]/1000
+        nutdelay = self.us2cycles(self.cfg["nutation_delay"]/1000)
 
         T = self.cfg["DEER_delay"]/1000
         first_tau = tau-T-tpid
@@ -302,13 +308,21 @@ class DEERProgram(CPMGProgram):
         
         # In Loopback mode we want to start readout at the beginning of the pi/2 pulse
         # Otherwise we want to delay readout until the second echo location
-        offset = 0.05 if self.cfg["loopback"] else (tpi2)/2+(pulses)*(2*delay-.00145)
+        offset = 0.05 if self.cfg["loopback"] else (tpi2)/2+(pulses)*(2*delay-.00145)+(2*tau)
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
-        trig_offset = self.us2cycles(0.25+self.cfg["h_offset"]+offset)
+        trig_offset = self.us2cycles(0.25+nutwidth+self.cfg["h_offset"]+offset)
         
+        # If the nutation pulse width is greater than the minimum number of cycles, add it in
+        nut_length = self.us2cycles(nutwidth, gen_ch=res_ch)
+        if nut_length>2:
+            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, length=nut_length)
+            self.pulse(ch=self.cfg["res_ch"])
+        
+        # self.res_r_phase.set_to(self.deg2reg(pi2_phase_list[cycle], gen_ch=res_ch))
         self.res_r_phase.set_to(pi2_phase_list[cycle])
-
-        self.synci(self.us2cycles(1))
+        
+        # Wait the nutation delay time
+        self.synci(nutdelay)
         
         # Tell the ADC when to trigger readout, based on the trigger offset defined above
         # If you uncomment the pins argument, it will also send a pulse on an I/O pin
@@ -382,7 +396,6 @@ class DEERProgram(CPMGProgram):
 
         T = self.cfg["DEER_delay"]/1000
         first_tau = tau-T-tpid
-
         # We want half the power for our pi/2 pulse, and this achieves that
         gain2 = gain if gain<10000 else gain-10000
         
@@ -454,6 +467,16 @@ class DEERProgram(CPMGProgram):
         
 
     def body(self):
+        delay = self.cfg["delay"]/1000
+        nutwidth = self.cfg["nutation_length"]/1000
+        nutdelay = self.cfg["nutation_delay"]/1000
+        tpi = self.cfg["pulse1_2"]/1000
+        tpi2 = self.cfg["pulse1_1"]/1000
+
+        offset = 0 if self.cfg["loopback"] else (tpi2+self.cfg["pulses"]*tpi*0)/2 + (2*self.cfg["pulses"]-1)*(delay)
+        # Actually set the trigger offset, including empirically-determined delay of 0.25 us
+        trig_offset = self.us2cycles(nutwidth+nutdelay+offset+self.cfg['sw_offset'])
+        self.trigoffset = self.cycles2us(trig_offset)
         # Currently "pulses" isn't controlling anything
         sing = self.cfg["single"]
         if sing:
