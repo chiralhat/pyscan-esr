@@ -101,8 +101,8 @@ class Oscilloscope(InstrumentDriver):
 
 
     def fourier_signal(self, d, fstart=3, fstop=100):
-        d.fourier = np.array([np.abs(rfft(sig)) for sig in [d.xsub, d.v1sub, d.v2sub]])
-        d.ffreqs = rfftfreq(len(d.xsub), d.time[1]-d.time[0])
+        d.fourier = np.array([np.abs(rfft(sig)) for sig in [d.x, d.i, d.q]])
+        d.ffreqs = rfftfreq(len(d.x), d.time[1]-d.time[0])
         d.ffit = np.zeros((3, 4))
         for n in range(3):
             try:
@@ -131,13 +131,13 @@ class Oscilloscope(InstrumentDriver):
                 d.volt2 = (v2+d.volt2)
             d.volt1 = d.volt1/reps
             d.volt2 = d.volt2/reps
-        d.x = np.sqrt(d.volt1**2+d.volt2**2)
+        d.xns = np.sqrt(d.volt1**2+d.volt2**2)
         d.v1sub = self.sback(d.volt1)
         d.v2sub = self.sback(d.volt2)
-        d.xsub = np.sqrt(d.v1sub**2+d.v2sub**2)
+        d.x = np.sqrt(d.v1sub**2+d.v2sub**2)
         
-        d.i = d.volt1
-        d.q = d.volt2
+        d.i = d.v1sub
+        d.q = d.v2sub
         d.freq = d.time
 
         self.fourier_signal(d, fstart, fstop)

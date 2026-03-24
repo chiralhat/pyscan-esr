@@ -42,7 +42,8 @@ def change_delay(devices, delay, ave=4, sltime=0.3, port=1, **kwargs):
         old_delay = devices.fpga.delay
         devices.fpga.delay = delay
         devices.fpga.delay2 = delay
-    change_trigger_delta(devices, old_delay, delay)
+    # change_trigger_delta(devices, old_delay, delay)
+    devices.psu.set_switch_1pulse(delay)
     devices.scope.average = 1
     sleep(0.1)
     devices.scope.average = ave

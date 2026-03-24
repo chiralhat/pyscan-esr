@@ -15,6 +15,9 @@ Key Interactions:
 - Delegates to `spinecho_scripts.py` or `pulsesweep_scripts.py` depending on experiment type.
 - Uses `rfsoc2.py` to interact with Qick RFSoC hardware.
 """
+import sys, os
+
+sys.path.append("../../")
 
 from flask import Flask, request, jsonify, make_response
 import spinecho_scripts
@@ -24,11 +27,6 @@ import pyvisa
 from time import sleep, time
 import numpy as np
 
-import sys, os
-
-sys.path.append("../../")
-from rfsoc2 import *
-
 if not hasattr(ps, "rm"):
     ps.rm = pyvisa.ResourceManager("@py")
 res_list = ps.rm.list_resources()
@@ -37,8 +35,6 @@ app = Flask(__name__)
 
 # Example experiment runner
 running = False
-soc = QickSoc()  # Hardware interface for the RFSoC system.
-soccfg = soc  # Alias for soc, used for compatibility.
 devices = (
     ps.ItemAttribute()
 )  # Container for hardware components (e.g., PSU, temperature controller).
@@ -102,20 +98,27 @@ def initialize_experiment():
     inst = ps.ItemAttribute()
 
     # Initialize PSU if necessary
-    if not hasattr(devices, "psu") and parameters["use_psu"]:
+    if not hasattr(devices, "psu") and (parameters["use_psu"]):
         try:
-            devices.psu = ps.MokuGo()
-        #     for inst in res_list:
-        #         try:
-        #             devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
-        #             break
-        #         except Exception as e:
-        #             try:
-        #                 devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
-        #             except:
-        #                 pass
+            for inst in res_list:
+                try:
+                    devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                    break
+                except Exception as e:
+                    try:
+                        devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                        break
+                    except:
+                        pass
         except Exception as e:
             print(f"Error initializing PSU: {e}")
+
+    # Initialize Moku if necessary
+    if not hasattr(devices, "moku") and not parameters['moku']=="None":
+        try:
+            devices.moku = ps.MokuGo(parameters['moku'])
+        except Exception as e:
+            print(f"Error initializing Moku: {e}")
 
     # Initialize temperature device if necessary
     if not hasattr(devices, "ls335") and parameters["use_temp"]:
@@ -124,23 +127,37 @@ def initialize_experiment():
 
     """This initializes a pyscan experiment with functions from the correct 
         experiment type scripts and GUI files."""
+
+    if parameters['moku']=='Bench':
+        if parameters['laser_on'] and not devices.moku.laser:
+            try:
+                devices.moku = ps.MokuGo(parameters['moku'])
+            except Exception as e:
+                print(f"Error initializing Moku: {e}")
+        devices.moku.laser = parameters['laser_on']
+        # print(devices.moku.laser)
+
     if experiment_type == "Spin Echo":
         # Initialize the experiment by setting up the parameters and devices.
         parameters["pulse1_2"] = parameters["pulse1_1"] * parameters["mult1"]
         parameters["pi2_phase"] = 0
         parameters["pi_phase"] = 90
         parameters["cpmg_phase"] = 0
-        channel = 1 if parameters["loopback"] else 0
+        channel = 1 if (parameters["loopback"] or parameters['dac_ch']=="A") else 0
         parameters["res_ch"] = channel
-        parameters["ro_chs"] = [channel]
+        parameters["ro_chs"] = [1] if parameters["loopback"] else [0]
         parameters["reps"] = 1
         parameters["single"] = parameters["loopback"]
 
-        if parameters["use_psu"] and not parameters["loopback"]:
-            devices.psu.set_magnet(parameters)
+        if not parameters['loopback']:
+            if not parameters['moku']=="None":
+                devices.moku.set_switch_1pulse(2*parameters['delay']) 
+                devices.moku.set_magnet(parameters)
+            if parameters["use_psu"]:
+                devices.psu.output = True
 
         spinecho_scripts.setup_experiment(
-            parameters, devices, sweep, soc
+            parameters, devices, sweep
         )  # From ______scripts.py
 
     elif experiment_type == "Pulse Frequency Sweep":
@@ -152,18 +169,22 @@ def initialize_experiment():
         parameters["pi_phase"] = 90
         parameters["delay"] = 300
         parameters["cpmg_phase"] = 0
-        channel = 1 if parameters["loopback"] else 0
+        channel = 1 if (parameters["loopback"] or parameters['dac_ch']=="A") else 0
         parameters["res_ch"] = channel
-        parameters["ro_chs"] = [channel]
+        parameters["ro_chs"] = [1] if parameters["loopback"] else [0]
         parameters["nutation_delay"] = 5000
         parameters["nutation_length"] = 0
         parameters["reps"] = 1
         parameters["sweep2"] = 0
         parameters["single"] = parameters["loopback"]  # ADDED THIS LINE
-        if parameters["use_psu"]:
-            devices.psu.set_magnet(parameters)
 
-        pulsesweep_scripts.setup_experiment(parameters, devices, sweep, soc)
+        if not parameters['loopback']:
+            if parameters["use_psu"]:
+                devices.psu.output = True
+            if parameters['moku']=='Cryostat':
+                devices.moku.set_magnet(parameters)
+
+        pulsesweep_scripts.setup_experiment(parameters, devices, sweep)
 
     #print(sweep)
     # if 'runinfo' in sweep:
@@ -266,18 +287,50 @@ def start_sweep():
         expt.outerr = 0
 
         if experiment_type == "Spin Echo":
-            delay = parameters['delay']
-            if parameters['expt']=="Hahn Echo":
-                sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*parameters['cpmg']
-            elif parameters['expt']=="CPMG":
-                sweep['expt'].echo_delay = 2*delay*runinfo.scan0.scan_dict['cpmg_sweep']
+            if parameters["expt"] == "Hahn Echo":
+                expt.echo_delay = (
+                    2
+                    * np.array(runinfo.scan0.scan_dict["delay_sweep"])
+                    * runinfo.parameters["pulses"]
+                )
+            elif parameters["expt"] == "CPMG":
+                expt.echo_delay = (
+                    2
+                    * runinfo.parameters["delay"]
+                    * np.array(runinfo.scan0.scan_dict["cpmg_sweep"])
+                )
+            elif parameters["sweep2"] and parameters["expt2"] == "Hahn Echo":
+                expt.echo_delay = (
+                    2
+                    * np.array(runinfo.scan1.scan_dict["delay_sweep"])
+                    * runinfo.parameters["pulses"]
+                )
+            elif parameters["sweep2"] and parameters["expt2"] == "CPMG":
+                expt.echo_delay = (
+                    2
+                    * runinfo.parameters["delay"]
+                    * np.array(runinfo.scan1.scan_dict["cpmg_sweep"])
+                )
             else:
-                sweep['expt'].echo_delay = 2*delay*parameters['cpmg']
+                expt.echo_delay = (
+                    2 * runinfo.parameters["delay"] * runinfo.parameters["pulses"]
+                )
 
         #print(expt)
         expt.start_time = time()
         expt.start_thread()
         return jsonify({"status": "sweep started"})
+
+
+@app.route("/get_parameters", methods=["GET"])
+def get_parameters():
+    global sweep
+    parameters = sweep["runinfo"].parameters
+    try:
+        return jsonify({"parameters": parameters})
+    except Exception as e:
+        print("Error in get_parameters:", e)
+        return make_response(jsonify({"error": serialize_object(e)}), 500)
 
 
 @app.route("/get_sweep_data", methods=["GET"])
@@ -321,7 +374,12 @@ def hardware_off():
     # Turn off power supply unit if enabled
     if sweep['runinfo'].parameters["use_psu"]:
         devices.psu.output = False
+    if not sweep['runinfo'].parameters['moku']=="None":
+        devices.moku.field = 0
+        if devices.moku.laser_port:
+            devices.moku.laser = False
     
+    # Disconnect from all equipment
     for key in devices.keys():
         devices[key].close()
     devices.__dict__.clear()

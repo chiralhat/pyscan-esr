@@ -61,7 +61,7 @@ def change_delay(devices, delay, ave=4, sltime=0.3, port=1, **kwargs):
         old_delay = devices.fpga.delay
         devices.fpga.delay = delay
         devices.fpga.delay2 = delay
-    change_trigger_delta(devices, old_delay, delay)
+    # change_trigger_delta(devices, old_delay, delay)
     devices.psu.set_switch_1pulse(delay)
     devices.scope.average = 1
     sleep(0.1)
@@ -137,9 +137,9 @@ def integrate_echo(times, data, alldat=False, backsub=False, prewin=False):
     
     
 def fourier_signal(d, fstart=3, fstop=100):
-    d.fourier = [np.abs(rfft(sig)) for sig in [d.xsub, d.v1sub, d.v2sub]]
+    d.fourier = [np.abs(rfft(sig)) for sig in [d.x, d.i, d.q]]
     d.fourier.append(np.sqrt(d.fourier[:][1]**2+d.fourier[:][2]**2))
-    d.ffreqs = rfftfreq(len(d.xsub), d.time[1]-d.time[0])
+    d.ffreqs = rfftfreq(len(d.x), d.time[1]-d.time[0])
     flen = len(d.fourier)
     d.ffit = np.zeros((flen, 4))
     for n in range(flen):
@@ -148,26 +148,26 @@ def fourier_signal(d, fstart=3, fstop=100):
             d.ffit[n] = lor_fit(lordat)[0]
         except:
             0
-    d.xfamp, d.v1famp, d.v2famp, d.xxfamp = [-fit[1] for fit in d.ffit]
+    d.xfamp, d.ifamp, d.qfamp, d.xxfamp = [-fit[1] for fit in d.ffit]
     d.ffdet = d.ffit[1][-1]
     d.ffdet2 = d.ffit[2][-1]
     d.ffdetx = d.ffit[3][-1]
     fwin = list(d.ffreqs[[fstart, fstop]])
     int_out = integrate_echo(d.ffreqs, d.fourier,
                                 backsub='linear', prewin=fwin)
-    [d.xfint, d.v1fint, d.v2fint, d.xxfint] = int_out
-     # d.xfmean, d.v1fmean, d.v2fmean, d.xxfmean] = int_out
+    # [d.xfint, d.ifint, d.qfint, d.xxfint] = int_out
+    d.xfmean, d.ifmean, d.qfmean, d.xxfmean] = int_out
     return d
     
     
 def fourier_signals(d, fstart=3, fstop=100):
-    ns = range(len(d.xsub))
+    ns = range(len(d.x))
     d.fourier = np.array([[np.abs(rfft(sig))
-                           for sig in [d.xsub[n], d.v1sub[n], d.v2sub[n]]]
+                           for sig in [d.x[n], d.i[n], d.q[n]]]
                           for n in ns])
-    d.ffreqs = np.array([rfftfreq(len(d.xsub[n]), d.time[n][1]-d.time[n][0])
+    d.ffreqs = np.array([rfftfreq(len(d.x[n]), d.time[n][1]-d.time[n][0])
                          for n in ns])
-    d.ffit = np.zeros((len(d.xsub), 3, 4))
+    d.ffit = np.zeros((len(d.x), 3, 4))
     for n in ns:
         for i in range(3):
             try:
@@ -177,8 +177,8 @@ def fourier_signals(d, fstart=3, fstop=100):
             except:
                 d.ffit[n][i] = np.zeros(4)
     d.xfamp = np.array([-fit[0][1] for fit in d.ffit])
-    d.v1famp = np.array([-fit[1][1] for fit in d.ffit])
-    d.v2famp = np.array([-fit[2][1] for fit in d.ffit])
+    d.ifamp = np.array([-fit[1][1] for fit in d.ffit])
+    d.qfamp = np.array([-fit[2][1] for fit in d.ffit])
     d.ffdet = np.array([fit[1][-1] for fit in d.ffit])
     d.ffdet2 = np.array([fit[2][-1] for fit in d.ffit])
     return d
@@ -189,27 +189,27 @@ def sback(sig, backnum=100):
 
 
 def process_se(d, win, backnum=100, detune=0):
-    v1usub = sback(d.v1up)
-    v1dsub = sback(d.v1down)
-    v2usub = sback(d.v2up)
-    v2dsub = sback(d.v2down)
-    d.v1sub = v1usub-v1dsub
-    d.v2sub = v2usub-v2dsub
-#     v1int = simps(v1sub, time)
-    d.xup = np.sqrt(v1usub**2+v2usub**2)
-    d.xdown = np.sqrt(v1dsub**2+v2dsub**2)
-    d.xsub = np.sqrt(d.v1sub**2+d.v2sub**2)
+    iusub = sback(d.iup)
+    idsub = sback(d.idown)
+    qusub = sback(d.qup)
+    qdsub = sback(d.qdown)
+    d.i = iusub-idsub
+    d.q = qusub-qdsub
+#     iint = simps(i, time)
+    d.xup = np.sqrt(iusub**2+qusub**2)
+    d.xdown = np.sqrt(idsub**2+qdsub**2)
+    d.x = np.sqrt(d.i**2+d.q**2)
     
-#     d.xup1 = np.sqrt((d.v1up)**2+(d.v2up)**2)
-#     d.xdown1 = np.sqrt((d.v1down)**2+(d.v2down)**2)
+#     d.xup1 = np.sqrt((d.iup)**2+(d.qup)**2)
+#     d.xdown1 = np.sqrt((d.idown)**2+(d.qdown)**2)
 #     d.xup1 = d.xup1-np.mean(d.xup1[-20:])
 #     d.xdown1 = d.xdown1-np.mean(d.xdown1[-20:])
-    d.xsub1 = d.xup-d.xdown
+    d.x1 = d.xup-d.xdown
 
-    int_out = integrate_echo(d.time, [d.v1sub, d.v2sub, d.xsub, d.xsub1],
+    int_out = integrate_echo(d.time, [d.i, d.q, d.x, d.x1],
                                 backsub='linear', prewin=win)
-    [d.v1int, d.v2int, d.xint, d.xint1] = int_out
-     # d.v1mean, d.v2mean, d.xmean, d.x1mean] = int_out
+    # [d.iint, d.qint, d.xint, d.xint1] = int_out
+    d.imean, d.qmean, d.xmean, d.x1mean] = int_out
     d = fourier_signal(d)
     
     return d
@@ -230,29 +230,29 @@ def subback(subfunc, args, devices, ave,
         sltime = ave/1000 if period<0.001 else period*ave
 #    sltime = sltime if sltime>=0.01 else 0
     subfunc(devices, args[0], ave=ave, sltime=sltime, port=port, **kwargs)
-    [[d.time, d.v1down],
-     [_, d.v2down]] = devices.scope.read_screen(0, init=False)
+    [[d.time, d.idown],
+     [_, d.qdown]] = devices.scope.read_screen(0, init=False)
     if reps>1:
         for n in range(reps-1):
             sleep(sltime)
-            [[_, v1d], [_, v2d]] = devices.scope.read_screen(0, init=False)
-            d.v1down = (v1d+d.v1down)
-            d.v2down = (v2d+d.v2down)
-        d.v1down = d.v1down/reps
-        d.v2down = d.v2down/reps
+            [[_, id], [_, qd]] = devices.scope.read_screen(0, init=False)
+            d.idown = (id+d.idown)
+            d.qdown = (qd+d.qdown)
+        d.idown = d.idown/reps
+        d.qdown = d.qdown/reps
     subfunc(devices, args[1], ave=ave, sltime=sltime, port=port, **kwargs)
-    [[_, d.v1up], [_, d.v2up]] = devices.scope.read_screen(0, init=False)
+    [[_, d.iup], [_, d.qup]] = devices.scope.read_screen(0, init=False)
     if reps>1:
         for n in range(reps-1):
             sleep(sltime)
-            [[_, v1u], [_, v2u]] = devices.scope.read_screen(0, init=False)
-            d.v1up = (v1u+d.v1up)
-            d.v2up = (v2u+d.v2up)
-        d.v1up = d.v1up/reps
-        d.v2up = d.v2up/reps
+            [[_, iu], [_, qu]] = devices.scope.read_screen(0, init=False)
+            d.iup = (iu+d.iup)
+            d.qup = (qu+d.qup)
+        d.iup = d.iup/reps
+        d.qup = d.qup/reps
     
     d = process_se(d, win, detune=detune)
-    #d.xsub, d.v1sub, d.v2sub = [sig/2 for sig in [d.xsub, d.v1sub, d.v2sub]]
+    #d.x, d.i, d.q = [sig/2 for sig in [d.x, d.i, d.q]]
     d.win = win
     
     return d
@@ -293,56 +293,56 @@ def subback_phasedelay(devices, ave=128, phase=0, delay=1000, offset=False,
         sltime = period*ave if period>0.1 else 2*period*ave
     change_delay(devices, 10*delay, ave, 0)
     change_phase(devices, (phase+dphase) % 360, ave, sltime, [offset, 0])
-    [[d.time, d.v1downno],
-     [_, d.v2downno]] = devices.scope.read_screen(0, init=False)
+    [[d.time, d.idownno],
+     [_, d.qdownno]] = devices.scope.read_screen(0, init=False)
     if reps>1:
         for n in range(reps-1):
             sleep(sltime)
-            [[_, v1dn], [_, v2dn]] = devices.scope.read_screen(0, init=False)
-            d.v1downno = (v1dn+d.v1downno)
-            d.v2downno = (v2dn+d.v2downno)
-        d.v1downno = d.v1downno/reps
-        d.v2downno = d.v2downno/reps
+            [[_, idn], [_, qdn]] = devices.scope.read_screen(0, init=False)
+            d.idownno = (idn+d.idownno)
+            d.qdownno = (qdn+d.qdownno)
+        d.idownno = d.idownno/reps
+        d.qdownno = d.qdownno/reps
     change_phase(devices, phase, ave, sltime, [offset, 1])
-    [[d.time, d.v1upno],
-     [_, d.v2upno]] = devices.scope.read_screen(0, init=False)
+    [[d.time, d.iupno],
+     [_, d.qupno]] = devices.scope.read_screen(0, init=False)
     if reps>1:
         for n in range(reps-1):
             sleep(sltime)
-            [[_, v1d], [_, v2d]] = devices.scope.read_screen(0, init=False)
-            d.v1upno = (v1d+d.v1upno)
-            d.v2upno = (v2d+d.v2upno)
-        d.v1upno = d.v1upno/reps
-        d.v2upno = d.v2upno/reps
+            [[_, id], [_, qd]] = devices.scope.read_screen(0, init=False)
+            d.iupno = (id+d.iupno)
+            d.qupno = (qd+d.qupno)
+        d.iupno = d.iupno/reps
+        d.qupno = d.qupno/reps
     change_delay(devices, delay, ave, 0)
     change_phase(devices, (phase+dphase) % 360, ave, sltime, [offset, 0])
-    [[d.time, d.v1downyes],
-     [_, d.v2downyes]] = devices.scope.read_screen(0, init=False)
+    [[d.time, d.idownyes],
+     [_, d.qdownyes]] = devices.scope.read_screen(0, init=False)
     if reps>1:
         for n in range(reps-1):
             sleep(sltime)
-            [[_, v1d], [_, v2d]] = devices.scope.read_screen(0, init=False)
-            d.v1downyes = (v1d+d.v1downyes)
-            d.v2downyes = (v2d+d.v2downyes)
-        d.v1downyes = d.v1downyes/reps
-        d.v2downyes = d.v2downyes/reps
+            [[_, id], [_, qd]] = devices.scope.read_screen(0, init=False)
+            d.idownyes = (id+d.idownyes)
+            d.qdownyes = (qd+d.qdownyes)
+        d.idownyes = d.idownyes/reps
+        d.qdownyes = d.qdownyes/reps
     change_phase(devices, phase, ave, sltime, [offset, 1])
-    [[_, d.v1upyes], [_, d.v2upyes]] = devices.scope.read_screen(0, init=False)
+    [[_, d.iupyes], [_, d.qupyes]] = devices.scope.read_screen(0, init=False)
     if reps>1:
         for n in range(reps-1):
             sleep(sltime)
-            [[_, v1d], [_, v2d]] = devices.scope.read_screen(0, init=False)
-            d.v1upyes = (v1d+d.v1upyes)
-            d.v2upyes = (v2d+d.v2upyes)
-        d.v1upyes = d.v1upyes/reps
-        d.v2upyes = d.v2upyes/reps
-    d.v1up = (d.v1upyes-d.v1upno)
-    d.v2up = (d.v2upyes-d.v2upno)
-    d.v1down = (d.v1downyes-d.v1downno)
-    d.v2down = (d.v2downyes-d.v2downno)
+            [[_, id], [_, qd]] = devices.scope.read_screen(0, init=False)
+            d.iupyes = (id+d.iupyes)
+            d.qupyes = (qd+d.qupyes)
+        d.iupyes = d.iupyes/reps
+        d.qupyes = d.qupyes/reps
+    d.iup = (d.iupyes-d.iupno)
+    d.qup = (d.qupyes-d.qupno)
+    d.idown = (d.idownyes-d.idownno)
+    d.qdown = (d.qdownyes-d.qdownno)
     
     d = process_se(d, win, detune)
-    d.xsub, d.v1sub, d.v2sub = [sig/2 for sig in [d.xsub, d.v1sub, d.v2sub]]
+    d.x, d.i, d.q = [sig/2 for sig in [d.x, d.i, d.q]]
     
     
     return d
@@ -405,6 +405,75 @@ def max_phase(devices, ave=4, ch=1):
     return ph
 
 
+def try_fit(func, dat, guess):
+    try:
+        fit = np.array(ps.func_fit(func, dat, guess)[:2])
+    except:
+        fit = np.zeros((2, len(guess)))
+    return fit
+
+
+def end_func(d, expt, run, dim=0):
+    if dim == 0:
+        sigs = list(expt.xmean[:-1]) + [d.xmean]
+    else:
+        sigs = list(expt.xmean[:-1, dim[1]]) + [d.xmean]
+    if "fit" not in expt.keys() and not dim == 0:
+        expt.fit = np.zeros((dim[0], 2, 4))
+        expt.out = np.zeros(dim[0])
+        expt.outerr = np.zeros(dim[0])
+    if run == "Rabi":  # Rabi sweep
+        rabidat = np.array([expt.rabi_sweep, sigs])
+        guess = [
+            rabidat[1].min(),
+            rabidat[1].max(),
+            rabidat[0][-1] / 2,
+            rabidat[0][-1] / 2,
+        ]
+        fit = try_fit(ps.rabifitnophi, rabidat, guess)
+        if dim == 0:
+            expt.fit, expt.out, expt.outerr = fit, *fit[:, 2] / 2
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = (
+                fit,
+                *fit[:, 2] / 2,
+            )
+    elif run == "Hahn Echo" or run == "CPMG":  # Hahn or CPMG sweep
+        deldat = np.array([expt.echo_delay, sigs])
+        try:
+            fit = np.array(ps.exp_fit_norange(deldat, 1, 1)[:2])
+        except:
+            fit = np.zeros((2, 4))
+        if dim == 0:
+            fit, expt.out, expt.outerr = fit, *fit[:, 2]
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]
+    elif run == "Phase Sweep":  # Phase sweep
+        phasedat = np.array([expt.phase_sweep, sigs])
+        try:
+            fit, maxphase, pherr = phase_fit(phasedat)
+        except:
+            fit, maxphase, pherr = np.zeros((2, 4)), 0, 0
+        if dim == 0:
+            fit, expt.out, expt.outerr = fit, maxphase, pherr
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = (
+                fit,
+                maxphase,
+                pherr,
+            )
+    elif run == "Inversion Sweep":  # Inversion sweep
+        invdat = np.array([expt.inversion_sweep, sigs])
+        try:
+            fit = np.array(ps.exp_fit_norange(invdat, 1, 1)[:2])
+        except:
+            fit = np.zeros((2, 4))
+        if dim == 0:
+            fit, expt.out, expt.outerr = fit, *fit[:, 2]
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]
+
+
 def measure_echo(expt):
     """
     """
@@ -456,7 +525,7 @@ def measure_echo(expt):
             if runinfo.parameters['use_psu']:
                 devices.psu.output = False
         if runinfo.parameters['expt']=='Phase Sweep':
-            sigs = list(expt.v1int[:-1])+[d.v1int]
+            sigs = list(expt.imean[:-1])+[d.imean]
             expt.maxphase = phase_fit(expt.phase_sweep, sigs)
     return d
 
@@ -585,7 +654,7 @@ def pulse_length_sweep():
     expt = ps.Sweep(runinfo, devices, parameters['outfile']+'PSweep')
     expt.start_thread()
 
-    ps.live_plot2D(expt, x_name='t', y_name='pulse_time', data_name='xsub',
+    ps.live_plot2D(expt, x_name='t', y_name='pulse_time', data_name='x',
                    transpose=1)
 
 

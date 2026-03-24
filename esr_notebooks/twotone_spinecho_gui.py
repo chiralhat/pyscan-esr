@@ -123,10 +123,10 @@ def init_experiment(devices, parameters, sweep):
     parameters['pulse2'] = parameters['pulse1_2']
     parameters['delay'] = parameters['delay1']
 
-    nut_time = parameters['nutation_width']+parameters['nutation_delay']
-    p1_time = parameters['pulse1_1']+(parameters['delay1']*2+parameters['pulse1_2'])*parameters['cpmg']
-    p2_time = parameters['p2start']+parameters['pulse2_1']+(parameters['delay2']*2+parameters['pulse2_2'])*parameters['cpmg']
-    switch_time = 500 + nut_time + p1_time
+    # nut_time = parameters['nutation_width']+parameters['nutation_delay']
+    # p1_time = parameters['pulse1_1']+(parameters['delay1']*2+parameters['pulse1_2'])*parameters['cpmg']
+    # p2_time = parameters['p2start']+parameters['pulse2_1']+(parameters['delay2']*2+parameters['pulse2_2'])*parameters['cpmg']
+    # parameters['switch_time'] = 500 + nut_time + p1_time
     # Turn on all the channels
     [devices.scope.write('SEL:CH'+str(ch)+' 1')
      for ch in devices.scope.channels[2:]]
@@ -135,7 +135,7 @@ def init_experiment(devices, parameters, sweep):
     devices.scope.setup_spin_echo(parameters)
     if parameters['use_psu']:
         devices.psu.set_magnet(parameters)
-        devices.psu.set_switch_1pulse(switch_time)
+        devices.psu.set_switch_1pulse(parameters['delay'])
     setup_twotone_experiment(parameters, devices, sweep)
 
 
