@@ -15,23 +15,34 @@ bitstream = "moku_switch.tar"
 clk_freq = 31.25e-3
 tstep = 1/clk_freq
 
+address = {'Cryostat': 'mokugo-005419.hamilton.edu',
+             'Bench': 'mokugo-005059.hamilton.edu'}
+
 class MokuGo(InstrumentDriver):
     '''
     Class to control Moku:Go AWG and programmable power supply
     '''
-    def __init__(self, address='mokugo-005419.hamilton.edu'):
-        self.instrument = MultiInstrument(address, platform_id=2, force_connect=True)
-        self.cc = self.instrument.set_instrument(1, CloudCompile, bitstream=bitstream)
+    def __init__(self, moku='Cryostat', laser_port=3):
+        self.instrument = MultiInstrument(address[moku], platform_id=2, force_connect=True)
+        self.instrument.cc = self.instrument.set_instrument(1, CloudCompile, bitstream=bitstream)
 
         connections = [dict(source="DIO", destination="Slot1InA"),
                     dict(source="Slot1OutA", destination="Output1"),
                     dict(source="Slot1OutB", destination="Output2")]
         self.instrument.set_connections(connections=connections)
         self.instrument.set_dio(direction=[0]*16)
-        self.instrument.set_power_supply(id=3, enable=True, voltage=5, current=0.15)
+        self.laser_port = 0
+        self.laser_V = 3
+        # Keep the magnet voltage at whatever it currently is
+        # fvolt = self.instrument.get_power_supply(2)['actual_voltage']
         self.instrument.set_power_supply(id=2, enable=True, voltage=0, current=0.15)
-        self.instrument.set_power_supply(id=1, enable=False, voltage=0, current=0.15)
-#        self.instrument.enableOutput(False)
+        if moku=='Cryostat':
+            self.instrument.set_power_supply(id=3, enable=True, voltage=5, current=0.15)
+            self.instrument.set_power_supply(id=1, enable=False, voltage=0, current=0.15)
+        elif moku=='Bench':
+            self.laser_port = laser_port
+            self.instrument.set_power_supply(id=self.laser_port, enable=True, voltage=self.laser_V, current=1)
+            self.instrument.set_power_supply(id=1, enable=True, voltage=5, current=0.15)
         self._gauss = 278
         self.c_limit = 3.5
         self.ramp = 50
@@ -51,9 +62,9 @@ class MokuGo(InstrumentDriver):
     
     
     def set_switch_1pulse(self, delay=500):
-        time = delay+1000
-        ticks = int(time//tstep)
-        self.cc.set_control(0, ticks)
+        # time = delay+1000
+        ticks = int(delay//tstep)
+        self.instrument.cc.set_control(0, ticks)
     # def set_switch_1pulse(self, time=10000, freq=800e3):
     #     assert freq<=maxF, f'Frequency exceeds limit, limit: {maxF}, freq: {freq}'
     #     ready = False
@@ -156,6 +167,26 @@ class MokuGo(InstrumentDriver):
     @current_limit.setter
     def current_limit(self, limit):
         self.c_limit = limit
+        
+        
+    @property
+    def laser(self):
+        return self.instrument.get_power_supply(id=self.laser_port)['enabled']
+    
+    @laser.setter
+    def laser(self, on):
+        self.instrument.set_power_supply(id=self.laser_port, enable=on, voltage=self.laser_V, current=1)
+        
+        
+    @property
+    def output(self):
+        return self.instrument.get_power_supply(id=2)['enabled']
+    
+    @output.setter
+    def output(self, on):
+        psns = [self.laser_port] if self.laser_port else [1, 2]
+        for n in psns:
+            self.instrument.get_power_supply(id=n)['enabled'] = on
         
         
     def set_magnet(self, p):
