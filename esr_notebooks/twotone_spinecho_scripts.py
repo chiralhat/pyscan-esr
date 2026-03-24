@@ -202,6 +202,10 @@ def sub_hole(devices, ave=128, delay1=1000, delay2=1000,
                                 backsub='linear', prewin=win[0])
     [d.v1int, d.v2int, d.x1int, d.x1int1] = int_out
 
+    int_out = integrate_echo(d.time, [d.v1up, d.v2up, d.x1up],
+                                backsub='linear', prewin=win[0])
+    [d.v1uint, d.v2uint, d.x1uint] = int_out
+
     return d
 
 
@@ -293,8 +297,7 @@ def setup_twotone_experiment(parameters, devices, sweep):
     def pulse_time(tpi2):
         pulse_change(devices, tpi2, 0, parameters['mult1'])
     def delay_sweep(delay):
-        devices.fpga.delay = delay
-        devices.fpga.delay2 = delay
+        delay_change(devices, delay, 0)
     expt_select = {'A Pulse Sweep': 0,
         'B Pulse Sweep': 1,
         'Both Pulse Sweep': 2,
