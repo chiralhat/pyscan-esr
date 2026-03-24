@@ -137,9 +137,9 @@ def integrate_echo(times, data, alldat=False, backsub=False, prewin=False):
     
     
 def fourier_signal(d, fstart=3, fstop=100):
-    d.fourier = [np.abs(rfft(sig)) for sig in [d.xsub, d.isub, d.qsub]]
+    d.fourier = [np.abs(rfft(sig)) for sig in [d.x, d.i, d.q]]
     d.fourier.append(np.sqrt(d.fourier[:][1]**2+d.fourier[:][2]**2))
-    d.ffreqs = rfftfreq(len(d.xsub), d.time[1]-d.time[0])
+    d.ffreqs = rfftfreq(len(d.x), d.time[1]-d.time[0])
     flen = len(d.fourier)
     d.ffit = np.zeros((flen, 4))
     for n in range(flen):
@@ -161,13 +161,13 @@ def fourier_signal(d, fstart=3, fstop=100):
     
     
 def fourier_signals(d, fstart=3, fstop=100):
-    ns = range(len(d.xsub))
+    ns = range(len(d.x))
     d.fourier = np.array([[np.abs(rfft(sig))
-                           for sig in [d.xsub[n], d.isub[n], d.qsub[n]]]
+                           for sig in [d.x[n], d.i[n], d.q[n]]]
                           for n in ns])
-    d.ffreqs = np.array([rfftfreq(len(d.xsub[n]), d.time[n][1]-d.time[n][0])
+    d.ffreqs = np.array([rfftfreq(len(d.x[n]), d.time[n][1]-d.time[n][0])
                          for n in ns])
-    d.ffit = np.zeros((len(d.xsub), 3, 4))
+    d.ffit = np.zeros((len(d.x), 3, 4))
     for n in ns:
         for i in range(3):
             try:
@@ -193,20 +193,20 @@ def process_se(d, win, backnum=100, detune=0):
     idsub = sback(d.idown)
     qusub = sback(d.qup)
     qdsub = sback(d.qdown)
-    d.isub = iusub-idsub
-    d.qsub = qusub-qdsub
-#     iint = simps(isub, time)
+    d.i = iusub-idsub
+    d.q = qusub-qdsub
+#     iint = simps(i, time)
     d.xup = np.sqrt(iusub**2+qusub**2)
     d.xdown = np.sqrt(idsub**2+qdsub**2)
-    d.xsub = np.sqrt(d.isub**2+d.qsub**2)
+    d.x = np.sqrt(d.i**2+d.q**2)
     
 #     d.xup1 = np.sqrt((d.iup)**2+(d.qup)**2)
 #     d.xdown1 = np.sqrt((d.idown)**2+(d.qdown)**2)
 #     d.xup1 = d.xup1-np.mean(d.xup1[-20:])
 #     d.xdown1 = d.xdown1-np.mean(d.xdown1[-20:])
-    d.xsub1 = d.xup-d.xdown
+    d.x1 = d.xup-d.xdown
 
-    int_out = integrate_echo(d.time, [d.isub, d.qsub, d.xsub, d.xsub1],
+    int_out = integrate_echo(d.time, [d.i, d.q, d.x, d.x1],
                                 backsub='linear', prewin=win)
     # [d.iint, d.qint, d.xint, d.xint1] = int_out
     d.imean, d.qmean, d.xmean, d.x1mean] = int_out
@@ -252,7 +252,7 @@ def subback(subfunc, args, devices, ave,
         d.qup = d.qup/reps
     
     d = process_se(d, win, detune=detune)
-    #d.xsub, d.isub, d.qsub = [sig/2 for sig in [d.xsub, d.isub, d.qsub]]
+    #d.x, d.i, d.q = [sig/2 for sig in [d.x, d.i, d.q]]
     d.win = win
     
     return d
@@ -342,7 +342,7 @@ def subback_phasedelay(devices, ave=128, phase=0, delay=1000, offset=False,
     d.qdown = (d.qdownyes-d.qdownno)
     
     d = process_se(d, win, detune)
-    d.xsub, d.isub, d.qsub = [sig/2 for sig in [d.xsub, d.isub, d.qsub]]
+    d.x, d.i, d.q = [sig/2 for sig in [d.x, d.i, d.q]]
     
     
     return d
@@ -654,7 +654,7 @@ def pulse_length_sweep():
     expt = ps.Sweep(runinfo, devices, parameters['outfile']+'PSweep')
     expt.start_thread()
 
-    ps.live_plot2D(expt, x_name='t', y_name='pulse_time', data_name='xsub',
+    ps.live_plot2D(expt, x_name='t', y_name='pulse_time', data_name='x',
                    transpose=1)
 
 

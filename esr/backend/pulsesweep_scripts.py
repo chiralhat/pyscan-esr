@@ -10,7 +10,7 @@ from IPython.display import display, clear_output
 def pf_single_shot(sig, parameters, devices):
     devices.scope.read_vxy(d=sig)
     freq = devices.synth.c_freqs
-    fit, err = ps.plot_exp_fit_norange(np.array([sig.time*1e6, sig.xsub]),
+    fit, err = ps.plot_exp_fit_norange(np.array([sig.time*1e6, sig.x]),
                                        freq, 1, plt=ax)
     sig.fit = fit
 
@@ -84,7 +84,7 @@ def decay_field_sweep(expt):
     sleep(sltime)
     d = devices.scope.read_vxy(sltime=sltime, reps=reps)
     expt.t = d.time
-    d.fit, d.err = exp_fit_norange_noback(np.array([d.time-d.time[0], d.xsub]),
+    d.fit, d.err = exp_fit_norange_noback(np.array([d.time-d.time[0], d.x]),
                                              parameters['freq_start'], 1)[:2]
     d.Q = d.fit[-1]
     d.A = d.fit[0]
