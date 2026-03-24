@@ -7,6 +7,8 @@ Created on Dec 30 2022
 
 
 import gpd3303s
+import numpy as np
+from time import sleep
 
 
 class GPD3303S():
@@ -18,11 +20,12 @@ class GPD3303S():
         self.instrument.open(port)
         self.instrument.selectIndependentMode()
         self.instrument.enableBeep(False)
-        self.instrument.setVoltage(1, 12)
+        self.instrument.setVoltage(1, 14.5)
         self.instrument.setVoltage(2, 0)
 #        self.instrument.enableOutput(False)
         self._gauss = 278
         self.c_limit = 3.5
+        self.ramp = 50
 
 
     def close(self):
@@ -43,6 +46,23 @@ class GPD3303S():
 
     def power_off(self):
         self.instrument.enableOutput(False)
+    
+    
+    def field_ramp(self, target):
+        current_field = self.field
+        target = float(target)
+        step = self.gauss*0.001
+        rate = self.ramp
+        assert rate>0, f'Ramp rate needs to be a positive integer, rate: {rate}'
+        while np.abs(current_field-target)>2*step:
+            delta = target-current_field
+            if delta>rate:
+                delta = rate
+            elif delta<-rate:
+                delta = -rate
+            self.v2 = (current_field+delta)/self.gauss
+            sleep(1)
+            current_field = self.field
 
 
     @property
@@ -116,7 +136,10 @@ class GPD3303S():
     
     @field.setter
     def field(self, value):
-        self.v2 = value/self.gauss
+        if self.ramp:
+            self.field_ramp(value)
+        else:
+            self.v2 = value/self.gauss
         
         
     @property
