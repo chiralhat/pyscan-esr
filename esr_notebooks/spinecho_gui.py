@@ -3,7 +3,7 @@ sys.path.append('../')
 import pyscan as ps
 import matplotlib.pyplot as plt
 from IPython.display import display, clear_output
-from spinecho_scripts import *
+from esr.backend.spinecho_scripts import *
 import gui_setup as gs
 
 # Set up the plots to be pretty
@@ -20,8 +20,7 @@ function_select = {'Phase': subback_phase,
 default_file = 'se_defaults.pkl'
 
 # These are all the controls to add for this GUI
-secont_keys = {'devices': [['scope_address', 'fpga_address', 'synth_address'],
-                           ['psu_address', 'use_psu']],
+secont_keys = {'devices': [['use_psu', 'moku']],
              'synth': [['freq', 'port', 'att'], ['power', 'power2', 'phase']],
              'fpga': [['delay', 'pulse1', 'mult'],
                       ['period', 'pre_att'],
@@ -74,9 +73,9 @@ def single_shot(sig, parameters, devices, output, fig):
     for ax in fig.axes:
         ax.remove()
     ax = fig.add_subplot(111)
-    ax.plot(sig.time*1e6, sig.v1sub, color='yellow', label='CH1')
-    ax.plot(sig.time*1e6, sig.v2sub, color='b', label='CH2')
-    ax.plot(sig.time*1e6, sig.xsub, color='g', label='AMP')
+    ax.plot(sig.time*1e6, sig.i, color='yellow', label='CH1')
+    ax.plot(sig.time*1e6, sig.q, color='b', label='CH2')
+    ax.plot(sig.time*1e6, sig.x, color='g', label='AMP')
     ax.set_xlabel('Time (μs)')
     ax.set_ylabel('Subtracted Signal (V)')
     [ax.axvline(x=w*1e6, color='purple', ls='--') for w in win]
@@ -106,9 +105,11 @@ def init_experiment(devices, parameters, sweep):
     devices.fpga.spin_echo(parameters)
     devices.synth.spin_echo(parameters)
     devices.scope.setup_spin_echo(parameters)
-    if parameters['use_psu']:
-        devices.psu.set_magnet(parameters)
-        devices.psu.set_switch_1pulse(parameters['delay'])
+    if not parameters['moku']=="None":
+        devices.moku.set_switch_1pulse(2*parameters['delay']) 
+        devices.moku.set_magnet(parameters)
+    if parameters["use_psu"]:
+        devices.psu.output = True
     setup_experiment(parameters, devices, sweep)
     
 
