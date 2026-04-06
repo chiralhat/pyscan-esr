@@ -8,11 +8,6 @@ import pyscan as ps
 
 defwin = [1e-1, 4e-1]
 
-function_select = {'Phase': subback_phase,
-                    'Delay': subback_delay,
-                    'Both': subback_phasedelay,
-                        'None': subback_none}
-
 
 def se_single_shot(sig, parameters, devices):
     func = function_select[parameters['subtract']]
@@ -62,7 +57,7 @@ def change_delay(devices, delay, ave=4, sltime=0.3, port=1, **kwargs):
         devices.fpga.delay = delay
         devices.fpga.delay2 = delay
     # change_trigger_delta(devices, old_delay, delay)
-    devices.psu.set_switch_1pulse(delay)
+    devices.moku.set_switch_1pulse(delay)
     devices.scope.average = 1
     sleep(0.1)
     devices.scope.average = ave
@@ -79,7 +74,7 @@ def delay_change(devices, delay, port):
         devices.fpga.delay = delay
         devices.fpga.delay2 = delay
     change_trigger_delta(devices, 2*old_delay, 2*delay)
-    devices.psu.set_switch_1pulse(delay)
+    devices.moku.set_switch_1pulse(delay)
 
 
 def change_nutation(devices, width, ave=4, sltime=0.3):
@@ -156,7 +151,7 @@ def fourier_signal(d, fstart=3, fstop=100):
     int_out = integrate_echo(d.ffreqs, d.fourier,
                                 backsub='linear', prewin=fwin)
     # [d.xfint, d.ifint, d.qfint, d.xxfint] = int_out
-    d.xfmean, d.ifmean, d.qfmean, d.xxfmean] = int_out
+    d.xfmean, d.ifmean, d.qfmean, d.xxfmean = int_out
     return d
     
     
@@ -209,7 +204,7 @@ def process_se(d, win, backnum=100, detune=0):
     int_out = integrate_echo(d.time, [d.i, d.q, d.x, d.x1],
                                 backsub='linear', prewin=win)
     # [d.iint, d.qint, d.xint, d.xint1] = int_out
-    d.imean, d.qmean, d.xmean, d.x1mean] = int_out
+    d.imean, d.qmean, d.xmean, d.x1mean = int_out
     d = fourier_signal(d)
     
     return d
@@ -522,8 +517,12 @@ def measure_echo(expt):
         expt.elapsed_time = expt.current_time-expt.start_time
         if runinfo.parameters['turn_off']:
             devices.synth.power_off()
-            if runinfo.parameters['use_psu']:
+            if runinfo.parameters["use_psu"]:
                 devices.psu.output = False
+            if not runinfo.parameters['moku']=="None":
+                devices.moku.field = 0
+                if devices.moku.laser_port:
+                    devices.moku.laser = False
         if runinfo.parameters['expt']=='Phase Sweep':
             sigs = list(expt.imean[:-1])+[d.imean]
             expt.maxphase = phase_fit(expt.phase_sweep, sigs)
@@ -563,6 +562,11 @@ def plot_fit_rabi(t_nut, vdat, guess=[1, 200, 100, 0.3]):
     rfit = plot_func_fit(rabifit, np.array([t_nut, vdat/vdat.max()]), guess)
     return rfit
 
+function_select = {'Phase': subback_phase,
+                    'Delay': subback_delay,
+                    'Both': subback_phasedelay,
+                        'None': subback_none}
+
 
 def setup_experiment(parameters, devices, sweep):
     def pulse_time(tpi2):
@@ -588,7 +592,7 @@ def setup_experiment(parameters, devices, sweep):
                              'fpga_nutation_width',
                              'fpga_period',
                              'delay_sweep',
-                             'psu_field',
+                             'moku_field',
                              'synth_c_freqs',
                                  'phase_sweep',
                             'fpga_nutation_delay'],
@@ -598,7 +602,7 @@ def setup_experiment(parameters, devices, sweep):
                            ps.PropertyScan({'fpga': sweep_range},
                                            prop='period', dt=wait),
                            ps.FunctionScan(delay_sweep, sweep_range, dt=wait),
-                           ps.PropertyScan({'psu': sweep_range},
+                           ps.PropertyScan({'moku': sweep_range},
                                            prop='field', dt=wait),
                            ps.PropertyScan({'synth': sweep_range},
                                            prop='c_freqs', dt=wait),

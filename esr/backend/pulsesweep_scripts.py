@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../')
-import spinecho_scripts as ses
+#import spinecho_scripts as ses
 import pyscan as ps
 import numpy as np
 from time import sleep
@@ -37,7 +37,7 @@ def decay_freq_sweep(expt):
     d = read_wait(devices, runinfo.parameters)
 #    d = devices.scope.read_vxy()
     expt.t = d.time
-    ses.fourier_signal(d)
+    #ses.fourier_signal(d)
     if 'ls335' in devices.keys():
         d.temp = devices.ls335.get_temp()
     

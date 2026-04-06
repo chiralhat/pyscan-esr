@@ -97,21 +97,66 @@ def initialize_experiment():
 
     inst = ps.ItemAttribute()
 
+    if not hasattr(devices, 'scope'):
+        try:
+            for inst in res_list:
+                if inst[:4]=='USB0':
+                    try:
+                        tscope = ps.new_instrument(visa_string=inst)
+                        model = tscope.query('*IDN?').split(',')[1]
+                        sleep(0.25)
+                        devices.scope = scopes[model](tscope)
+                        devices.scope.initialize_waveforms()
+                        res_list.remove(inst)
+                        break
+                    except:
+                        pass
+        except Exception as e:
+            print(f"Error initializing Scope: {e}")
+    if not hasattr(devices, 'synth'):
+        try:
+            for inst in res_list[::-1]:
+                waddr = inst.split('ASRL')[-1].split('::')[0]
+                if 'ACM' in waddr:
+                    try:
+                        devices.synth = ps.WindfreakSynthHD(waddr)
+                        res_list.remove(inst)
+                        break
+                    except:
+                        pass
+        except Exception as e:
+            print(f"Error initializing RF Source: {e}")
     # Initialize PSU if necessary
     if not hasattr(devices, "psu") and (parameters["use_psu"]):
         try:
             for inst in res_list:
                 try:
                     devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                    res_list.remove(inst)
                     break
                 except Exception as e:
                     try:
                         devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                        res_list.remove(inst)
                         break
                     except:
                         pass
         except Exception as e:
             print(f"Error initializing PSU: {e}")
+
+    if not hasattr(devices, 'fpga'):
+        try:
+            for inst in res_list:
+                faddr = inst.split('ASRL')[-1].split('::')[0]
+                try:
+                    devices.fpga = ps.ecp5evn(ps.new_instrument(serial_string=faddr))
+                    devices.fpga.delay = 500
+                    res_list.remove(inst)
+                    break
+                except:
+                    pass
+        except Exception as e:
+            print(f"Error initializing FPGA: {e}")
 
     # Initialize Moku if necessary
     if not hasattr(devices, "moku") and not parameters['moku']=="None":
@@ -139,50 +184,33 @@ def initialize_experiment():
 
     if experiment_type == "Spin Echo":
         # Initialize the experiment by setting up the parameters and devices.
-        parameters["pulse1_2"] = parameters["pulse1_1"] * parameters["mult1"]
-        parameters["pi2_phase"] = 0
-        parameters["pi_phase"] = 90
-        parameters["cpmg_phase"] = 0
-        channel = 1 if (parameters["loopback"] or parameters['dac_ch']=="A") else 0
-        parameters["res_ch"] = channel
-        parameters["ro_chs"] = [1] if parameters["loopback"] else [0]
-        parameters["reps"] = 1
-        parameters["single"] = parameters["loopback"]
-
-        if not parameters['loopback']:
-            if not parameters['moku']=="None":
-                devices.moku.set_switch_1pulse(2*parameters['delay']) 
-                devices.moku.set_magnet(parameters)
-            if parameters["use_psu"]:
-                devices.psu.output = True
+        parameters['pulse2'] = parameters['pulse1']*parameters['mult']
+        chs = devices.scope.channels
+        if len(chs)>2:
+            [devices.scope.write('SEL:CH'+str(ch)+' 0') for ch in chs[2:]]
+        devices.fpga.spin_echo(parameters)
+        devices.synth.spin_echo(parameters)
+        devices.scope.setup_spin_echo(parameters)
+        if not parameters['moku']=="None":
+            devices.moku.set_switch_1pulse(2*parameters['delay']) 
+            devices.moku.set_magnet(parameters)
+        if parameters["use_psu"]:
+            devices.psu.output = True
 
         spinecho_scripts.setup_experiment(
             parameters, devices, sweep
         )  # From ______scripts.py
 
     elif experiment_type == "Pulse Frequency Sweep":
-        # self.pulsesweep_gui = psg.PulseSweepExperiment(self.graph)
-        # Initialize experiment parameters and devices.
-        parameters["pulses"] = 0
-        parameters["pulse1_2"] = parameters["pulse1_1"]
-        parameters["pi2_phase"] = 0
-        parameters["pi_phase"] = 90
-        parameters["delay"] = 300
-        parameters["cpmg_phase"] = 0
-        channel = 1 if (parameters["loopback"] or parameters['dac_ch']=="A") else 0
-        parameters["res_ch"] = channel
-        parameters["ro_chs"] = [1] if parameters["loopback"] else [0]
-        parameters["nutation_delay"] = 5000
-        parameters["nutation_length"] = 0
-        parameters["reps"] = 1
-        parameters["sweep2"] = 0
-        parameters["single"] = parameters["loopback"]  # ADDED THIS LINE
-
-        if not parameters['loopback']:
-            if parameters["use_psu"]:
-                devices.psu.output = True
-            if parameters['moku']=='Cryostat':
-                devices.moku.set_magnet(parameters)
+        parameters['pulse2'] = parameters['pulse1']*parameters['mult']
+        devices.fpga.pulse_freq_sweep(parameters)
+        devices.synth.pulse_freq_sweep(parameters)
+        devices.scope.setup_pulse_decay(parameters)
+        if not parameters['moku']=="None":
+            devices.moku.set_switch_1pulse(2*parameters['delay']) 
+            devices.moku.set_magnet(parameters)
+        if parameters["use_psu"]:
+            devices.psu.output = True
 
         pulsesweep_scripts.setup_experiment(parameters, devices, sweep)
 
