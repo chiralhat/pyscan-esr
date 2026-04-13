@@ -1,6 +1,6 @@
 import sys
-sys.path.append('../')
-from spinecho_scripts import *
+sys.path.append('../../')
+from esr.backend.spinecho_scripts import *
 
 defwin = [[1e-1, 4e-1], [1e-1, 4e-1]]
 
@@ -25,41 +25,41 @@ def invert_scope(devices, arg, ave=4, sltime=0.3, **kwargs):
     sleep(sltime)
 
 
-def fourier_signals(d, fstart=3, fstop=100):
-    # TODO: Make this work for all 4 channels
-    # Calculate the fourier transform of each signal
-    fourier = [np.abs(rfft(sig)) for sig in [d.x1sub, d.v1sub, d.v2sub]]
-    # Combine the individual channel ffts
-    fourier.append(np.sqrt(fourier[1]**2+fourier[2]**2))
-    d.fourier = fourier + [np.abs(rfft(sig)) for sig in [d.x2sub, d.v3sub, d.v4sub]]
-    d.fourier.append(np.sqrt(d.fourier[-1]**2+d.fourier[-2]**2))
-    d.ffreqs = rfftfreq(len(d.x1sub), d.time[1]-d.time[0])
-    flen = len(d.fourier)
-    d.ffit = np.zeros((flen, 4))
-    for n in range(flen):
-        try:
-            lordat = np.array([d.ffreqs, -d.fourier[n]])[:, fstart:fstop]
-            d.ffit[n] = ut.lor_fit(lordat)[0]
-        except:
-            0
-    d.x1famp, d.v1famp, d.v2famp, d.x1xfamp = [-fit[1] for fit in d.ffit[:4]]
-    d.ffdet1 = d.ffit[1][-1]
-    d.ffdet2 = d.ffit[2][-1]
-    d.ffdetx1 = d.ffit[3][-1]
-    d.x2famp, d.v3famp, d.v4famp, d.x2xfamp = [-fit[1] for fit in d.ffit[4:]]
-    d.ffdet3 = d.ffit[5][-1]
-    d.ffdet4 = d.ffit[6][-1]
-    d.ffdetx2 = d.ffit[7][-1]
-    fwin = list(d.ffreqs[[fstart, fstop]])
-    int_out = integrate_echo(d.ffreqs, d.fourier,
-                                backsub='linear', prewin=fwin)
-    [d.x1fint, d.v1fint, d.v2fint, d.x1xfint,
-     d.x2fint, d.v3fint, d.v4fint, d.x2xfint] = int_out
-    return d
+# def fourier_signals(d, fstart=3, fstop=100):
+#     # TODO: Make this work for all 4 channels
+#     # Calculate the fourier transform of each signal
+#     fourier = [np.abs(rfft(sig)) for sig in [d.x1sub, d.v1sub, d.v2sub]]
+#     # Combine the individual channel ffts
+#     fourier.append(np.sqrt(fourier[1]**2+fourier[2]**2))
+#     d.fourier = fourier + [np.abs(rfft(sig)) for sig in [d.x2sub, d.v3sub, d.v4sub]]
+#     d.fourier.append(np.sqrt(d.fourier[-1]**2+d.fourier[-2]**2))
+#     d.ffreqs = rfftfreq(len(d.x1sub), d.time[1]-d.time[0])
+#     flen = len(d.fourier)
+#     d.ffit = np.zeros((flen, 4))
+#     for n in range(flen):
+#         try:
+#             lordat = np.array([d.ffreqs, -d.fourier[n]])[:, fstart:fstop]
+#             d.ffit[n] = ut.lor_fit(lordat)[0]
+#         except:
+#             0
+#     d.x1famp, d.v1famp, d.v2famp, d.x1xfamp = [-fit[1] for fit in d.ffit[:4]]
+#     d.ffdet1 = d.ffit[1][-1]
+#     d.ffdet2 = d.ffit[2][-1]
+#     d.ffdetx1 = d.ffit[3][-1]
+#     d.x2famp, d.v3famp, d.v4famp, d.x2xfamp = [-fit[1] for fit in d.ffit[4:]]
+#     d.ffdet3 = d.ffit[5][-1]
+#     d.ffdet4 = d.ffit[6][-1]
+#     d.ffdetx2 = d.ffit[7][-1]
+#     fwin = list(d.ffreqs[[fstart, fstop]])
+#     int_out = integrate_echo(d.ffreqs, d.fourier,
+#                                 backsub='linear', prewin=fwin)
+#     [d.x1fint, d.v1fint, d.v2fint, d.x1xfint,
+#      d.x2fint, d.v3fint, d.v4fint, d.x2xfint] = int_out
+#     return d
     
     
 def process_ses(d, win, backnum=100, detune=0):
-    v1usub = sback(d.v1up)
+    i1usub = sback(d.v1up)
     v1dsub = sback(d.v1down)
     v2usub = sback(d.v2up)
     v2dsub = sback(d.v2down)
@@ -67,12 +67,12 @@ def process_ses(d, win, backnum=100, detune=0):
     d.v2sub = v2usub-v2dsub
     d.x1up = np.sqrt(v1usub**2+v2usub**2)
     d.x1down = np.sqrt(v1dsub**2+v2dsub**2)
-    d.x1sub = np.sqrt(d.v1sub**2+d.v2sub**2)
+    d.x1 = np.sqrt(d.v1sub**2+d.v2sub**2)
     d.x1sub1 = d.x1up-d.x1down
 
-    int_out = integrate_echo(d.time, [d.v1sub, d.v2sub, d.x1sub, d.x1sub1],
+    int_out = integrate_echo(d.time, [d.v1sub, d.v2sub, d.x1, d.x1sub1],
                                 backsub='linear', prewin=win[0])
-    [d.v1int, d.v2int, d.x1int, d.x1int1] = int_out
+    [d.i1int, d.q1int, d.x1int, d.x1int1] = int_out
     
     v3usub = sback(d.v3up)
     v3dsub = sback(d.v3down)
@@ -82,14 +82,19 @@ def process_ses(d, win, backnum=100, detune=0):
     d.v4sub = v4usub-v4dsub
     d.x2up = np.sqrt(v3usub**2+v4usub**2)
     d.x2down = np.sqrt(v3dsub**2+v4dsub**2)
-    d.x2sub = np.sqrt(d.v3sub**2+d.v4sub**2)
+    d.x2 = np.sqrt(d.v3sub**2+d.v4sub**2)
 
     d.x2sub1 = d.x2up-d.x2down
 
-    int_out = integrate_echo(d.time, [d.v3sub, d.v4sub, d.x2sub, d.x2sub1],
+    int_out = integrate_echo(d.time, [d.v3sub, d.v4sub, d.x2, d.x2sub1],
                                 backsub='linear', prewin=win[1])
-    [d.v3int, d.v4int, d.x2int, d.x2int1] = int_out
+    [d.i2int, d.q2int, d.x2int, d.x2int1] = int_out
     d = fourier_signals(d)
+
+    d.i1 = d.v1sub
+    d.q1 = d.v2sub
+    d.i2 = d.v3sub
+    d.q2 = d.v4sub
     
     return d
 
@@ -138,7 +143,7 @@ def subback(subfunc, args, devices, ave,
         d.v2up = d.v2up/reps
         d.v3up = d.v3up/reps
         d.v4up = d.v4up/reps
-    
+
     d = process_ses(d, win, detune=detune)
     #d.xsub, d.v1sub, d.v2sub = [sig/2 for sig in [d.xsub, d.v1sub, d.v2sub]]
     d.win = win
@@ -255,7 +260,12 @@ def measure_echos(expt):
         expt.elapsed_time = expt.current_time-expt.start_time
         if runinfo.parameters['turn_off']:
             devices.synth.power_off()
-            devices.psu.output = False
+            if runinfo.parameters["use_psu"]:
+                devices.psu.output = False
+            if not runinfo.parameters['moku']=="None":
+                devices.moku.field = 0
+                if devices.moku.laser_port:
+                    devices.moku.laser = False
     return d
 
 
