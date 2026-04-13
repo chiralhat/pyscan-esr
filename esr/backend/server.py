@@ -64,8 +64,8 @@ def read(sig, devices):
     for ax in fig.axes:
         ax.remove()
     ax = fig.add_subplot(111)
-    ax.plot(sig.time*1e6, sig.volt1, color='yellow', label='CH1')
-    ax.plot(sig.time*1e6, sig.volt2, color='b', label='CH2')
+    ax.plot(sig.time*1e6, sig.i, color='yellow', label='CH1')
+    ax.plot(sig.time*1e6, sig.q, color='b', label='CH2')
     ax.plot(sig.time*1e6, sig.x, color='g', label='AMP')
     ax.set_xlabel('Time (μs)')
     ax.set_ylabel('Subtracted Signal (V)')
