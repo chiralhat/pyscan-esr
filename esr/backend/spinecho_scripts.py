@@ -50,13 +50,15 @@ def change_phase(devices, phase, ave=4, sltime=0.3, offset=[False, 0],
 def change_delay(devices, delay, ave=4, sltime=0.3, port=1, **kwargs):
     if port==2:
         old_delay = devices.fpga.delay2
+        new_delay = delay-devices.fpga.pulse2_1
         devices.fpga.delay = delay+devices.fpga.pulse2_1+devices.fpga.pulse2_2
-        devices.fpga.delay2 = delay
+        devices.fpga.delay2 = new_delay
     else:
         old_delay = devices.fpga.delay
+        new_delay = delay
         devices.fpga.delay = delay
         devices.fpga.delay2 = delay
-    change_trigger_delta(devices, old_delay, delay)
+    change_trigger_delta(devices, old_delay, new_delay)
     devices.moku.set_switch_1pulse(delay)
     devices.scope.average = 1
     sleep(0.1)
@@ -269,10 +271,29 @@ def subback_phase(devices, ave=128, phase=0, dphase=180,
 def subback_none(devices, ave=128, phase=0, dphase=180,
                  sltime=0, lims=defwin, reps=1, detune=0, d=0, port=1,
                  **kwargs):
-    func = nochange
-    args = [0, 0]
-    d = subback(func, args, devices, ave, sltime, lims, reps, d=d,
-                detune=detune, port=port, **kwargs)
+    if isinstance(d, int):
+        d = ps.ItemAttribute()
+    period = devices.fpga.period/1e9
+    delay = devices.fpga.delay2/1e9 if port==2 else devices.fpga.delay/1e9
+    # win = [delay+lims[0]/1e6, delay+lims[1]/1e6]
+    win = [lims[0]/1e6, lims[1]/1e6]
+    
+    [[d.time, d.iup],
+     [_, d.qup]] = devices.scope.read_screen(0, init=False)
+    if reps>1:
+        for n in range(reps-1):
+            sleep(sltime)
+            [[_, iu], [_, qu]] = devices.scope.read_screen(0, init=False)
+            d.iup = (iu+d.iup)
+            d.qup = (qu+d.qup)
+        d.iup = d.iup/reps
+        d.qup = d.qup/reps
+    
+    d.idown, d.qdown = np.zeros((2,len(d.iup)))
+    
+    d = process_se(d, win, detune=detune)
+    #d.x, d.i, d.q = [sig/2 for sig in [d.x, d.i, d.q]]
+    d.win = win
     
     return d
 
