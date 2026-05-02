@@ -56,7 +56,7 @@ def change_delay(devices, delay, ave=4, sltime=0.3, port=1, **kwargs):
         old_delay = devices.fpga.delay
         devices.fpga.delay = delay
         devices.fpga.delay2 = delay
-    # change_trigger_delta(devices, old_delay, delay)
+    change_trigger_delta(devices, old_delay, delay)
     devices.moku.set_switch_1pulse(delay)
     devices.scope.average = 1
     sleep(0.1)
@@ -67,13 +67,15 @@ def change_delay(devices, delay, ave=4, sltime=0.3, port=1, **kwargs):
 def delay_change(devices, delay, port):
     if port==2:
         old_delay = devices.fpga.delay2
+        new_delay = delay-devices.fpga.pulse2_1
         devices.fpga.delay = delay+devices.fpga.pulse2_1+devices.fpga.pulse2_2
-        devices.fpga.delay2 = delay
+        devices.fpga.delay2 = new_delay
     else:
         old_delay = devices.fpga.delay
+        new_delay = delay
         devices.fpga.delay = delay
         devices.fpga.delay2 = delay
-    change_trigger_delta(devices, 2*old_delay, 2*delay)
+    change_trigger_delta(devices, 2*old_delay, 2*new_delay)
     devices.moku.set_switch_1pulse(delay)
 
 
@@ -545,6 +547,16 @@ def pulse_change(devices, tpi2, port, mult):
         devices.fpga.pulse2_2 = tpi2*mult
         devices.fpga.delay = devices.fpga.delay2 + (1+mult)*tpi2
     change_trigger_delta(devices, old_time*(1+mult), tpi2*(1+mult))
+
+
+def nutation_change(devices, delay, width):
+    old_delay = devices.fpga.nutation_delay
+    old_width = devices.fpga.nutation_width
+    devices.fpga.nutation_delay = delay
+    devices.fpga.nutation_width = width
+    old_time = old_delay+old_width
+    new_time = delay+width
+    change_trigger_delta(devices, old_time, new_time)
         
         
 def frequency_change(devices, f, find_phase=False):
@@ -575,6 +587,10 @@ def setup_experiment(parameters, devices, sweep):
         delay_change(devices, delay, parameters['port'])
     def phase_sweep(phase):
         change_phase(devices, phase, parameters['ave'], parameters['sltime'])
+    def rabi_sweep(nut_w):
+        nutation_change(devices, parameters['nutation_delay'], nut_w)
+    def inversion_sweep(nut_d):
+        nutation_change(devices, nut_d, parameters['nutation_width'])
     expt_select = {'Pulse Sweep': 0,
                    'Rabi': 1,
                    'Period Sweep': 2,
@@ -589,16 +605,15 @@ def setup_experiment(parameters, devices, sweep):
                             parameters['sweep_step'],
                             parameters['sweep_end'])
     setup_vars = {'y_name': ['pulse_time',
-                             'fpga_nutation_width',
+                             'rabi_sweep',
                              'fpga_period',
                              'delay_sweep',
                              'moku_field',
                              'synth_c_freqs',
                                  'phase_sweep',
-                            'fpga_nutation_delay'],
+                            'inversion_sweep'],
                   'loop': [ps.FunctionScan(pulse_time, sweep_range, dt=wait),
-                           ps.PropertyScan({'fpga': sweep_range},
-                                           prop='nutation_width', dt=wait),
+                           ps.FunctionScan(rabi_sweep, sweep_range, dt=wait),
                            ps.PropertyScan({'fpga': sweep_range},
                                            prop='period', dt=wait),
                            ps.FunctionScan(delay_sweep, sweep_range, dt=wait),
@@ -607,8 +622,7 @@ def setup_experiment(parameters, devices, sweep):
                            ps.PropertyScan({'synth': sweep_range},
                                            prop='c_freqs', dt=wait),
                            ps.FunctionScan(phase_sweep, sweep_range, dt=wait),
-                           ps.PropertyScan({'fpga': sweep_range},
-                                           prop='nutation_delay', dt=wait)],
+                           ps.FunctionScan(inversion_sweep, sweep_range, dt=wait)],
                   'file': ['PSweep',
                            'Rabi',
                            'T1',
