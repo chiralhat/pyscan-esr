@@ -50,7 +50,7 @@ def change_phase(devices, phase, ave=4, sltime=0.3, offset=[False, 0],
 def change_delay(devices, delay, ave=4, sltime=0.3, port=1, **kwargs):
     if port==2:
         old_delay = devices.fpga.delay2
-        new_delay = delay-devices.fpga.pulse2_1
+        new_delay = delay
         devices.fpga.delay = delay+devices.fpga.pulse2_1+devices.fpga.pulse2_2
         devices.fpga.delay2 = new_delay
     else:
@@ -567,7 +567,7 @@ def pulse_change(devices, tpi2, port, mult):
         devices.fpga.pulse2_1 = tpi2
         devices.fpga.pulse2_2 = tpi2*mult
         devices.fpga.delay = devices.fpga.delay2 + (1+mult)*tpi2
-    change_trigger_delta(devices, old_time*(1+mult), tpi2*(1+mult))
+    change_trigger_delta(devices, old_time*(1+mult)/4, tpi2*(1+mult)/4)
 
 
 def nutation_change(devices, delay, width):
