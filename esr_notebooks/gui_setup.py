@@ -52,7 +52,7 @@ twotone_sweep_list = ['A Pulse Sweep',
 # Load the Resource Manager if it hasn't been done yet
 if not hasattr(ps, 'rm'):
     ps.rm = pyvisa.ResourceManager('@py')
-res_list = ps.rm.list_resources()
+res_list = list(ps.rm.list_resources())
 
 # This indicator shows whether a process is running.
 run_ind = ipw.IntProgress(value=0, min=0, max=1,
@@ -75,7 +75,9 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
                                                           description='RF Addr'),
                             'psu_address': ipw.Text(layout=nwid,
                                                           description='PSU Addr'),
-                            'use_psu': ipw.Checkbox(layout=wwid, description='Use PSU? (No magnet if not)')},
+                            'use_psu': ipw.Checkbox(layout=wwid, description='Use PSU? (No magnet if not)'),
+                            'moku': ipw.Dropdown(options=['Cryostat', 'Bench', 'None'],
+                                                          description="Moku")},
                 'synth': {'freq': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
                                                        description='Freq (MHz)'),
                           'freq1': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
@@ -381,23 +383,71 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
                 
             inst = ps.ItemAttribute()
             if not hasattr(devices, 'scope'):
-                saddr = parameters['scope_address']
-                inst.scope = ps.new_instrument(visa_string=saddr)
-                model = inst.scope.query('*IDN?').split(',')[1]
-                sleep(0.25)
-                devices.scope = scopes[model](inst.scope)
-                # inst.bk2190e = ps.new_instrument(visa_string=saddr)
-                # devices.scope = ps.BKPrecision2190E(inst.bk2190e)
-                devices.scope.initialize_waveforms()
-            if not hasattr(devices, 'fpga'):
-                faddr = parameters['fpga_address'].split('ASRL')[-1].split('::')[0]
-                inst.ecp5 = ps.new_instrument(serial_string=faddr)
-                devices.fpga = ps.ecp5evn(inst.ecp5)
+                try:
+                    for inst in res_list:
+                        if inst[:4]=='USB0':
+                            try:
+                                tscope = ps.new_instrument(visa_string=inst)
+                                model = tscope.query('*IDN?').split(',')[1]
+                                sleep(0.25)
+                                devices.scope = scopes[model](tscope)
+                                devices.scope.initialize_waveforms()
+                                res_list.remove(inst)
+                                break
+                            except:
+                                pass
+                except Exception as e:
+                    print(f"Error initializing Scope: {e}")
             if not hasattr(devices, 'synth'):
-                waddr = parameters['synth_address'].split('ASRL')[-1].split('::')[0]
-                devices.synth = ps.WindfreakSynthHD(waddr)
-            if not hasattr(devices, 'psu') and parameters['use_psu']:
-                devices.psu = ps.MokuGo(parameters['psu_address'])
+                try:
+                    for inst in res_list[::-1]:
+                        waddr = inst.split('ASRL')[-1].split('::')[0]
+                        if 'ACM' in waddr:
+                            try:
+                                devices.synth = ps.WindfreakSynthHD(waddr)
+                                res_list.remove(inst)
+                                break
+                            except:
+                                pass
+                except Exception as e:
+                    print(f"Error initializing RF Source: {e}")
+            # Initialize PSU if necessary
+            if not hasattr(devices, "psu") and (parameters["use_psu"]):
+                try:
+                    for inst in res_list:
+                        try:
+                            devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                            res_list.remove(inst)
+                            break
+                        except Exception as e:
+                            try:
+                                devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                                res_list.remove(inst)
+                                break
+                            except:
+                                pass
+                except Exception as e:
+                    print(f"Error initializing PSU: {e}")
+
+            if not hasattr(devices, 'fpga'):
+                try:
+                    for inst in res_list:
+                        faddr = inst.split('ASRL')[-1].split('::')[0]
+                        try:
+                            devices.fpga = ps.ecp5evn(ps.new_instrument(serial_string=faddr))
+                            devices.fpga.delay = 500
+                            res_list.remove(inst)
+                            break
+                        except:
+                            pass
+                except Exception as e:
+                    print(f"Error initializing FPGA: {e}")
+            # Initialize Moku if necessary
+            if not hasattr(devices, "moku") and not parameters['moku']=="None":
+                try:
+                    devices.moku = ps.MokuGo(parameters['moku'])
+                except Exception as e:
+                    print(f"Error initializing Moku: {e}")
             if not hasattr(devices, 'ls335'):
                 devices.ls335 = ps.Lakeshore335()
             if (parameters['init'] or btn.description=='Initialize'):
@@ -417,8 +467,12 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
             if 'expt' in sweep.keys():
                 sweep['expt'].runinfo.running = False
             devices.synth.power_off()
-            if parameters['use_psu']:
+            if parameters["use_psu"]:
                 devices.psu.output = False
+            if not parameters['moku']=="None":
+                devices.moku.field = 0
+                if devices.moku.laser_port:
+                    devices.moku.laser = False
         
         with output:
             fig = plt.figure(figsize=(8, 5))

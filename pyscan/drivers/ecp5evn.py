@@ -208,7 +208,7 @@ class ecp5evn(InstrumentDriver):
 
     @pulse2.setter
     def pulse2(self, pulse2):
-        self._pulse2 = self.set_p2time('pulse2', pulse2, self.pulse2_2)[0]
+        self._pulse2 = self.set_p2time('pulse2', pulse2, self._pulse2_2)[0]
     
     @property
     def pulse2_1(self):

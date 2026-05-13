@@ -166,6 +166,11 @@ class Oscilloscope(InstrumentDriver):
         d.volt4 = self.sback(d.volt4/reps)
         d.x1 = np.sqrt(d.volt1**2+d.volt2**2)
         d.x2 = np.sqrt(d.volt3**2+d.volt4**2)
+
+        d.i1 = d.volt1
+        d.q1 = d.volt2
+        d.i2 = d.volt3
+        d.q2 = d.volt4
         
         return d
 
@@ -288,7 +293,8 @@ class Oscilloscope(InstrumentDriver):
         scale: boolean, optional
             Autoscale the scope, by default True
         """
-        delay = p['pulse1']+p['pulse2']+2*p['delay']
+        # Setting delay for where we expect to see the echo, including the built-in switch delay
+        delay = p['pulse1']/2+p['pulse2']/2+2*p['delay']+p['nutation_width']+p['nutation_delay']+2000
         pre_off = p['h_offset']
         time_div = p['tdiv']
         scale = p['scale']
@@ -346,7 +352,8 @@ class Oscilloscope(InstrumentDriver):
         scale: boolean, optional
             Autoscale the scope, by default True
         """
-        delay = p['pulse1']+p['pulse2']+p['delay']
+        # Setting delay for where we expect to see the ringdown, including the built-in switch delay
+        delay = p['pulse1']+p['pulse2']+p['delay']+p['nutation_width']+p['nutation_delay']+2000
         h_off = p['h_offset']
         time_div = p['tdiv']
         offset = p['v_offset']
