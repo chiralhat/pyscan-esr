@@ -474,7 +474,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "gauss_amps",
                     "type": "double_spin",
                     "min": 0.001,
-                    "max": 1000.0,
+                    "max": 100000.0,
                     "default": 270.0,
                 },
                 {
@@ -1261,6 +1261,16 @@ class ExperimentUI(QMainWindow):
         # ----- Experiment-specific buttons: Init, Read, Sweep -----
         top_menu = self.init_experiment_specific_buttons(top_menu)
         top_menu.addSpacing(30)
+
+        # # ----- Laser Indicator -----
+        # self.label_laser = QLabel("Laser On")
+        # self.indicator_laser = QLabel(" ")
+        # self.indicator_laser.setFixedSize(10, 10)
+        # self.indicator_laser.setStyleSheet(
+        #     "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        # )
+        # top_menu.addWidget(self.label_laser)
+        # top_menu.addWidget(self.indicator_laser)
 
         return top_menu_container
 
