@@ -230,6 +230,8 @@ def run_snapshot():
     
     if experiment_type == "Pulse Frequency Sweep Read Processed":
         measure_decay(parameters, soc, sig)
+    elif "Pulse Frequency" in experiment_type:
+        measure_phase(parameters, soc, sig, deer=False)
     else:
         deer = True if parameters["expt"]=="DEER" else False
         measure_phase(parameters, soc, sig, deer=deer)
