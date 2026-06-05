@@ -6,7 +6,7 @@ Created on June 30 2025
 """
 
 from .instrument_driver import InstrumentDriver
-from moku.instruments import MultiInstrument, CloudCompile
+from moku.instruments import MultiInstrument, CustomInstrument
 import numpy as np
 from time import sleep
 
@@ -24,7 +24,7 @@ class MokuGo(InstrumentDriver):
     '''
     def __init__(self, moku='Cryostat', laser_port=3):
         self.instrument = MultiInstrument(address[moku], platform_id=2, force_connect=True)
-        self.instrument.cc = self.instrument.set_instrument(1, CloudCompile, bitstream=bitstream)
+        self.instrument.cc = self.instrument.set_instrument(1, CustomInstrument, bitstream=bitstream)
 
         connections = [dict(source="DIO", destination="Slot1InA"),
                     dict(source="Slot1OutA", destination="Output1"),
