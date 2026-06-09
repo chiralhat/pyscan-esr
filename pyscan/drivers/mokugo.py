@@ -101,7 +101,7 @@ class MokuGo(InstrumentDriver):
         step = self.gauss*0.01
         rate = self.ramp
         assert rate>0, f'Ramp rate needs to be a positive integer, rate: {rate}'
-        while np.abs(current_field-target)>2*step:
+        while np.abs(current_field-target)>step/4:
             getout = False
             delta = target-current_field
             if delta>rate:
@@ -129,7 +129,7 @@ class MokuGo(InstrumentDriver):
     # for a given setting. We correct the report with v2_offset, and the output with fieldv_offset
     @property
     def v2(self):
-        return self.instrument.get_power_supply(2)['actual_voltage']+self.v2_offset
+        return self.instrument.get_power_supply(2)['set_voltage']+self.v2_offset
 
     @v2.setter
     def v2(self, val):
