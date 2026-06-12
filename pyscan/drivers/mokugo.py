@@ -34,6 +34,8 @@ class MokuGo(InstrumentDriver):
         self.laser_port = 0
         self.laser_V = 3
         self.laser_I = 0.25
+        # Minimum step size for voltage is 0.005 V
+        self.V_step = 0.005
         # Keep the magnet voltage at whatever it currently is
         # fvolt = self.instrument.get_power_supply(2)['actual_voltage']
         self.instrument.set_power_supply(id=2, enable=True, voltage=0, current=0.15)
@@ -98,10 +100,10 @@ class MokuGo(InstrumentDriver):
     def field_ramp(self, target):
         current_field = self.field
         target = float(target)
-        step = self.gauss*0.01
+        step = self.gauss*self.V_step
         rate = self.ramp
         assert rate>0, f'Ramp rate needs to be a positive integer, rate: {rate}'
-        while np.abs(current_field-target)>step/4:
+        while np.abs(current_field-target)>step/2:
             getout = False
             delta = target-current_field
             if delta>rate:
