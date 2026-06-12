@@ -137,7 +137,7 @@ def end_func(d, expt, run, dim=0):
         else:
             expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = (
                 fit,
-                *fit[:, 2] / 2,
+                *fit[:, 2] / 4,
             )
     elif run == "Hahn Echo" or run == "CPMG":  # Hahn or CPMG sweep
         deldat = np.array([expt.echo_delay, sigs])
