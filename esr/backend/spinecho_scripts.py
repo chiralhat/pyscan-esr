@@ -125,12 +125,13 @@ def end_func(d, expt, run, dim=0):
     if run == "Rabi":  # Rabi sweep
         rabidat = np.array([expt.rabi_sweep, sigs])
         guess = [
-            rabidat[1].min(),
-            rabidat[1].max(),
+            rabidat[1].max()-rabidat[1].min(),
             rabidat[0][-1] / 2,
-            rabidat[0][-1] / 2,
+            rabidat[0][-1] * 2,
+            0,
+            rabidat[1].min()
         ]
-        fit = try_fit(ps.rabifitnophi, rabidat, guess)
+        fit = try_fit(ps.rabifit, rabidat, guess)
         if dim == 0:
             expt.fit, expt.out, expt.outerr = fit, *fit[:, 2] / 2
         else:
