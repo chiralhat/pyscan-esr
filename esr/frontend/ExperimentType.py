@@ -41,6 +41,7 @@ expt_select = {
     "CPMG": 8,
     "Gain": 9,
     "DEER": 10,
+    "Temp": 11,
 }
 y_names = [
     "pulse_time",
@@ -54,6 +55,7 @@ y_names = [
     "echo_delay",
     "gain_sweep",
     "deer_sweep",
+    "ls335_temp",
 ]
 
 psexpt_select = {
