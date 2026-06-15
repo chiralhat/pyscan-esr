@@ -246,7 +246,6 @@ class DEERProgram(CPMGProgram):
         cfg=self.cfg   
         res_ch = cfg["res_ch"]
         deer_ch = 0 if res_ch else 1
-        print('init', res_ch, deer_ch)
         
         # Convert frequently-used times from us to cycles
         readout_length = [self.us2cycles(cfg["readout_length"], ro_ch=ch) for ch in cfg["ro_chs"]]
@@ -288,7 +287,6 @@ class DEERProgram(CPMGProgram):
         period = self.us2cycles(self.cfg["period"])
         res_ch = self.cfg["res_ch"]
         deer_ch = 0 if res_ch else 1
-        print('deer', res_ch, deer_ch)
         tpi2 = self.cfg["pulse1_1"]/1000
         tpi = self.cfg["pulse1_2"]/1000
         tpid = self.cfg["pulse2_2"]/1000
@@ -299,9 +297,10 @@ class DEERProgram(CPMGProgram):
         gain = self.cfg["gain"]
         nutwidth = self.cfg["nutation_length"]/1000
         nutdelay = self.us2cycles(self.cfg["nutation_delay"]/1000)
+        deer_length = self.us2cycles(tpid, gen_ch=deer_ch)
 
-        T = self.cfg["DEER_delay"]/1000
-        first_tau = tau-T-tpid
+        T = self.cfg["DEER_delay"]/1000-tpid/2
+        first_tau = tau-T
 
         # We want half the power for our pi/2 pulse, and this achieves that
         gain2 = gain if gain<10000 else gain-10000
@@ -310,19 +309,19 @@ class DEERProgram(CPMGProgram):
         # Otherwise we want to delay readout until the second echo location
         offset = 0.05 if self.cfg["loopback"] else (tpi2)/2+(pulses)*(2*delay-.00145)+(2*tau)
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
-        trig_offset = self.us2cycles(0.25+nutwidth+self.cfg["h_offset"]+offset)
+        trig_offset = self.us2cycles(0.25+self.cfg["h_offset"]+offset)
         
-        # If the nutation pulse width is greater than the minimum number of cycles, add it in
-        nut_length = self.us2cycles(nutwidth, gen_ch=res_ch)
-        if nut_length>2:
-            self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, length=nut_length)
-            self.pulse(ch=self.cfg["res_ch"])
+        # # If the nutation pulse width is greater than the minimum number of cycles, add it in
+        # nut_length = self.us2cycles(nutwidth, gen_ch=res_ch)
+        # if nut_length>2:
+        #     self.set_pulse_registers(ch=self.cfg["res_ch"], gain=gain, length=nut_length)
+        #     self.pulse(ch=self.cfg["res_ch"])
         
-        # self.res_r_phase.set_to(self.deg2reg(pi2_phase_list[cycle], gen_ch=res_ch))
-        self.res_r_phase.set_to(pi2_phase_list[cycle])
+        # # self.res_r_phase.set_to(self.deg2reg(pi2_phase_list[cycle], gen_ch=res_ch))
+        # self.res_r_phase.set_to(pi2_phase_list[cycle])
         
-        # Wait the nutation delay time
-        self.synci(nutdelay)
+        # # Wait the nutation delay time
+        # self.sync_all(nutdelay)
         
         # Tell the ADC when to trigger readout, based on the trigger offset defined above
         # If you uncomment the pins argument, it will also send a pulse on an I/O pin
@@ -344,17 +343,15 @@ class DEERProgram(CPMGProgram):
         self.set_pulse_registers(ch=res_ch, gain=gain,
                                  length=self.us2cycles(tpi, gen_ch=res_ch))
         self.pulse(ch=self.cfg["res_ch"])
-        deer_length = self.us2cycles(tpid, gen_ch=deer_ch)
-
-        # Wait until first echo
-        self.synci(self.us2cycles(delay_pi2))
         
         if deer_length>2:
             # Note: changing the frequency randomizes the phase
             # self.res_r_freq.set_to(self.cfg['freq2'])
+            # Wait until first echo and then the DEER delay
+            self.synci(self.us2cycles(delay_pi2+T))
 
-            # Wait until DEER pulse
-            self.synci(self.us2cycles(T))
+            # # Wait until DEER pulse
+            # self.synci(self.us2cycles(T))
 
             # Send DEER pulse for second spin
             self.set_pulse_registers(ch=deer_ch, gain=gain,
@@ -362,11 +359,14 @@ class DEERProgram(CPMGProgram):
             self.pulse(ch=deer_ch)
             # self.res_r_freq.set_to(self.cfg['freq'])
             self.res_r_phase.set_to(pi_phase_list[cycle])
-
-            # Delay between DEER pulse and second pi pulse
-            self.synci(self.us2cycles(first_tau))
         else:
-            self.synci(self.us2cycles(tau))
+            print('nope')
+            self.synci(self.us2cycles(delay_pi2+T))
+
+        # Delay between DEER pulse and second pi pulse
+        self.synci(self.us2cycles(first_tau))
+        # else:
+        #     self.synci(self.us2cycles(tau))
 
         # Second pi pulse
         self.set_pulse_registers(ch=res_ch, gain=gain,
@@ -516,7 +516,10 @@ def iq_convert(soc, iq_list, pulses=1, ro=0, single=False, decimated=True):
         time = soc.cycles2us(np.arange(len(i)), ro_ch=ro)
         return time, i, q, x
     else:
-        imean, qmean = [iqs[0][0]+iqs[0][3]-iqs[0][1]-iqs[0][2] for iqs in iq_list]
+        if single:
+            imean, qmean = [iq[0][0] for iq in iq_list]
+        else:
+            imean, qmean = [iqs[0][0]+iqs[0][3]-iqs[0][1]-iqs[0][2] for iqs in iq_list]
         xmean = np.abs(imean+1j*qmean)
         return imean, qmean, xmean
     
@@ -589,6 +592,8 @@ def measure_decay(parameters, soc, d=0, ro=0, progress=False):
 def measure_phase(parameters, soc, d=0, ro=0, deer=False, progress=False):
     reps = parameters['ave_reps']
     pulses = parameters['pulses']
+    if parameters['subtract']=='None':
+        parameters['single'] = True
     if isinstance(d, int):
         d = ps.ItemAttribute()
     iq_list = safe_read(parameters, soc, deer, progress)
@@ -625,7 +630,7 @@ def measure_phase(parameters, soc, d=0, ro=0, deer=False, progress=False):
 def acquire_phase(parameters, soc, d=0, ro=0, deer=False, progress=False):
     reps = parameters['ave_reps']
     pulses = parameters['pulses']
-    parameters['single'] = False
+    parameters['single'] = True if parameters['subtract']=='None' else False
     nreps = parameters['soft_avgs']
     parameters['reps'] = nreps
     parameters['soft_avgs'] = 1
