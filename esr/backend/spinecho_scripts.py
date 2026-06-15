@@ -176,18 +176,14 @@ def end_func(d, expt, run, dim=0):
 
 
 def setup_measure_function(soc, integrate, deer=False):
+    meas_func = acquire_phase if integrate else measure_phase
     def measure_echo(expt):
         """ """
 
         runinfo = expt.runinfo
         devices = expt.devices
 
-        if integrate:
-            d = acquire_phase(runinfo.parameters, soc, deer=deer)
-        else:
-            d = measure_phase(runinfo.parameters, soc, deer=deer)
-
-            expt.t = d.time
+        d = meas_func(runinfo.parameters, soc, deer=deer)
 
         d.current_time = time()
 
@@ -200,6 +196,8 @@ def setup_measure_function(soc, integrate, deer=False):
             else:
                 dim = 0
             end_func(d, expt, runinfo.parameters["expt"], dim)
+            if not integrate:
+                expt.t = d.time
             if runinfo.parameters["sweep2"] and not runinfo._indicies[1] == (
                 runinfo._dims[1] - 1
             ):
