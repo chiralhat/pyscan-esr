@@ -91,6 +91,7 @@ sweep_list = [
     "CPMG",
     "Gain",
     "DEER",
+    "Temp"
 ]
 
 bimod_sweep_list = [
@@ -160,8 +161,8 @@ EXPERIMENT_TEMPLATES = {
                     "display": "Time Offset",
                     "key": "h_offset",
                     "type": "double_spin",
-                    "min": -10000.0,
-                    "max": 10000.0,
+                    # "min": -10000.0,
+                    # "max": 10000.0,
                     "default": -0.125,
                 },
                 {
@@ -191,7 +192,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "period",
                     "type": "double_spin",
                     "min": 0.1,
-                    "max": 2000000000.0,
+                    # "max": 2000000000.0,
                     "default": 10.0,
                 },
                 {
@@ -199,7 +200,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "pulse1_1",
                     "type": "double_spin",
                     "min": 0.0,
-                    "max": 652100.0,
+                    # "max": 652100.0,
                     "default": 50.0,
                 },
                 {
@@ -213,7 +214,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "ave_reps",
                     "type": "spin",
                     "min": 1,
-                    "max": 1000,
+                    # "max": 1000,
                     "default": 1,
                 },
                 {
@@ -221,7 +222,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "wait",
                     "type": "double_spin",
                     "min": 0.0,
-                    "max": 20.0,
+                    # "max": 20.0,
                     "default": 0.3,
                 },
                 {
@@ -287,7 +288,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "sltime",
                     "type": "double_spin",
                     "min": 0.0,
-                    "max": 20.0,
+                    # "max": 20.0,
                     "default": 0.0,
                 },
             ],
@@ -319,7 +320,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "period",
                     "type": "double_spin",
                     "min": 0.1,
-                    "max": 2000000000.0,
+                    # "max": 2000000000.0,
                     "default": 200.0,
                     "tool tip": "Helpful information",
                 },
@@ -342,7 +343,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "ave_reps",
                     "type": "spin",
                     "min": 1,
-                    "max": 1000,
+                    # "max": 1000,
                     "default": 1,
                 },
                 {
@@ -365,7 +366,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "delay",
                     "type": "double_spin",
                     "min": 0,
-                    "max": 652100,
+                    # "max": 652100,
                     "default": 150.0,
                 },
                 {
@@ -373,7 +374,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "pulse1_1",
                     "type": "double_spin",
                     "min": 0,
-                    "max": 652100,
+                    # "max": 652100,
                     "default": 50.0,
                 },
                 {
@@ -381,7 +382,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "nutation_delay",
                     "type": "double_spin",
                     "min": 0,
-                    "max": 655360,
+                    # "max": 655360,
                     "default": 5000.0,
                 },
                 {
@@ -389,7 +390,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "nutation_length",
                     "type": "double_spin",
                     "min": 0,
-                    "max": 655360,
+                    # "max": 655360,
                     "default": 0.0,
                 },
                 {
@@ -466,7 +467,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "field",
                     "type": "double_spin",
                     "min": 0.0,
-                    "max": 10000,
+                    # "max": 10000,
                     "default": 0.0,
                 },
                 {
@@ -474,7 +475,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "gauss_amps",
                     "type": "double_spin",
                     "min": 0.001,
-                    "max": 100000.0,
+                    # "max": 100000.0,
                     "default": 270.0,
                 },
                 {
@@ -482,7 +483,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "current_limit",
                     "type": "double_spin",
                     "min": 0.0,
-                    "max": 10.0,
+                    # "max": 10.0,
                     "default": 3.5,
                 },
                 {
@@ -490,7 +491,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "wait",
                     "type": "double_spin",
                     "min": 0.0,
-                    "max": 20.0,
+                    # "max": 20.0,
                     "default": 0.2,
                 },
                 {
@@ -507,7 +508,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "tau",
                     "type": "double_spin",
                     "min": 0,
-                    "max": 652100,
+                    # "max": 652100,
                     "default": 150.0,
                 },
                 {
@@ -515,7 +516,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "DEER_delay",
                     "type": "double_spin",
                     "min": 0,
-                    "max": 652100,
+                    # "max": 652100,
                     "default": 150.0,
                 },
                 {
@@ -523,7 +524,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "pulse2_2",
                     "type": "double_spin",
                     "min": 0,
-                    "max": 652100,
+                    # "max": 652100,
                     "default": 50.0,
                 },
                 {
@@ -591,30 +592,6 @@ EXPERIMENT_TEMPLATES = {
                     "default": False,
                 },
                 {
-                    "display": "Field Start (G)",
-                    "key": "field_start",
-                    "type": "double_spin",
-                    "min": 0.0,
-                    "max": 2500.0,
-                    "default": 0.0,
-                },
-                {
-                    "display": "Field End (G)",
-                    "key": "field_end",
-                    "type": "double_spin",
-                    "min": 0.0,
-                    "max": 2500.0,
-                    "default": 50.0,
-                },
-                {
-                    "display": "Field Step (G)",
-                    "key": "field_step",
-                    "type": "double_spin",
-                    "min": 0.01,
-                    "max": 2500.0,
-                    "default": 1.5,
-                },
-                {
                     "display": "Sub Method",
                     "key": "subtract",
                     "type": "combo",
@@ -626,7 +603,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "sltime",
                     "type": "double_spin",
                     "min": 0.0,
-                    "max": 20.0,
+                    # "max": 20.0,
                     "default": 0.0,
                 },
             ],
