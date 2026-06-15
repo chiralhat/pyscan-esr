@@ -192,7 +192,7 @@ def setup_measure_function(soc, integrate, deer=False):
         d.current_time = time()
 
         if "ls335" in devices.keys():
-            d.temp, d.tempb = devices.ls335.get_all_kelvin_reading()
+            d.temp, d.tempb = devices.ls335.get_temps()
 
         if runinfo._indicies[0] == (runinfo._dims[0] - 1):
             if runinfo.parameters["sweep2"]:
@@ -265,6 +265,7 @@ def setup_experiment(parameters, devices, sweep, soc):
         "CPMG": 8,
         "Gain": 9,
         "DEER": 10,
+        "Temp": 11,
     }
     wait = parameters["wait"]
     sweep_range = ps.drange(
@@ -285,7 +286,8 @@ def setup_experiment(parameters, devices, sweep, soc):
             "inversion_sweep",
             "echo_delay",
             "gain_sweep",
-            "deer_sweep"
+            "deer_sweep",
+            "temp_sweep"
         ],
         "scan": [
             [
@@ -300,6 +302,7 @@ def setup_experiment(parameters, devices, sweep, soc):
                 ps.FunctionScan(cpmg_sweep, s_range, dt=wait),
                 ps.FunctionScan(gain_sweep, s_range, dt=wait),
                 ps.FunctionScan(deer_sweep, s_range, dt=wait),
+                ps.PropertyScan({"ls335": s_range}, prop="temp", dt=wait),
             ]
             for s_range in [sweep_range, sweep2_range]
         ],
@@ -315,6 +318,7 @@ def setup_experiment(parameters, devices, sweep, soc):
             "CPMG",
             "Gain",
             "DEER",
+            "Temp"
         ],
     }
     run_1 = expt_select[parameters["expt"]]
