@@ -595,7 +595,7 @@ EXPERIMENT_TEMPLATES = {
                     "display": "Sub Method",
                     "key": "subtract",
                     "type": "combo",
-                    "options": ["Phase", "Delay", "Both", "None", "Autophase"],
+                    "options": ["Phase", "None"],
                     "default": "Phase",
                 },
                 {
