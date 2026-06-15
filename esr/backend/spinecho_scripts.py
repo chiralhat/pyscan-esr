@@ -192,7 +192,7 @@ def setup_measure_function(soc, integrate, deer=False):
         d.current_time = time()
 
         if "ls335" in devices.keys():
-            d.temp = devices.ls335.get_temp()
+            d.temp, d.tempb = devices.ls335.get_all_kelvin_reading()
 
         if runinfo._indicies[0] == (runinfo._dims[0] - 1):
             if runinfo.parameters["sweep2"]:

@@ -83,7 +83,7 @@ def setup_measure_function(soc, function):
         #    d = runinfo.measure_phase(prog, soc)
 
         if "ls335" in devices.keys():
-            d.temp = devices.ls335.get_temp()
+            d.temp, d.tempb = devices.ls335.get_all_kelvin_reading()
 
         expt.t = d.time
 
