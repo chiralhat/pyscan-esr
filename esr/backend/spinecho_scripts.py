@@ -125,18 +125,19 @@ def end_func(d, expt, run, dim=0):
     if run == "Rabi":  # Rabi sweep
         rabidat = np.array([expt.rabi_sweep, sigs])
         guess = [
-            rabidat[1].min(),
-            rabidat[1].max(),
+            rabidat[1].max()-rabidat[1].min(),
             rabidat[0][-1] / 2,
-            rabidat[0][-1] / 2,
+            rabidat[0][-1] * 2,
+            0,
+            rabidat[1].min()
         ]
-        fit = try_fit(ps.rabifitnophi, rabidat, guess)
+        fit = try_fit(ps.rabifit, rabidat, guess)
         if dim == 0:
             expt.fit, expt.out, expt.outerr = fit, *fit[:, 2] / 2
         else:
             expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = (
                 fit,
-                *fit[:, 2] / 2,
+                *fit[:, 2] / 4,
             )
     elif run == "Hahn Echo" or run == "CPMG":  # Hahn or CPMG sweep
         deldat = np.array([expt.echo_delay, sigs])
@@ -191,7 +192,7 @@ def setup_measure_function(soc, integrate, deer=False):
         d.current_time = time()
 
         if "ls335" in devices.keys():
-            d.temp = devices.ls335.get_temp()
+            d.temp, d.tempb = devices.ls335.get_all_kelvin_reading()
 
         if runinfo._indicies[0] == (runinfo._dims[0] - 1):
             if runinfo.parameters["sweep2"]:
