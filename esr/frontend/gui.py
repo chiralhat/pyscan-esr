@@ -905,7 +905,7 @@ class ExperimentUI(QMainWindow):
 
         # Create spectrometer options
         self.spectrometers = {
-            "Cryostat": "http://127.0.0.1:5000",
+            "Cryostat": "http://pynq.hamilton.edu:5000",
             "Bench": "http://pynq2.hamilton.edu:5000",
         }
 
