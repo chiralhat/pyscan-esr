@@ -112,7 +112,7 @@ bimod_sweep_list = [
 EXPERIMENT_TEMPLATES = {
     "Pulse Frequency Sweep": {
         "groups": {
-            "Main Settings": [
+            "Main": [
                 {
                     "display": "Frequency",
                     "key": "freq",
@@ -157,7 +157,7 @@ EXPERIMENT_TEMPLATES = {
                     "default": [3850.0, 3950.0, 2.0],
                 },
             ],
-            "Readout Settings": [
+            "Readout": [
                 {
                     "display": "Time Offset",
                     "key": "h_offset",
@@ -187,6 +187,49 @@ EXPERIMENT_TEMPLATES = {
                     "default": True,
                 },
             ],
+            "Magnet": [
+                {
+                    "display": "Field, Scale, I limit",
+                    "key": ["field", "gauss_amps", "current_limit"],
+                    "type": "composite",
+                    "default": [0.0, 276.0, 3.5],
+                },
+                {
+                    "display": "Turn field off after sweep?",
+                    "key": "turn_off",
+                    "type": "check",
+                    "default": True,
+                },
+            ],
+            "Temperature": [
+                {
+                    "display": "Set Temperature?",
+                    "key": "set_temp",
+                    "type": "combo",
+                    "options": ['Heater', 'Setpoint', 'None'],
+                    "default": 'None',
+                },
+                {
+                    "display": "Setpoint (K)",
+                    "key": "temp",
+                    "type": "double_spin",
+                    "min": 1.0,
+                    "max": 325,
+                    "default": 4,
+                },
+                {
+                    "display": "Ramp Setpoint?",
+                    "key": "temp_ramp",
+                    "type": "check",
+                    "default": True,
+                },
+                {
+                    "display": "Use Lakeshore?",
+                    "key": "use_temp",
+                    "type": "check",
+                    "default": False,
+                },
+            ],
             "Uncommon Settings": [
                 {
                     "display": "Repetition time",
@@ -203,12 +246,6 @@ EXPERIMENT_TEMPLATES = {
                     "min": 0.0,
                     # "max": 652100.0,
                     "default": 50.0,
-                },
-                {
-                    "display": "Magnetic Field, Scale, Current limit",
-                    "key": ["field", "gauss_amps", "current_limit"],
-                    "type": "composite",
-                    "default": [0.0, 276.0, 3.5],
                 },
                 {
                     "display": "Reps",
@@ -257,18 +294,6 @@ EXPERIMENT_TEMPLATES = {
                     "default": "Cryostat",
                 },
                 {
-                    "display": "Use Lakeshore?",
-                    "key": "use_temp",
-                    "type": "check",
-                    "default": False,
-                },
-                {
-                    "display": "Turn field off after sweep?",
-                    "key": "turn_off",
-                    "type": "check",
-                    "default": True,
-                },
-                {
                     "display": "Turn laser on? (Bench Moku)",
                     "key": "laser_on",
                     "type": "check",
@@ -297,7 +322,7 @@ EXPERIMENT_TEMPLATES = {
     },
     "Spin Echo": {
         "groups": {
-            "Main Settings": [
+            "Main": [
                 {
                     "display": "Ch1 Freq",
                     "key": "freq",
@@ -317,7 +342,7 @@ EXPERIMENT_TEMPLATES = {
                     "tool tip": "Helpful information",
                 },
                 {
-                    "display": "Repetition time",
+                    "display": "Repetition time (us)",
                     "key": "period",
                     "type": "double_spin",
                     "min": 0.1,
@@ -361,7 +386,7 @@ EXPERIMENT_TEMPLATES = {
                     "default": [150.0, 1000.0, 50.0],
                 },
             ],
-            "Pulse Settings": [
+            "Pulse": [
                 {
                     "display": "Ch1 Delay",
                     "key": "delay",
@@ -403,7 +428,7 @@ EXPERIMENT_TEMPLATES = {
                     "default": 1,
                 },
             ],
-            "Readout Settings": [
+            "Readout": [
                 {
                     "display": "Time Offset (us)",
                     "key": "h_offset",
@@ -433,36 +458,7 @@ EXPERIMENT_TEMPLATES = {
                     "default": True,
                 },
             ],
-            "Second Sweep Settings": [
-                {
-                    "display": "Second sweep?",
-                    "key": "sweep2",
-                    "type": "check",
-                    "default": False,
-                },
-                {
-                    "display": "Experiment 2",
-                    "key": "expt2",
-                    "type": "combo",
-                    "options": sweep_list,
-                    "default": "Hahn Echo",
-                },
-                {
-                    "display": "Sweep 2 start, end, step",
-                    "key": ["sweep2_start", "sweep2_end", "sweep2_step"],
-                    "type": "composite",
-                    "default": [0, 0, 0],
-                },
-            ],
-            "Uncommon Settings": [
-                {
-                    "display": "Ch1 180 Pulse Mult",
-                    "key": "mult1",
-                    "type": "double_spin",
-                    "min": 0,
-                    "max": 652100,
-                    "default": 1.0,
-                },
+            "Magnet": [
                 {
                     "display": "Magnetic Field (G)",
                     "key": "field",
@@ -487,6 +483,64 @@ EXPERIMENT_TEMPLATES = {
                     # "max": 10.0,
                     "default": 3.5,
                 },
+                {
+                    "display": "Turn field off after sweep?",
+                    "key": "turn_off",
+                    "type": "check",
+                    "default": True,
+                },
+            ],
+            "Temperature": [
+                {
+                    "display": "Set Temperature?",
+                    "key": "set_temp",
+                    "type": "combo",
+                    "options": ['Heater', 'Setpoint', 'None'],
+                    "default": 'None',
+                },
+                {
+                    "display": "Setpoint (K)",
+                    "key": "temp",
+                    "type": "double_spin",
+                    "min": 1.0,
+                    "max": 325,
+                    "default": 4,
+                },
+                {
+                    "display": "Ramp Setpoint?",
+                    "key": "temp_ramp",
+                    "type": "check",
+                    "default": True,
+                },
+                {
+                    "display": "Use Lakeshore?",
+                    "key": "use_temp",
+                    "type": "check",
+                    "default": False,
+                },
+            ],
+            "Second Sweep": [
+                {
+                    "display": "Second sweep?",
+                    "key": "sweep2",
+                    "type": "check",
+                    "default": False,
+                },
+                {
+                    "display": "Experiment 2",
+                    "key": "expt2",
+                    "type": "combo",
+                    "options": sweep_list,
+                    "default": "Hahn Echo",
+                },
+                {
+                    "display": "Sweep 2 start, end, step",
+                    "key": ["sweep2_start", "sweep2_end", "sweep2_step"],
+                    "type": "composite",
+                    "default": [0, 0, 0],
+                },
+            ],
+            "Uncommon": [
                 {
                     "display": "Wait Time (s)",
                     "key": "wait",
@@ -528,21 +582,6 @@ EXPERIMENT_TEMPLATES = {
                     # "max": 652100,
                     "default": 50.0,
                 },
-                {
-                    "display": "Switch Offset (us)",
-                    "key": "sw_offset",
-                    "type": "double_spin",
-                    "min": -1e5,
-                    "max": 1e5,
-                    "default": -0.45,
-                },
-                {
-                    "display": "DAC Ch",
-                    "key": "dac_ch",
-                    "type": "combo",
-                    "options": ["B", "A"],
-                    "default": "B",
-                },
             ],
             "Utility Settings": [
                 {
@@ -559,22 +598,18 @@ EXPERIMENT_TEMPLATES = {
                     "default": "Cryostat",
                 },
                 {
-                    "display": "Use Lakeshore?",
-                    "key": "use_temp",
-                    "type": "check",
-                    "default": False,
-                },
-                {
-                    "display": "Turn field off after sweep?",
-                    "key": "turn_off",
-                    "type": "check",
-                    "default": True,
-                },
-                {
                     "display": "Turn laser on? (Bench Moku)",
                     "key": "laser_on",
                     "type": "check",
                     "default": True,
+                },
+                {
+                    "display": "Switch Offset (us)",
+                    "key": "sw_offset",
+                    "type": "double_spin",
+                    "min": -1e5,
+                    "max": 1e5,
+                    "default": -0.45,
                 },
             ],
             "Never Change": [
@@ -606,6 +641,21 @@ EXPERIMENT_TEMPLATES = {
                     "min": 0.0,
                     # "max": 20.0,
                     "default": 0.0,
+                },
+                {
+                    "display": "Ch1 180 Pulse Mult",
+                    "key": "mult1",
+                    "type": "double_spin",
+                    "min": 0,
+                    "max": 652100,
+                    "default": 1.0,
+                },
+                {
+                    "display": "DAC Ch",
+                    "key": "dac_ch",
+                    "type": "combo",
+                    "options": ["B", "A"],
+                    "default": "B",
                 },
             ],
         }
