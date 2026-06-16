@@ -98,9 +98,14 @@ def initialize_experiment():
             print(f"Error initializing Moku: {e}")
 
     # Initialize temperature device if necessary
-    if not hasattr(devices, "ls335") and parameters["use_temp"]:
-        devices.ls335 = ps.Lakeshore335()
-        temp = devices.ls335.get_temp()
+    if parameters["use_temp"]:
+        if not hasattr(devices, "ls335"):
+            devices.ls335 = ps.Lakeshore335()
+            temp = devices.ls335.get_temp()
+        if not parameters['set_temp']=='None':
+            devices.ls335.ramp(on=parameters['temp_ramp'])
+            temp_func = devices.ls335.temp if parameters['set_temp']=='Heater' else devices.ls335.setpoint
+            temp_func(parameters['temp'])
 
     """This initializes a pyscan experiment with functions from the correct 
         experiment type scripts and GUI files."""
