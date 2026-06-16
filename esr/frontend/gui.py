@@ -12,7 +12,8 @@ Key Interactions:
 - Embeds `GraphWidget` and `SweepPlotWidget` from `graphing.py` for live plotting.
 - Communicates with a Flask-based backend (see `server.py`) to control hardware and collect data.
 """
-
+global app_mode
+app_mode = "GUI"
 import matplotlib
 
 matplotlib.use("Qt5Agg")  # Must be done before importing pyplot!
@@ -378,7 +379,7 @@ EXPERIMENT_TEMPLATES = {
                     "default": 50.0,
                 },
                 {
-                    "display": "Nut. Delay (ns)",
+                    "display": "Nut. Delay (us)",
                     "key": "nutation_delay",
                     "type": "double_spin",
                     "min": 0,
@@ -904,7 +905,7 @@ class ExperimentUI(QMainWindow):
 
         # Create spectrometer options
         self.spectrometers = {
-            "Cryostat": "http://pynq.hamilton.edu:5000",
+            "Cryostat": "http://127.0.0.1:5000",
             "Bench": "http://pynq2.hamilton.edu:5000",
         }
 
