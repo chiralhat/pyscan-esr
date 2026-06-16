@@ -113,7 +113,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         length = self.us2cycles(cfg["pulse1_1"]/1000, gen_ch=res_ch)
         delay = self.us2cycles(cfg['delay']/1000-cfg['pulse1_1']/1000)
         tpi2 = self.us2cycles(cfg['pulse1_1']/1000)
-        tstart = self.us2cycles(cfg['nutation_delay']/1000)
+        tstart = self.us2cycles(cfg['nutation_delay'])
 
         # set the nyquist zone
         self.declare_gen(ch=res_ch, nqz=1)
@@ -149,7 +149,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         delay_pi2 = delay-tpi2
         delay_pi = 2*delay-tpi
         nutwidth = self.cfg["nutation_length"]/1000
-        nutdelay = self.us2cycles(self.cfg["nutation_delay"]/1000)
+        nutdelay = self.us2cycles(self.cfg["nutation_delay"])
         gain = self.cfg["gain"]
         
         # We want half the power for our pi/2 pulse, and this achieves that
@@ -208,7 +208,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
     def body(self):
         res_ch = self.cfg["res_ch"]
         nutwidth = self.cfg["nutation_length"]/1000
-        nutdelay = self.cfg["nutation_delay"]/1000
+        nutdelay = self.cfg["nutation_delay"]
         delay = self.cfg["delay"]/1000
         tpi = self.cfg["pulse1_2"]/1000
         tpi2 = self.cfg["pulse1_1"]/1000
@@ -252,7 +252,7 @@ class DEERProgram(CPMGProgram):
         length = self.us2cycles(cfg["pulse1_1"]/1000, gen_ch=res_ch)
         delay = self.us2cycles(cfg['delay']/1000-cfg['pulse1_1']/1000)
         tpi2 = self.us2cycles(cfg['pulse1_1']/1000)
-        tstart = self.us2cycles(cfg['nutation_delay']/1000)
+        tstart = self.us2cycles(cfg['nutation_delay'])
 
         # set the nyquist zone
         self.declare_gen(ch=res_ch, nqz=1)
@@ -296,7 +296,7 @@ class DEERProgram(CPMGProgram):
         tau = self.cfg["tau"]/1000-tpi/2
         gain = self.cfg["gain"]
         nutwidth = self.cfg["nutation_length"]/1000
-        nutdelay = self.us2cycles(self.cfg["nutation_delay"]/1000)
+        nutdelay = self.us2cycles(self.cfg["nutation_delay"])
         deer_length = self.us2cycles(tpid, gen_ch=deer_ch)
 
         T = self.cfg["DEER_delay"]/1000-tpid/2
@@ -469,7 +469,7 @@ class DEERProgram(CPMGProgram):
     def body(self):
         delay = self.cfg["delay"]/1000
         nutwidth = self.cfg["nutation_length"]/1000
-        nutdelay = self.cfg["nutation_delay"]/1000
+        nutdelay = self.cfg["nutation_delay"]
         tpi = self.cfg["pulse1_2"]/1000
         tpi2 = self.cfg["pulse1_1"]/1000
 
