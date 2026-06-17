@@ -96,7 +96,7 @@ class Lakeshore335():
             self.instrument.set_heater_range(output, hran)
             self.hran = hran
         else:
-            self.hran = int(self.get_heater_range(output))
+            self.hran = int(self.instrument.get_heater_range(output))
         return self.hran
 
 
