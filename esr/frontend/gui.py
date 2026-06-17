@@ -203,11 +203,10 @@ EXPERIMENT_TEMPLATES = {
             ],
             "Temperature": [
                 {
-                    "display": "Set Temperature?",
-                    "key": "set_temp",
-                    "type": "combo",
-                    "options": ['Heater', 'Setpoint', 'None'],
-                    "default": 'None',
+                    "display": "Set Temp, Ramp, Heater",
+                    "key": ["set_temp", "temp_ramp", "heater_on"],
+                    "type": "composite",
+                    "default": [False, True, False],
                 },
                 {
                     "display": "Setpoint (K)",
@@ -216,12 +215,6 @@ EXPERIMENT_TEMPLATES = {
                     "min": 1.0,
                     "max": 325,
                     "default": 4,
-                },
-                {
-                    "display": "Ramp Setpoint?",
-                    "key": "temp_ramp",
-                    "type": "check",
-                    "default": True,
                 },
                 {
                     "display": "Use Lakeshore?",
@@ -492,11 +485,10 @@ EXPERIMENT_TEMPLATES = {
             ],
             "Temperature": [
                 {
-                    "display": "Set Temperature?",
-                    "key": "set_temp",
-                    "type": "combo",
-                    "options": ['Heater', 'Setpoint', 'None'],
-                    "default": 'None',
+                    "display": "Set Temp, Ramp, Heater",
+                    "key": ["set_temp", "temp_ramp", "heater_on"],
+                    "type": "composite",
+                    "default": [False, True, False],
                 },
                 {
                     "display": "Setpoint (K)",
@@ -505,12 +497,6 @@ EXPERIMENT_TEMPLATES = {
                     "min": 1.0,
                     "max": 325,
                     "default": 4,
-                },
-                {
-                    "display": "Ramp Setpoint?",
-                    "key": "temp_ramp",
-                    "type": "check",
-                    "default": True,
                 },
                 {
                     "display": "Use Lakeshore?",
