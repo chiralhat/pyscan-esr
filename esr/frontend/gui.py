@@ -203,11 +203,10 @@ EXPERIMENT_TEMPLATES = {
             ],
             "Temperature": [
                 {
-                    "display": "Set Temperature?",
-                    "key": "set_temp",
-                    "type": "combo",
-                    "options": ['Heater', 'Setpoint', 'None'],
-                    "default": 'None',
+                    "display": "Set Temp, Ramp, Heater",
+                    "key": ["set_temp", "temp_ramp", "heater_on"],
+                    "type": "composite",
+                    "default": [False, True, False],
                 },
                 {
                     "display": "Setpoint (K)",
@@ -216,12 +215,6 @@ EXPERIMENT_TEMPLATES = {
                     "min": 1.0,
                     "max": 325,
                     "default": 4,
-                },
-                {
-                    "display": "Ramp Setpoint?",
-                    "key": "temp_ramp",
-                    "type": "check",
-                    "default": True,
                 },
                 {
                     "display": "Use Lakeshore?",
@@ -492,11 +485,10 @@ EXPERIMENT_TEMPLATES = {
             ],
             "Temperature": [
                 {
-                    "display": "Set Temperature?",
-                    "key": "set_temp",
-                    "type": "combo",
-                    "options": ['Heater', 'Setpoint', 'None'],
-                    "default": 'None',
+                    "display": "Set Temp, Ramp, Heater",
+                    "key": ["set_temp", "temp_ramp", "heater_on"],
+                    "type": "composite",
+                    "default": [False, True, False],
                 },
                 {
                     "display": "Setpoint (K)",
@@ -505,12 +497,6 @@ EXPERIMENT_TEMPLATES = {
                     "min": 1.0,
                     "max": 325,
                     "default": 4,
-                },
-                {
-                    "display": "Ramp Setpoint?",
-                    "key": "temp_ramp",
-                    "type": "check",
-                    "default": True,
                 },
                 {
                     "display": "Use Lakeshore?",
@@ -765,7 +751,7 @@ class DynamicSettingsPanel(QWidget):
         for group_name, group_settings in settings.get("groups", {}).items():
             group_item = QTreeWidgetItem([group_name])
             self.settings_tree.addTopLevelItem(group_item)
-            group_item.setExpanded(group_name == "Main Settings")
+            group_item.setExpanded(group_name == "Main")
             for setting in group_settings:
                 item = QTreeWidgetItem()
                 group_item.addChild(item)
@@ -888,6 +874,10 @@ class DynamicSettingsPanel(QWidget):
                     spin.setMaximum(setting.get("max", 1e9))
                     spin.setValue(val)
                     layout.addWidget(spin)
+                elif isinstance(val, bool):
+                    check = QCheckBox()
+                    check.setChecked(setting.get("default", False))
+                    layout.addWidget(check)
                 else:
                     line = QLineEdit()
                     line.setText(str(val) if val is not None else "")
