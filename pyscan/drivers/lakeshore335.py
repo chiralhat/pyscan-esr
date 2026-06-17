@@ -28,7 +28,7 @@ class Lakeshore335():
         self.t_chan = 1
         self.zone = 0
         self.tolerance = 0.1
-        self.timeout = 60
+        self.timeout = 600
         try:
             self.instrument.set_heater_setup_one(hres, 1.0, hdisp)
         except Exception as e:
@@ -36,8 +36,9 @@ class Lakeshore335():
         self.heater(0, 1)
         self.heater(0, 2)
         self.instrument.set_heater_output_mode(1, 1+self.zone, self.t_chan, False)
-        self.ramp(on=0)
         tnow = self.get_temp(self.t_chan)
+        self.ramp(on=0)
+        sleep(0.2)
         self.setpoint(tnow)
         self.ramp()
     
@@ -56,7 +57,7 @@ class Lakeshore335():
 
     
     def get_temp(self, ch=1):
-        return get_temps[ch-1]
+        return self.get_temps()[ch-1]
     
     
     def setpoint(self, value=0, output=1):
@@ -84,10 +85,16 @@ class Lakeshore335():
         return self.mode
     
     
-    def heater(self, hrange=3, output=1):
+    def heater(self, hrange='Read', output=1):
         if hrange!='Read':
-            self.instrument.set_heater_range(output, hrange)
-            self.hran = hrange
+            if not hrange:
+                hran = self.instrument.HeaterRange.OFF
+            elif self.tset<=40:
+                hran = self.instrument.HeaterRange.MEDIUM
+            else:
+                hran = self.instrument.HeaterRange.HIGH
+            self.instrument.set_heater_range(output, hran)
+            self.hran = hran
         else:
             self.hran = int(self.get_heater_range(output))
         return self.hran
@@ -101,10 +108,8 @@ class Lakeshore335():
         assert tset>=1.5, f'Setpoint needs to be between 1.5 K and 320 K, setpoint: {tset}'
         assert tset<=320, f'Setpoint needs to be between 1.5 K and 320 K, setpoint: {tset}'
         tc = self.instrument
-        t_start = self.get_temp(output)
-        tc.set_control_setpoint(output, tset)
-        hrange = tc.HeaterRange.MEDIUM if tset <= 100 else tc.HeaterRange.HIGH
-        self.heater(hrange, output)
+        self.setpoint(tset, output)
+        self.heater(1, output)
         while tc.get_setpoint_ramp_status(output):
             pass
         start_time = time()
@@ -112,3 +117,4 @@ class Lakeshore335():
             now_time = time()
             if (now_time-start_time)>self.timeout:
                 raise AttributeError(f'Failed to reach desired temperature in {self.timeout} seconds.')
+            sleep(1)
