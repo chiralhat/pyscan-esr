@@ -1441,6 +1441,9 @@ class ExperimentUI(QMainWindow):
             # Update server address
             self.server_address = self.spectrometers[spectrometer]
 
+            # TODO: Set up spectrometer-specific controls, so we don't have laser controls for Cryo,
+            # and don't have temperature controls for Bench
+
             # Change experiment logic handlers
             self.experiments = {
                 "Spin Echo": ExperimentType("Spin Echo", self.spectrometers[spectrometer]),

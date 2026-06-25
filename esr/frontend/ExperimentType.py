@@ -88,6 +88,7 @@ class ExperimentType(QObject):
         self.expt = None  # Handle during sweep
 
         # Default parameter files for different experiment types
+        # TODO: Change this so we have cryo defaults and bench defaults
         if self.type == "Spin Echo":
             self.default_file = "se_defaults.pkl"
         elif self.type == "Pulse Frequency Sweep":
