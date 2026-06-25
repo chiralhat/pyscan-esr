@@ -77,10 +77,11 @@ class ExperimentType(QObject):
     # Signal emitted when data is ready to be plotted (used to notify GUI)
     plot_update_signal = pyqtSignal()
 
-    def __init__(self, exp_type, server_address):
+    def __init__(self, exp_type, server_address, spectrometer):
         super().__init__()
         self.type = exp_type  # Experiment type string
         self.server_address = server_address
+        self.spectrometer = spectrometer
 
         # Parameter dictionaries to be populated by the UI or script
         self.parameters = {}
@@ -88,11 +89,15 @@ class ExperimentType(QObject):
         self.expt = None  # Handle during sweep
 
         # Default parameter files for different experiment types
-        # TODO: Change this so we have cryo defaults and bench defaults
         if self.type == "Spin Echo":
             self.default_file = "se_defaults.pkl"
         elif self.type == "Pulse Frequency Sweep":
             self.default_file = "ps_defaults.pkl"
+        # Default parameter files for different spectrometer types
+        if self.spectrometer == "Cryostat":
+            self.default_file = "c_" + self.default_file
+        elif self.spectrometer == "Bench":
+            self.default_file = "b_" + self.default_file
 
         # Initialize graphs for processed and unprocessed reads and sweeps
         self.read_unprocessed_graph = GraphWidget()

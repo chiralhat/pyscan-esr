@@ -955,11 +955,12 @@ class ExperimentUI(QMainWindow):
             "Cryostat": "http://pynq.hamilton.edu:5000",
             "Bench": "http://pynq2.hamilton.edu:5000",
         }
+        self.spectrometer = "Cryostat"
 
         # Create experiment logic handlers
         self.experiments = {
-            "Spin Echo": ExperimentType("Spin Echo", self.spectrometers["Cryostat"]),
-            "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep", self.spectrometers["Cryostat"]),
+            "Spin Echo": ExperimentType("Spin Echo", self.spectrometers["Cryostat"], self.spectrometer),
+            "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep", self.spectrometers["Cryostat"], self.spectrometer),
         }
 
         # Core application state flags
@@ -1439,6 +1440,7 @@ class ExperimentUI(QMainWindow):
 
         try:
             # Update server address
+            self.spectrometer = spectrometer
             self.server_address = self.spectrometers[spectrometer]
 
             # TODO: Set up spectrometer-specific controls, so we don't have laser controls for Cryo,
@@ -1446,8 +1448,8 @@ class ExperimentUI(QMainWindow):
 
             # Change experiment logic handlers
             self.experiments = {
-                "Spin Echo": ExperimentType("Spin Echo", self.spectrometers[spectrometer]),
-                "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep", self.spectrometers[spectrometer]),
+                "Spin Echo": ExperimentType("Spin Echo", self.spectrometers[spectrometer], self.spectrometer),
+                "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep", self.spectrometers[spectrometer], self.spectrometer),
             }
             self.current_experiment = self.experiments[self.current_experiment.type]
             
@@ -2129,7 +2131,7 @@ class ExperimentUI(QMainWindow):
         """
         try:
             # Clone the current experiment backend logic
-            new_experiment = ExperimentType(self.current_experiment.type, self.server_address)
+            new_experiment = ExperimentType(self.current_experiment.type, self.server_address, self.spectrometer)
 
             # Create a QueuedExperiment wrapper (includes settings + metadata)
             queue_item = QueuedExperiment(
