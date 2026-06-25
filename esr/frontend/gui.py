@@ -310,6 +310,13 @@ EXPERIMENT_TEMPLATES = {
                     # "max": 20.0,
                     "default": 0.0,
                 },
+                {
+                    "display": "Sub Method",
+                    "key": "subtract",
+                    "type": "combo",
+                    "options": ["Phase", "None"],
+                    "default": "None",
+                },
             ],
         }
     },
