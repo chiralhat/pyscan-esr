@@ -22,7 +22,7 @@ matplotlib.use("Qt5Agg")  # Must be done before importing pyplot!
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 import requests
 
-import globals
+#import globals
 
 import sys
 
@@ -30,7 +30,7 @@ sys.path.append("../")
 # from rfsoc2 import *
 import numpy as np
 from time import sleep
-import pyscan_non_soc_version as ps
+from pyscan import FunctionScan, PropertyScan, RunInfo, ItemAttribute, Sweep, Experiment, PlotGenerator
 
 
 def deserialize_obj(data):
@@ -59,7 +59,7 @@ def deserialize_obj(data):
                     "function", lambda x: x
                 )  # fallback if no function
                 values = list(temp_data.get("scan_dict", {}).values())[0]
-                obj = ps.FunctionScan(function=function, values=values)
+                obj = FunctionScan(function=function, values=values)
                 for k, v in temp_data.items():
                     setattr(obj, k, v)
                 return obj
@@ -69,7 +69,7 @@ def deserialize_obj(data):
                 input_dict = temp_data.get("input_dict", {})
 
                 # Create PropertyScan object with valid arguments
-                obj = ps.PropertyScan(prop=prop, input_dict=input_dict)
+                obj = PropertyScan(prop=prop, input_dict=input_dict)
 
                 for k, v in temp_data.items():
                     if k not in ["prop", "input_dict"]:  # Only pass valid arguments
@@ -78,7 +78,7 @@ def deserialize_obj(data):
                 return obj
 
             elif clsname == "RunInfo":
-                obj = ps.RunInfo()  # Create a new RunInfo object
+                obj = RunInfo()  # Create a new RunInfo object
                 for k, v in temp_data.items():
                     # Avoid unexpected arguments that don't belong in the constructor
                     if k not in [
@@ -88,7 +88,7 @@ def deserialize_obj(data):
                 return obj
 
             elif clsname == "ItemAttribute":
-                obj = ps.ItemAttribute()  # Instantiate the ItemAttribute object
+                obj = ItemAttribute()  # Instantiate the ItemAttribute object
                 for k, v in temp_data.items():
                     setattr(obj, k, v)
                 return obj
@@ -111,7 +111,7 @@ def deserialize_obj(data):
                 )
 
                 # Create the Sweep object directly
-                obj = ps.Sweep(runinfo=runinfo, devices=devices)
+                obj = Sweep(runinfo=runinfo, devices=devices)
 
                 # Now set the remaining attributes for the Sweep object
                 for k, v in temp_data.items():
@@ -141,7 +141,7 @@ def deserialize_obj(data):
                 )
 
                 # Create the Experiment object directly
-                obj = ps.Experiment(runinfo=runinfo, devices=devices)
+                obj = Experiment(runinfo=runinfo, devices=devices)
 
                 # Now set the remaining attributes for the Experiment object
                 for k, v in temp_data.items():
@@ -153,7 +153,7 @@ def deserialize_obj(data):
 
                 return obj  # Directly return the Experiment object
             elif clsname == "Signal":
-                obj = ps.ItemAttribute()  # or however the Signal object is instantiated
+                obj = ItemAttribute()  # or however the Signal object is instantiated
                 for k, v in temp_data.items():
                     if k in ["x", "time"] and isinstance(v, list):
                         setattr(obj, k, np.array(v, dtype=np.float64))
@@ -211,11 +211,12 @@ class Worker(QObject):
     live_plot_2D_update_signal = pyqtSignal(object)
     live_plot_1D_update_signal = pyqtSignal(object)
 
-    def __init__(self, experiment, task_name, combo_2d=None, combo_1d=None):
+    def __init__(self, experiment, task_name, server_address, combo_2d=None, combo_1d=None):
         super().__init__()
         self.experiment = experiment
         self.task_name = task_name
         self.stop_requested = False
+        self.server_address = server_address
         self.combo_2d = combo_2d
         self.combo_1d = combo_1d
 
@@ -228,6 +229,7 @@ class Worker(QObject):
         try:
             single = self.experiment.parameters["single"]
             avgs = self.experiment.parameters["soft_avgs"]
+            areps = self.experiment.parameters["reps"]
             if self.task_name == "read_processed":
                 self.updateStatus.emit("Reading processed data...\n")
 
@@ -243,6 +245,7 @@ class Worker(QObject):
                         "experiment type": "Spin Echo Read Processed",
                     }
                 elif self.experiment.type == "Pulse Frequency Sweep":
+                    self.experiment.parameters["single"] = True
                     data = {
                         "parameters": self.experiment.parameters,
                         "experiment type": "Pulse Frequency Sweep Read Processed",
@@ -254,24 +257,29 @@ class Worker(QObject):
                 if self.experiment.type == "Spin Echo":
                     self.experiment.parameters["single"] = True
                     self.experiment.parameters["soft_avgs"] = 1
+                    self.experiment.parameters["reps"] = 1
                     data = {
                         "parameters": self.experiment.parameters,
                         "experiment type": "Spin Echo Read Unprocessed",
                     }
-                    print("about to ask server")
-                    response = requests.post(
-                        globals.server_address + "/run_snapshot", json=data
-                    )
-                    print("asked server")
-                    if response.ok:
-                        response_data = response.json()
-                        self.experiment.sig = deserialize_obj(response_data["sig"])
-                    else:
-                        print("Error:", response.status_code, response.text)
+                    # print("about to ask server")
+                    # try:
+                    #     response = requests.post(
+                    #         self.server_address + "/run_snapshot", json=data
+                    #     )
+                    #     print("asked server")
+                    #     if response.ok:
+                    #         response_data = response.json()
+                    #         self.experiment.sig = deserialize_obj(response_data["sig"])
+                    #     else:
+                    #         print("Error:", response.status_code, response.text)
+                    # except Exception as e:
+                    #     print(f"Error reading unprocessed: {e}")
 
                 elif self.experiment.type == "Pulse Frequency Sweep":
                     self.experiment.parameters["single"] = True
                     self.experiment.parameters["soft_avgs"] = 1
+                    self.experiment.parameters["reps"] = 1
                     data = {
                         "parameters": self.experiment.parameters,
                         "experiment type": "Pulse Frequency Sweep Read Unprocessed",
@@ -283,7 +291,7 @@ class Worker(QObject):
             # Send request to server
             try:
                 response = requests.post(
-                    globals.server_address + "/run_snapshot", json=data
+                    self.server_address + "/run_snapshot", json=data
                 )
             except Exception as e:
                 self.updateStatus.emit(f"Error in connecting to server: {e}\n")
@@ -297,6 +305,7 @@ class Worker(QObject):
                 print("Error:", response.status_code, response.text)
             self.experiment.parameters["single"] = single
             self.experiment.parameters["soft_avgs"] = avgs
+            self.experiment.parameters["reps"] = areps
             self.experiment.sig.freq = self.experiment.parameters["freq"]
 
             # Emit signals based on experiment type for plotting
@@ -311,6 +320,94 @@ class Worker(QObject):
             print("Error when running snapshot:")
             print(e)
             print()
+    
+
+    def update_plots(self, last_data_2d, last_data_1d, do_int, do_sweep2):
+        try:
+            if do_sweep2:
+                xname = self.experiment.parameters["y_name2"]
+            else:
+                xname = "t"
+            yname = self.experiment.parameters["y_name"]
+            
+            if self.experiment.expt.runinfo.measured:
+                if (not do_int) or do_sweep2:
+                    data_name_2d = self.combo_2d.currentText()
+                    if do_sweep2 and len(data_name_2d)==1:
+                        data_name_2d = "xmean"
+                    pg_2D = PlotGenerator(
+                        expt=self.experiment.expt,
+                        d=2,
+                        x_name=xname,
+                        y_name=yname,
+                        data_name=data_name_2d,
+                        transpose=1,
+                    )
+                    if last_data_2d is None or not np.array_equal(
+                        pg_2D.data, last_data_2d
+                    ):
+                        last_data_2d = pg_2D.data.copy()
+                        self.live_plot_2D_update_signal.emit(pg_2D)
+
+                if self.experiment.type == "Spin Echo" and (not do_sweep2):
+                    data_name_1d = self.combo_1d.currentText()
+                    pg_1D = PlotGenerator(
+                        expt=self.experiment.expt,
+                        d=1,
+                        x_name=yname,
+                        data_name=data_name_1d,
+                    )
+                    if last_data_1d is None or not np.array_equal(
+                        pg_1D.data, last_data_1d
+                    ):
+                        last_data_1d = pg_1D.data.copy()
+                        self.live_plot_1D_update_signal.emit(pg_1D)
+            return last_data_2d, last_data_1d
+        except Exception as e:
+            self.updateStatus.emit(f"Error updating plots: {e}\n")
+
+
+    def update_sweep(self):
+        try:
+            last_data_2d = None
+            last_data_1d = None
+
+            do_sweep2 = self.experiment.parameters['sweep2']
+            # Continuously fetch data until sweep stops or is requested to stop
+            while not self.stop_requested and self.running:
+                response = requests.get(self.server_address + "/get_sweep_data")
+                if response.ok:
+                    response_data = response.json()
+                    self.experiment.expt = deserialize_obj(
+                        response_data["expt"]["serialized_experiment"]
+                    )
+                    print("Deserialized expt")
+                else:
+                    print("Error:", response.status_code, response.text)
+
+                if not self.experiment.expt.runinfo.running:
+                    self.running = False
+                    break
+
+                # Generate and emit updated plots
+                last_data_2d, last_data_1d = self.update_plots(last_data_2d, last_data_1d, do_int, do_sweep2)
+
+                sleep(self.experiment.parameters['subtime']/10)
+
+            # final emitting of plots when sweep is over
+            self.update_plots(last_data_2d, last_data_1d, do_int, do_sweep2)
+
+            # Final status update
+            if self.stop_requested:
+                self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
+            else:
+                self.updateStatus.emit("Done sweeping (normal exit).\n")
+                if not do_sweep2:
+                    self.updateStatus.emit(f"Fit Parameters: {self.experiment.expt.out:.3g} +- {self.experiment.expt.outerr}")
+
+            self.finished.emit()
+        except Exception as e:
+            self.updateStatus.emit(f"Error updating sweep: {e}\n")
 
     @pyqtSlot()
     def run_sweep(self):
@@ -327,109 +424,14 @@ class Worker(QObject):
                 "experiment type": self.experiment.type,
                 "sweep": self.experiment.sweep,
             }
-            response = requests.post(globals.server_address + "/start_sweep", json=data)
+            response = requests.post(self.server_address + "/start_sweep", json=data)
             if response.ok:
                 self.running = True
             else:
                 print("Error:", response.status_code, response.text)
                 return
 
-            last_data_2d = None
-            last_data_1d = None
-
-            # Continuously fetch data until sweep stops or is requested to stop
-            while not self.stop_requested and self.running:
-                response = requests.get(globals.server_address + "/get_sweep_data")
-                if response.ok:
-                    response_data = response.json()
-                    self.experiment.expt = deserialize_obj(
-                        response_data["expt"]["serialized_experiment"]
-                    )
-                    print("Deserialized expt")
-                else:
-                    print("Error:", response.status_code, response.text)
-
-                if not self.experiment.expt.runinfo.running:
-                    self.running = False
-                    break
-
-                # Generate and emit updated plots
-                if self.experiment.expt.runinfo.measured:
-                    if not self.experiment.parameters['integrate']:
-                        data_name_2d = self.combo_2d.currentText()
-                        pg_2D = ps.PlotGenerator(
-                            expt=self.experiment.expt,
-                            d=2,
-                            x_name="t",
-                            y_name=self.experiment.parameters["y_name"],
-                            data_name=data_name_2d,
-                            transpose=1,
-                        )
-
-                    if self.experiment.type == "Spin Echo":
-                        data_name_1d = self.combo_1d.currentText()
-                        pg_1D = ps.PlotGenerator(
-                            expt=self.experiment.expt,
-                            d=1,
-                            x_name=self.experiment.parameters["y_name"],
-                            data_name=data_name_1d,
-                        )
-
-                    if not self.experiment.parameters['integrate']:
-                        if last_data_2d is None or not np.array_equal(
-                            pg_2D.data, last_data_2d
-                        ):
-                            last_data_2d = pg_2D.data.copy()
-                            self.live_plot_2D_update_signal.emit(pg_2D)
-
-                    if self.experiment.type == "Spin Echo":
-                        if last_data_1d is None or not np.array_equal(
-                            pg_1D.data, last_data_1d
-                        ):
-                            last_data_1d = pg_1D.data.copy()
-                            self.live_plot_1D_update_signal.emit(pg_1D)
-                sleep(1)
-
-            # final emitting of plots when sweep is over
-            if self.experiment.expt.runinfo.measured:
-                try:
-                    if not self.experiment.parameters['integrate']:
-                        data_name_2d = self.combo_2d.currentText()
-                        pg_2D = ps.PlotGenerator(
-                            expt=self.experiment.expt,
-                            d=2,
-                            x_name="t",
-                            y_name=self.experiment.parameters["y_name"],
-                            data_name=data_name_2d,
-                            transpose=1,
-                        )
-                    
-                    if self.experiment.type == "Spin Echo":
-                        data_name_1d = self.combo_1d.currentText()
-                        pg_1D = ps.PlotGenerator(
-                            expt=self.experiment.expt,
-                            d=1,
-                            x_name=self.experiment.parameters["y_name"],
-                            data_name=data_name_1d,
-                        )
-
-                    if not self.experiment.parameters['integrate']:
-                        self.live_plot_2D_update_signal.emit(pg_2D)
-
-                    if self.experiment.type == "Spin Echo":
-                        self.live_plot_1D_update_signal.emit(pg_1D)
-
-                except Exception as e:
-                    self.updateStatus.emit(f"Error final plot update: {e}\n")
-
-            # Final status update
-            if self.stop_requested:
-                self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
-            else:
-                self.updateStatus.emit("Done sweeping (normal exit).\n")
-                self.updateStatus.emit(f"Fit Parameters: {self.experiment.expt.out:.3g} +- {self.experiment.expt.outerr}")
-
-            self.finished.emit()
+            self.update_sweep()
 
         except Exception as e:
             print()
@@ -447,103 +449,14 @@ class Worker(QObject):
             print("Resuming sweep in worker thread…")
             # Initiate sweep on the server
             self.experiment.sweep_running = True
-            
-            last_data_2d = None
-            last_data_1d = None
 
-            # Continuously fetch data until sweep stops or is requested to stop
-            while not self.stop_requested and self.running:
-                response = requests.get(globals.server_address + "/get_sweep_data")
-                if response.ok:
-                    response_data = response.json()
-                    self.experiment.expt = deserialize_obj(
-                        response_data["expt"]["serialized_experiment"]
-                    )
-                    print("Deserialized expt")
-                else:
-                    print("Error:", response.status_code, response.text)
-
-                if not self.experiment.expt.runinfo.running:
-                    self.running = False
-                    break
-
-                # Generate and emit updated plots
-                if self.experiment.expt.runinfo.measured:
-                    if not self.experiment.expt.runinfo.parameters['integrate']:
-                        data_name_2d = self.combo_2d.currentText()
-                        pg_2D = ps.PlotGenerator(
-                            expt=self.experiment.expt,
-                            d=2,
-                            x_name="t",
-                            y_name=self.experiment.expt.runinfo.parameters["y_name"],
-                            data_name=data_name_2d,
-                            transpose=1,
-                        )
-
-                    if self.experiment.type == "Spin Echo":
-                        data_name_1d = self.combo_1d.currentText()
-                        pg_1D = ps.PlotGenerator(
-                            expt=self.experiment.expt,
-                            d=1,
-                            x_name=self.experiment.expt.runinfo.parameters["y_name"],
-                            data_name=data_name_1d,
-                        )
-
-                    if not self.experiment.expt.runinfo.parameters['integrate']:
-                        if last_data_2d is None or not np.array_equal(
-                            pg_2D.data, last_data_2d
-                        ):
-                            last_data_2d = pg_2D.data.copy()
-                            self.live_plot_2D_update_signal.emit(pg_2D)
-
-                    if self.experiment.type == "Spin Echo":
-                        if last_data_1d is None or not np.array_equal(
-                            pg_1D.data, last_data_1d
-                        ):
-                            last_data_1d = pg_1D.data.copy()
-                            self.live_plot_1D_update_signal.emit(pg_1D)
-                sleep(1)
-
-            # final emitting of plots when sweep is over
-            if self.experiment.expt.runinfo.measured:
-                try:
-                    if not self.experiment.expt.runinfo.parameters['integrate']:
-                        data_name_2d = self.combo_2d.currentText()
-                        pg_2D = ps.PlotGenerator(
-                            expt=self.experiment.expt,
-                            d=2,
-                            x_name="t",
-                            y_name=self.experiment.expt.runinfo.parameters["y_name"],
-                            data_name=data_name_2d,
-                            transpose=1,
-                        )
-                    
-                    if self.experiment.type == "Spin Echo":
-                        data_name_1d = self.combo_1d.currentText()
-                        pg_1D = ps.PlotGenerator(
-                            expt=self.experiment.expt,
-                            d=1,
-                            x_name=self.experiment.expt.runinfo.parameters["y_name"],
-                            data_name=data_name_1d,
-                        )
-
-                    if not self.experiment.expt.runinfo.parameters['integrate']:
-                        self.live_plot_2D_update_signal.emit(pg_2D)
-
-                    if self.experiment.type == "Spin Echo":
-                        self.live_plot_1D_update_signal.emit(pg_1D)
-
-                except Exception as e:
-                    self.updateStatus.emit(f"Error final plot update: {e}\n")
-
-            # Final status update
-            if self.stop_requested:
-                self.updateStatus.emit("Stop request detected. Exiting sweep early.\n")
+            response = requests.get(self.server_address + "/get_parameters")
+            if response.ok:
+                self.experiment.parameters = response.json()["parameters"]
             else:
-                self.updateStatus.emit("Done sweeping (normal exit).\n")
-                self.updateStatus.emit(f"Fit Parameters: {self.experiment.expt.out:.3g} +- {self.experiment.expt.outerr}")
+                print("Error:", response.status_code, response.text)
 
-            self.finished.emit()
+            self.update_sweep()
 
         except Exception as e:
             print()

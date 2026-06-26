@@ -15,9 +15,13 @@ Key Interactions:
 - Delegates to `spinecho_scripts.py` or `pulsesweep_scripts.py` depending on experiment type.
 - Uses `rfsoc2.py` to interact with Qick RFSoC hardware.
 """
+
 import sys, os
 
 sys.path.append("../../")
+nopath = '/home/xilinx/jupyter_notebooks/pyscan-esr-UI'
+if nopath in sys.path:
+    sys.path.remove(nopath)
 
 from flask import Flask, request, jsonify, make_response
 import spinecho_scripts
@@ -166,9 +170,14 @@ def initialize_experiment():
             print(f"Error initializing Moku: {e}")
 
     # Initialize temperature device if necessary
-    if not hasattr(devices, "ls335") and parameters["use_temp"]:
-        devices.ls335 = ps.Lakeshore335()
-        temp = devices.ls335.get_temp()
+    if parameters["use_temp"]:
+        if not hasattr(devices, "ls335"):
+            devices.ls335 = ps.Lakeshore335()
+            temp = devices.ls335.get_temp()
+        if parameters['set_temp']:
+            devices.ls335.ramp(on=parameters['temp_ramp'])
+            devices.ls335.setpoint(parameters['temp'])
+        self.heater(parameters['heater_on'])
 
     """This initializes a pyscan experiment with functions from the correct 
         experiment type scripts and GUI files."""

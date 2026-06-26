@@ -12,7 +12,8 @@ Key Interactions:
 - Embeds `GraphWidget` and `SweepPlotWidget` from `graphing.py` for live plotting.
 - Communicates with a Flask-based backend (see `server.py`) to control hardware and collect data.
 """
-
+global app_mode
+app_mode = "GUI"
 import matplotlib
 
 matplotlib.use("Qt5Agg")  # Must be done before importing pyplot!
@@ -56,14 +57,15 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import sys, os
 
-sys.path.append("../")
+sys.path.append("../../")
 from time import sleep
 from datetime import date, datetime
 import pickle
 import requests
-import pyscan_non_soc_version as ps
+#import pyscan_non_soc_version as ps
+from pyscan import PlotGenerator
 
-import globals
+# import globals
 from Worker import *
 from graphing import *
 from ExperimentType import *
@@ -88,6 +90,9 @@ sweep_list = [
     "EDFS",
     "Freq Sweep",
     "CPMG",
+    "Gain",
+    "DEER",
+    "Temp"
 ]
 
 bimod_sweep_list = [
@@ -107,7 +112,7 @@ bimod_sweep_list = [
 EXPERIMENT_TEMPLATES = {
     "Pulse Frequency Sweep": {
         "groups": {
-            "Main Settings": [
+            "Main": [
                 {
                     "display": "Frequency",
                     "key": "freq",
@@ -152,13 +157,13 @@ EXPERIMENT_TEMPLATES = {
                     "default": [3850.0, 3950.0, 2.0],
                 },
             ],
-            "Readout Settings": [
+            "Readout": [
                 {
                     "display": "Time Offset",
                     "key": "h_offset",
                     "type": "double_spin",
-                    "min": -10000.0,
-                    "max": 10000.0,
+                    # "min": -10000.0,
+                    # "max": 10000.0,
                     "default": -0.125,
                 },
                 {
@@ -175,46 +180,6 @@ EXPERIMENT_TEMPLATES = {
                     "type": "check",
                     "default": False,
                 },
-            ],
-            "Uncommon Settings": [
-                {
-                    "display": "Repetition time",
-                    "key": "period",
-                    "type": "double_spin",
-                    "min": 0.1,
-                    "max": 2000000000.0,
-                    "default": 10.0,
-                },
-                {
-                    "display": "Ch1 90 Pulse",
-                    "key": "pulse1_1",
-                    "type": "double_spin",
-                    "min": 0.0,
-                    "max": 652100.0,
-                    "default": 50.0,
-                },
-                {
-                    "display": "Magnetic Field, Scale, Current limit",
-                    "key": ["field", "gauss_amps", "current_limit"],
-                    "type": "composite",
-                    "default": [0.0, 276.0, 3.5],
-                },
-                {
-                    "display": "Reps",
-                    "key": "ave_reps",
-                    "type": "spin",
-                    "min": 1,
-                    "max": 1000,
-                    "default": 1,
-                },
-                {
-                    "display": "Wait Time",
-                    "key": "wait",
-                    "type": "double_spin",
-                    "min": 0.0,
-                    "max": 20.0,
-                    "default": 0.3,
-                },
                 {
                     "display": "Integral only",
                     "key": "integrate",
@@ -222,18 +187,110 @@ EXPERIMENT_TEMPLATES = {
                     "default": True,
                 },
             ],
+            "Magnet": [
+                {
+                    "display": "Field, Scale, I limit",
+                    "key": ["field", "gauss_amps", "current_limit"],
+                    "type": "composite",
+                    "default": [0.0, 276.0, 3.5],
+                },
+                {
+                    "display": "Turn field off after sweep?",
+                    "key": "turn_off",
+                    "type": "check",
+                    "default": True,
+                },
+            ],
+            "Temperature": [
+                {
+                    "display": "Set Temp, Ramp, Heater",
+                    "key": ["set_temp", "temp_ramp", "heater_on"],
+                    "type": "composite",
+                    "default": [False, True, False],
+                },
+                {
+                    "display": "Setpoint (K)",
+                    "key": "temp",
+                    "type": "double_spin",
+                    "min": 1.0,
+                    "max": 325,
+                    "default": 4,
+                },
+                {
+                    "display": "Use Lakeshore?",
+                    "key": "use_temp",
+                    "type": "check",
+                    "default": False,
+                },
+            ],
+            "Uncommon Settings": [
+                {
+                    "display": "Repetition time",
+                    "key": "period",
+                    "type": "double_spin",
+                    "min": 0.1,
+                    # "max": 2000000000.0,
+                    "default": 10.0,
+                },
+                {
+                    "display": "Ch1 90 Pulse",
+                    "key": "pulse1_1",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    # "max": 652100.0,
+                    "default": 50.0,
+                },
+                {
+                    "display": "Reps",
+                    "key": "ave_reps",
+                    "type": "spin",
+                    "min": 1,
+                    # "max": 1000,
+                    "default": 1,
+                },
+                {
+                    "display": "Wait Time",
+                    "key": "wait",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    # "max": 20.0,
+                    "default": 0.3,
+                },
+                {
+                    "display": "Switch Offset (us)",
+                    "key": "sw_offset",
+                    "type": "double_spin",
+                    "min": -1e5,
+                    "max": 1e5,
+                    "default": -0.45,
+                },
+                {
+                    "display": "DAC Ch",
+                    "key": "dac_ch",
+                    "type": "combo",
+                    "options": ["B", "A"],
+                    "default": "B",
+                },
+            ],
             "Utility Settings": [
                 {
-                    "display": "Use PSU",
+                    "display": "Use PSU?",
                     "key": "use_psu",
                     "type": "check",
                     "default": False,
                 },
                 {
-                    "display": "Use Lakeshore",
-                    "key": "use_temp",
+                    "display": "Moku Setup",
+                    "key": "moku",
+                    "type": "combo",
+                    "options": ['Cryostat', 'Bench', 'None'],
+                    "default": "Cryostat",
+                },
+                {
+                    "display": "Turn laser on? (Bench Moku)",
+                    "key": "laser_on",
                     "type": "check",
-                    "default": False,
+                    "default": True,
                 },
             ],
             "Never Change": [
@@ -250,15 +307,22 @@ EXPERIMENT_TEMPLATES = {
                     "key": "sltime",
                     "type": "double_spin",
                     "min": 0.0,
-                    "max": 20.0,
+                    # "max": 20.0,
                     "default": 0.0,
+                },
+                {
+                    "display": "Sub Method",
+                    "key": "subtract",
+                    "type": "combo",
+                    "options": ["Phase", "None"],
+                    "default": "None",
                 },
             ],
         }
     },
     "Spin Echo": {
         "groups": {
-            "Main Settings": [
+            "Main": [
                 {
                     "display": "Ch1 Freq",
                     "key": "freq",
@@ -278,11 +342,11 @@ EXPERIMENT_TEMPLATES = {
                     "tool tip": "Helpful information",
                 },
                 {
-                    "display": "Repetition time",
+                    "display": "Repetition time (us)",
                     "key": "period",
                     "type": "double_spin",
                     "min": 0.1,
-                    "max": 2000000000.0,
+                    # "max": 2000000000.0,
                     "default": 200.0,
                     "tool tip": "Helpful information",
                 },
@@ -305,7 +369,7 @@ EXPERIMENT_TEMPLATES = {
                     "key": "ave_reps",
                     "type": "spin",
                     "min": 1,
-                    "max": 1000,
+                    # "max": 1000,
                     "default": 1,
                 },
                 {
@@ -322,13 +386,13 @@ EXPERIMENT_TEMPLATES = {
                     "default": [150.0, 1000.0, 50.0],
                 },
             ],
-            "Pulse Settings": [
+            "Pulse": [
                 {
                     "display": "Ch1 Delay",
                     "key": "delay",
                     "type": "double_spin",
                     "min": 0,
-                    "max": 652100,
+                    # "max": 652100,
                     "default": 150.0,
                 },
                 {
@@ -336,15 +400,15 @@ EXPERIMENT_TEMPLATES = {
                     "key": "pulse1_1",
                     "type": "double_spin",
                     "min": 0,
-                    "max": 652100,
+                    # "max": 652100,
                     "default": 50.0,
                 },
                 {
-                    "display": "Nut. Delay (ns)",
+                    "display": "Nut. Delay (us)",
                     "key": "nutation_delay",
                     "type": "double_spin",
                     "min": 0,
-                    "max": 655360,
+                    # "max": 655360,
                     "default": 5000.0,
                 },
                 {
@@ -352,32 +416,19 @@ EXPERIMENT_TEMPLATES = {
                     "key": "nutation_length",
                     "type": "double_spin",
                     "min": 0,
-                    "max": 655360,
+                    # "max": 655360,
                     "default": 0.0,
                 },
-            ],
-            "Second Sweep Settings": [
                 {
-                    "display": "Second sweep?",
-                    "key": "sweep2",
-                    "type": "check",
-                    "default": False,
-                },
-                {
-                    "display": "Experiment 2",
-                    "key": "expt2",
-                    "type": "combo",
-                    "options": sweep_list,
-                    "default": "Hahn Echo",
-                },
-                {
-                    "display": "Sweep 2 start, end, step",
-                    "key": ["sweep2_start", "sweep2_end", "sweep2_step"],
-                    "type": "composite",
-                    "default": [0, 0, 0],
+                    "display": "# 180 Pulses",
+                    "key": "pulses",
+                    "type": "spin",
+                    "min": 1,
+                    "max": 256,
+                    "default": 1,
                 },
             ],
-            "Readout Settings": [
+            "Readout": [
                 {
                     "display": "Time Offset (us)",
                     "key": "h_offset",
@@ -400,30 +451,28 @@ EXPERIMENT_TEMPLATES = {
                     "type": "check",
                     "default": False,
                 },
-            ],
-            "Uncommon Settings": [
                 {
-                    "display": "Ch1 180 Pulse Mult",
-                    "key": "mult1",
-                    "type": "double_spin",
-                    "min": 0,
-                    "max": 652100,
-                    "default": 1.0,
+                    "display": "Integral only",
+                    "key": "integrate",
+                    "type": "check",
+                    "default": True,
                 },
+            ],
+            "Magnet": [
                 {
                     "display": "Magnetic Field (G)",
                     "key": "field",
                     "type": "double_spin",
                     "min": 0.0,
-                    "max": 0.0,
-                    "default": 2500.0,
+                    # "max": 10000,
+                    "default": 0.0,
                 },
                 {
                     "display": "Magnet Scale (G/A)",
                     "key": "gauss_amps",
                     "type": "double_spin",
                     "min": 0.001,
-                    "max": 1000.0,
+                    # "max": 100000.0,
                     "default": 270.0,
                 },
                 {
@@ -431,30 +480,30 @@ EXPERIMENT_TEMPLATES = {
                     "key": "current_limit",
                     "type": "double_spin",
                     "min": 0.0,
-                    "max": 10.0,
+                    # "max": 10.0,
                     "default": 3.5,
                 },
                 {
-                    "display": "Wait Time (s)",
-                    "key": "wait",
-                    "type": "double_spin",
-                    "min": 0.0,
-                    "max": 20.0,
-                    "default": 0.2,
-                },
-                {
-                    "display": "Integral only",
-                    "key": "integrate",
+                    "display": "Turn field off after sweep?",
+                    "key": "turn_off",
                     "type": "check",
-                    "default": False,
+                    "default": True,
                 },
             ],
-            "Utility Settings": [
+            "Temperature": [
                 {
-                    "display": "Use PSU? (no magnet if not)",
-                    "key": "use_psu",
-                    "type": "check",
-                    "default": False,
+                    "display": "Set Temp, Ramp, Heater",
+                    "key": ["set_temp", "temp_ramp", "heater_on"],
+                    "type": "composite",
+                    "default": [False, True, False],
+                },
+                {
+                    "display": "Setpoint (K)",
+                    "key": "temp",
+                    "type": "double_spin",
+                    "min": 1.0,
+                    "max": 325,
+                    "default": 4,
                 },
                 {
                     "display": "Use Lakeshore?",
@@ -463,15 +512,100 @@ EXPERIMENT_TEMPLATES = {
                     "default": False,
                 },
             ],
-            "Never Change": [
+            "Second Sweep": [
                 {
-                    "display": "# 180 Pulses",
-                    "key": "pulses",
-                    "type": "spin",
-                    "min": 1,
-                    "max": 256,
-                    "default": 1,
+                    "display": "Second sweep?",
+                    "key": "sweep2",
+                    "type": "check",
+                    "default": False,
                 },
+                {
+                    "display": "Experiment 2",
+                    "key": "expt2",
+                    "type": "combo",
+                    "options": sweep_list,
+                    "default": "Hahn Echo",
+                },
+                {
+                    "display": "Sweep 2 start, end, step",
+                    "key": ["sweep2_start", "sweep2_end", "sweep2_step"],
+                    "type": "composite",
+                    "default": [0, 0, 0],
+                },
+            ],
+            "Uncommon": [
+                {
+                    "display": "Wait Time (s)",
+                    "key": "wait",
+                    "type": "double_spin",
+                    "min": 0.0,
+                    # "max": 20.0,
+                    "default": 0.2,
+                },
+                {
+                    "display": "DEER Freq",
+                    "key": "freq2",
+                    "type": "double_spin",
+                    "min": 50.0,
+                    "max": 14999.0,
+                    "default": 3902.0,
+                    "tool tip": "Helpful information",
+                },
+                {
+                    "display": "Second Delay",
+                    "key": "tau",
+                    "type": "double_spin",
+                    "min": 0,
+                    # "max": 652100,
+                    "default": 150.0,
+                },
+                {
+                    "display": "DEER Delay",
+                    "key": "DEER_delay",
+                    "type": "double_spin",
+                    "min": 0,
+                    # "max": 652100,
+                    "default": 150.0,
+                },
+                {
+                    "display": "DEER Pulse",
+                    "key": "pulse2_2",
+                    "type": "double_spin",
+                    "min": 0,
+                    # "max": 652100,
+                    "default": 50.0,
+                },
+            ],
+            "Utility Settings": [
+                {
+                    "display": "Use PSU?",
+                    "key": "use_psu",
+                    "type": "check",
+                    "default": False,
+                },
+                {
+                    "display": "Moku Setup",
+                    "key": "moku",
+                    "type": "combo",
+                    "options": ['Cryostat', 'Bench', 'None'],
+                    "default": "Cryostat",
+                },
+                {
+                    "display": "Turn laser on? (Bench Moku)",
+                    "key": "laser_on",
+                    "type": "check",
+                    "default": True,
+                },
+                {
+                    "display": "Switch Offset (us)",
+                    "key": "sw_offset",
+                    "type": "double_spin",
+                    "min": -1e5,
+                    "max": 1e5,
+                    "default": -0.45,
+                },
+            ],
+            "Never Change": [
                 {
                     "display": "Phase",
                     "key": "phase",
@@ -487,34 +621,10 @@ EXPERIMENT_TEMPLATES = {
                     "default": False,
                 },
                 {
-                    "display": "Field Start (G)",
-                    "key": "field_start",
-                    "type": "double_spin",
-                    "min": 0.0,
-                    "max": 2500.0,
-                    "default": 0.0,
-                },
-                {
-                    "display": "Field End (G)",
-                    "key": "field_end",
-                    "type": "double_spin",
-                    "min": 0.0,
-                    "max": 2500.0,
-                    "default": 50.0,
-                },
-                {
-                    "display": "Field Step (G)",
-                    "key": "field_step",
-                    "type": "double_spin",
-                    "min": 0.01,
-                    "max": 2500.0,
-                    "default": 1.5,
-                },
-                {
                     "display": "Sub Method",
                     "key": "subtract",
                     "type": "combo",
-                    "options": ["Phase", "Delay", "Both", "None", "Autophase"],
+                    "options": ["Phase", "None"],
                     "default": "Phase",
                 },
                 {
@@ -522,8 +632,23 @@ EXPERIMENT_TEMPLATES = {
                     "key": "sltime",
                     "type": "double_spin",
                     "min": 0.0,
-                    "max": 20.0,
+                    # "max": 20.0,
                     "default": 0.0,
+                },
+                {
+                    "display": "Ch1 180 Pulse Mult",
+                    "key": "mult1",
+                    "type": "double_spin",
+                    "min": 0,
+                    "max": 652100,
+                    "default": 1.0,
+                },
+                {
+                    "display": "DAC Ch",
+                    "key": "dac_ch",
+                    "type": "combo",
+                    "options": ["B", "A"],
+                    "default": "B",
                 },
             ],
         }
@@ -633,7 +758,7 @@ class DynamicSettingsPanel(QWidget):
         for group_name, group_settings in settings.get("groups", {}).items():
             group_item = QTreeWidgetItem([group_name])
             self.settings_tree.addTopLevelItem(group_item)
-            group_item.setExpanded(group_name == "Main Settings")
+            group_item.setExpanded(group_name == "Main")
             for setting in group_settings:
                 item = QTreeWidgetItem()
                 group_item.addChild(item)
@@ -653,7 +778,11 @@ class DynamicSettingsPanel(QWidget):
                 defaults = {}
         else:
             defaults = {}
+        
+        self.load_parameters(defaults, type_map)
 
+
+    def load_parameters(self, defaults, type_map):
         # Apply default values to each widget in the tree
         tree = self.settings_tree
         root = tree.invisibleRootItem()
@@ -722,6 +851,7 @@ class DynamicSettingsPanel(QWidget):
             widget.setMinimum(float(setting.get("min", 0.0)))
             widget.setMaximum(float(setting.get("max", 1e9)))
             widget.setValue(float(setting.get("default", 0.0)))
+            widget.setDecimals(setting.get("decimals", 3))
 
         # Text input field
         elif stype == "line_edit":
@@ -751,6 +881,10 @@ class DynamicSettingsPanel(QWidget):
                     spin.setMaximum(setting.get("max", 1e9))
                     spin.setValue(val)
                     layout.addWidget(spin)
+                elif isinstance(val, bool):
+                    check = QCheckBox()
+                    check.setChecked(setting.get("default", False))
+                    layout.addWidget(check)
                 else:
                     line = QLineEdit()
                     line.setText(str(val) if val is not None else "")
@@ -816,10 +950,17 @@ class ExperimentUI(QMainWindow):
         super().__init__()
         self.setWindowIcon(QIcon("icon.png"))
 
+        # Create spectrometer options
+        self.spectrometers = {
+            "Cryostat": "http://pynq.hamilton.edu:5000",
+            "Bench": "http://pynq2.hamilton.edu:5000",
+        }
+        self.spectrometer = "Cryostat"
+
         # Create experiment logic handlers
         self.experiments = {
-            "Spin Echo": ExperimentType("Spin Echo"),
-            "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep"),
+            "Spin Echo": ExperimentType("Spin Echo", self.spectrometers["Cryostat"], self.spectrometer),
+            "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep", self.spectrometers["Cryostat"], self.spectrometer),
         }
 
         # Core application state flags
@@ -831,6 +972,7 @@ class ExperimentUI(QMainWindow):
         self.current_experiment = self.experiments["Spin Echo"]
         self.experiment_templates = EXPERIMENT_TEMPLATES
         self.temp_parameters = {}
+        self.server_address = self.spectrometers["Cryostat"]
 
         # Initialize key panels
         self.settings_panel = DynamicSettingsPanel()
@@ -867,7 +1009,7 @@ class ExperimentUI(QMainWindow):
         """
         try:
             response = requests.get(
-                globals.server_address + "/get_scopes", json=data, timeout=2
+                self.server_address + "/get_scopes", json=data, timeout=2
             )
             response.raise_for_status()
             data = response.json()
@@ -896,7 +1038,7 @@ class ExperimentUI(QMainWindow):
         if not self.is_process_running:
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
-            self.sweep_start_stop_btn.setEnabled(False)
+            # self.sweep_start_stop_btn.setEnabled(False)
             self.set_parameters_and_initialize_btn.setEnabled(True)
 
     def init_layout(self):
@@ -1020,7 +1162,7 @@ class ExperimentUI(QMainWindow):
         hdr3.addWidget(QLabel("Variable:"))
         combo_2d = QComboBox()
         combo_2d.currentTextChanged.connect(self.update_2d_plot)
-        combo_2d.addItems(["x", "i", "q"])
+        combo_2d.addItems(["x", "i", "q", "xmean", "imean", "qmean"])
         hdr3.addWidget(combo_2d)
         hdr3.addStretch()
         tab3_layout.addLayout(hdr3)
@@ -1097,6 +1239,21 @@ class ExperimentUI(QMainWindow):
         top_menu_container = QWidget()
         top_menu_container.setLayout(top_menu)
 
+        # ----- Dropdown for spectrometer selection -----
+        spec_widget = QWidget()
+        spec_layout = QVBoxLayout(spec_widget)
+        spec_layout.setSpacing(0)
+        spec_layout.setContentsMargins(0, 0, 0, 0)
+
+        spec_dropdown = QComboBox()
+        spec_dropdown.addItems(list(self.spectrometers.keys()))
+        spec_dropdown.setStyleSheet("font-size: 10pt;")
+        spec_dropdown.currentTextChanged.connect(self.change_spectrometer)
+        spec_dropdown.setMinimumHeight(40)
+        spec_layout.addWidget(spec_dropdown)
+
+        top_menu.addWidget(spec_widget)
+        
         # ----- Dropdown for experiment type selection -----
         exp_widget = QWidget()
         exp_layout = QVBoxLayout(exp_widget)
@@ -1120,9 +1277,26 @@ class ExperimentUI(QMainWindow):
         add_queue_btn.clicked.connect(self.add_to_queue)
         top_menu.addWidget(add_queue_btn)
 
+        # ----- Load from Server Button -----
+        server_load_btn = QPushButton("Load from Server")
+        server_load_btn.setMinimumHeight(40)
+        server_load_btn.setStyleSheet("font-size: 10pt; padding: 4px;")
+        server_load_btn.clicked.connect(self.load_from_server)
+        top_menu.addWidget(server_load_btn)
+
         # ----- Experiment-specific buttons: Init, Read, Sweep -----
         top_menu = self.init_experiment_specific_buttons(top_menu)
         top_menu.addSpacing(30)
+
+        # # ----- Laser Indicator -----
+        # self.label_laser = QLabel("Laser On")
+        # self.indicator_laser = QLabel(" ")
+        # self.indicator_laser.setFixedSize(10, 10)
+        # self.indicator_laser.setStyleSheet(
+        #     "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        # )
+        # top_menu.addWidget(self.label_laser)
+        # top_menu.addWidget(self.indicator_laser)
 
         return top_menu_container
 
@@ -1249,6 +1423,94 @@ class ExperimentUI(QMainWindow):
 
         return top_menu
 
+    def change_spectrometer(self, spectrometer):
+        """Handles switching between spectrometers (Cryostat vs Bench).
+
+        - Stops any running sweep
+        - Resets parameters, graphs, and tab views
+        - Reconnects to the newly selected spectrometer
+        """
+        if hasattr(self, "worker"):
+            self.worker.stop_sweep()
+            self.indicator_sweep.setStyleSheet(
+                "background-color: grey; border: 1px solid black; border-radius: 5px;"
+            )
+
+        print(f"Changing spectrometer to {spectrometer}...\n")
+
+        try:
+            # Update server address
+            self.spectrometer = spectrometer
+            self.server_address = self.spectrometers[spectrometer]
+
+            # TODO: Set up spectrometer-specific controls, so we don't have laser controls for Cryo,
+            # and don't have temperature controls for Bench
+
+            # Change experiment logic handlers
+            self.experiments = {
+                "Spin Echo": ExperimentType("Spin Echo", self.spectrometers[spectrometer], self.spectrometer),
+                "Pulse Frequency Sweep": ExperimentType("Pulse Frequency Sweep", self.spectrometers[spectrometer], self.spectrometer),
+            }
+            self.current_experiment = self.experiments[self.current_experiment.type]
+            
+            # Refresh graph contents for the new experiment
+            for idx in range(self.graph_tabs.count()):
+                tab = self.graph_tabs.widget(idx)
+                layout = tab.layout()
+                if not layout:
+                    layout = QVBoxLayout(tab)
+                    tab.setLayout(layout)
+
+                # Clear layout contents
+                while layout.count():
+                    item = layout.takeAt(0)
+                    if item.widget():
+                        item.widget().setParent(None)
+                    elif item.layout():
+                        nested_layout = item.layout()
+                        while nested_layout.count():
+                            sub_item = nested_layout.takeAt(0)
+                            if sub_item.widget():
+                                sub_item.widget().setParent(None)
+                        layout.removeItem(nested_layout)
+
+                # Rebuild each tab
+                if idx == 0:
+                    layout.addWidget(self.current_experiment.read_unprocessed_graph)
+                elif idx == 1:
+                    layout.addWidget(self.current_experiment.read_processed_graph)
+                elif idx == 2:
+                    hdr3 = QHBoxLayout()
+                    hdr3.addWidget(QLabel("Variable:"))
+                    combo_2d = QComboBox()
+                    combo_2d.currentTextChanged.connect(self.update_2d_plot)
+                    combo_2d.addItems(["x", "i", "q"])
+                    hdr3.addWidget(combo_2d)
+                    hdr3.addStretch()
+                    layout.addLayout(hdr3)
+                    layout.addWidget(self.current_experiment.sweep_graph_2D)
+                    self.combo_2d = combo_2d
+                elif self.graph_tabs.tabText(idx) == "1D Sweep":
+                    hdr4 = QHBoxLayout()
+                    hdr4.addWidget(QLabel("Variable:"))
+                    combo_1d = QComboBox()
+                    combo_1d.currentTextChanged.connect(self.update_1d_plot)
+                    combo_1d.addItems(["xmean", "imean", "qmean"])
+                    hdr4.addWidget(combo_1d)
+                    hdr4.addStretch()
+                    layout.addLayout(hdr4)
+                    layout.addWidget(self.current_experiment.sweep_graph_1D)
+                    self.combo_1d = combo_1d
+
+            # Reset button state
+            self.read_unprocessed_btn.setEnabled(False)
+            self.read_processed_btn.setEnabled(False)
+            # self.sweep_start_stop_btn.setEnabled(False)
+            self.set_parameters_and_initialize_btn.setEnabled(True)
+
+        except Exception as e:
+            print(f"Error switching spectrometer: {e}")
+
     def change_experiment_type(self, experiment_type):
         """Handles switching between experiment modes (Spin Echo vs Pulse Frequency Sweep).
 
@@ -1349,7 +1611,7 @@ class ExperimentUI(QMainWindow):
             # Reset button state
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
-            #self.sweep_start_stop_btn.setEnabled(False)
+            # self.sweep_start_stop_btn.setEnabled(False)
             self.set_parameters_and_initialize_btn.setEnabled(True)
 
         except Exception as e:
@@ -1360,11 +1622,16 @@ class ExperimentUI(QMainWindow):
         try:
             if self.current_experiment.expt:
                 data_name_2d = self.combo_2d.currentText()
-                pg_2D = ps.PlotGenerator(
+                if self.current_experiment.parameters['sweep2']:
+                    xname = self.current_experiment.parameters["y_name2"]
+                else:
+                    xname = "t"
+                yname = self.current_experiment.parameters["y_name"]
+                pg_2D = PlotGenerator(
                     expt=self.current_experiment.expt,
                     d=2,
-                    x_name="t",
-                    y_name=self.current_experiment.parameters["y_name"],
+                    x_name=xname,
+                    y_name=yname,
                     data_name=data_name_2d,
                     transpose=1,
                 )
@@ -1379,7 +1646,7 @@ class ExperimentUI(QMainWindow):
         """
         if self.current_experiment.expt:
             data_name_1d = self.combo_1d.currentText()
-            pg_1D = ps.PlotGenerator(
+            pg_1D = PlotGenerator(
                 expt=self.current_experiment.expt,
                 d=1,
                 x_name=self.current_experiment.parameters["y_name"],
@@ -1509,7 +1776,7 @@ class ExperimentUI(QMainWindow):
 
         # Setup worker thread and task
         self.worker_thread = QThread(self)
-        self.worker = Worker(self.current_experiment, "read_unprocessed")
+        self.worker = Worker(self.current_experiment, "read_unprocessed", self.server_address)
         self.worker.moveToThread(self.worker_thread)
 
         # Connect signals
@@ -1550,7 +1817,7 @@ class ExperimentUI(QMainWindow):
 
         # Setup worker and thread
         self.worker_thread = QThread(self)
-        self.worker = Worker(self.current_experiment, "read_processed")
+        self.worker = Worker(self.current_experiment, "read_processed", self.server_address)
         self.worker.moveToThread(self.worker_thread)
 
         # Setup worker and thread
@@ -1600,6 +1867,7 @@ class ExperimentUI(QMainWindow):
                 self.worker = Worker(
                     self.current_experiment,
                     "sweep",
+                    self.server_address,
                     combo_2d=self.combo_2d,
                 )
             elif self.current_experiment.type == "Spin Echo":
@@ -1607,6 +1875,7 @@ class ExperimentUI(QMainWindow):
                 self.worker = Worker(
                     self.current_experiment,
                     "sweep",
+                    self.server_address,
                     combo_2d=self.combo_2d,
                     combo_1d=self.combo_1d,
                 )
@@ -1614,9 +1883,16 @@ class ExperimentUI(QMainWindow):
 
             # Connect sweep update signals
             self.worker_thread.started.connect(self.worker.run_sweep)
+            try:
+                self.current_experiment.sweep_graph_2D.colorbar.remove()
+            except:
+                pass
+            self.current_experiment.sweep_graph_2D.mesh = None
+            self.current_experiment.sweep_graph_2D.ax.clear()
             self.worker.live_plot_2D_update_signal.connect(
                 self.current_experiment.sweep_graph_2D.on_live_plot_2D
             )
+            # self.current_experiment.sweep_graph_1D.ax.clear()
             self.worker.live_plot_1D_update_signal.connect(
                 self.current_experiment.sweep_graph_1D.on_live_plot_1D
             )
@@ -1649,6 +1925,7 @@ class ExperimentUI(QMainWindow):
                 self.worker = Worker(
                     self.current_experiment,
                     "sweep",
+                    self.server_address,
                     combo_2d=self.combo_2d,
                 )
             elif self.current_experiment.type == "Spin Echo":
@@ -1656,6 +1933,7 @@ class ExperimentUI(QMainWindow):
                 self.worker = Worker(
                     self.current_experiment,
                     "sweep",
+                    self.server_address,
                     combo_2d=self.combo_2d,
                     combo_1d=self.combo_1d,
                 )
@@ -1853,7 +2131,7 @@ class ExperimentUI(QMainWindow):
         """
         try:
             # Clone the current experiment backend logic
-            new_experiment = ExperimentType(self.current_experiment.type)
+            new_experiment = ExperimentType(self.current_experiment.type, self.server_address, self.spectrometer)
 
             # Create a QueuedExperiment wrapper (includes settings + metadata)
             queue_item = QueuedExperiment(
@@ -1867,6 +2145,36 @@ class ExperimentUI(QMainWindow):
             if queue_item.valid:
                 self.queue_manager.add_to_working_queue(queue_item)
 
+        except Exception as e:
+            print(e)
+
+    def load_from_server(self):
+        """Loads settings into the panel using the experiment template structure.
+        It uses the parameters currently loaded into the server.
+        """
+
+        settings = self.experiment_templates[self.current_experiment.type]
+        
+        # Create a type lookup map to interpret each setting key
+        type_map = {}
+        for group in settings.get("groups", {}).values():
+            for setting in group:
+                stype = setting.get("type")
+                key = setting.get("key")
+                if isinstance(key, list):
+                    for subkey in key:
+                        type_map[subkey] = stype
+                else:
+                    type_map[key] = stype
+        
+        response = requests.get(self.server_address + "/get_parameters")
+        if response.ok:
+            parameters = response.json()["parameters"]
+        else:
+            print("Error:", response.status_code, response.text)
+        
+        try:
+            self.settings_panel.load_parameters(parameters, type_map)
         except Exception as e:
             print(e)
 
@@ -1924,7 +2232,7 @@ class QueueRunnerWorker(QThread):
 
         Connects appropriate update and plotting signals to the GUI.
         """
-        worker = Worker(experiment.experiment, task)
+        worker = Worker(experiment.experiment, task, self.server_address)
         thread = QThread()
 
         worker.moveToThread(thread)
