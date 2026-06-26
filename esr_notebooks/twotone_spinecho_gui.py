@@ -14,8 +14,9 @@ plt.rc('mathtext', fontset='cm')
 default_file = 'bse_defaults.pkl'
 
 secont_keys['synth'][0] = ['freq1', 'freq2', 'att1', 'att2']
-secont_keys['fpga'] = [['delay1', 'pulse1_1', 'mult1', 'period'],
-                       ['delay2', 'pulse2_1', 'mult2', 'p2start', 'block'],
+secont_keys['fpga'] = [['delay1', 'pulse1_1', 'mult1'],
+                       ['delay2', 'pulse2_1', 'mult2', 'p2start'],
+                       ['period', 'block', 'pre_att'],
                        ['cpmg', 'pulse_block', 'nutation_delay', 'nutation_width']]
 secont_keys['measure'] = [['subtract', 'reps', 'twotone_expt'],
                           ['wait', 'sltime', 'init', 'turn_off'],
@@ -48,11 +49,11 @@ def biread(sig, devices, output, fig):
     for ax in fig.axes:
         ax.remove()
     ax = fig.add_subplot(111)
-    ax.plot(sig.time*1e6, sig.volt1, color='yellow', label='CH1')
-    ax.plot(sig.time*1e6, sig.volt2, color='b', label='CH2')
+    ax.plot(sig.time*1e6, sig.i1, color='yellow', label='CH1')
+    ax.plot(sig.time*1e6, sig.q1, color='b', label='CH2')
     ax.plot(sig.time*1e6, sig.x1, color='m', label='AMP1')
-    ax.plot(sig.time*1e6, sig.volt3, color='r', label='CH3')
-    ax.plot(sig.time*1e6, sig.volt4, color='g', label='CH4')
+    ax.plot(sig.time*1e6, sig.i2, color='r', label='CH3')
+    ax.plot(sig.time*1e6, sig.q2, color='g', label='CH4')
     ax.plot(sig.time*1e6, sig.x2, color='black', label='AMP2')
     ax.set_xlabel('Time (μs)')
     ax.set_ylabel('Subtracted Signal (V)')
@@ -100,12 +101,12 @@ def single_shot(sig, parameters, devices, output, fig):
     for ax in fig.axes:
         ax.remove()
     ax = fig.add_subplot(111)
-    ax.plot(sig.time*1e6, sig.v1sub, color='yellow', label='CH1')
-    ax.plot(sig.time*1e6, sig.v2sub, color='b', label='CH2')
-    ax.plot(sig.time*1e6, sig.x1sub, color='m', label='AMP1')
-    ax.plot(sig.time*1e6, sig.v3sub, color='r', label='CH3')
-    ax.plot(sig.time*1e6, sig.v4sub, color='g', label='CH4')
-    ax.plot(sig.time*1e6, sig.x2sub, color='black', label='AMP2')
+    ax.plot(sig.time*1e6, sig.i1, color='yellow', label='CH1')
+    ax.plot(sig.time*1e6, sig.q1, color='b', label='CH2')
+    ax.plot(sig.time*1e6, sig.x1, color='m', label='AMP1')
+    ax.plot(sig.time*1e6, sig.i2, color='r', label='CH3')
+    ax.plot(sig.time*1e6, sig.q2, color='g', label='CH4')
+    ax.plot(sig.time*1e6, sig.x2, color='black', label='AMP2')
     ax.set_xlabel('Time (μs)')
     ax.set_ylabel('Subtracted Signal (V)')
     [ax.axvline(x=w*1e6, color='m', ls='--') for w in win[0]]
@@ -133,9 +134,11 @@ def init_experiment(devices, parameters, sweep):
     devices.fpga.bimodal_spin_echo(parameters)
     devices.synth.bimodal_spin_echo(parameters)
     devices.scope.setup_spin_echo(parameters)
-    if parameters['use_psu']:
-        devices.psu.set_magnet(parameters)
-        devices.psu.set_switch_1pulse(parameters['delay'])
+    if not parameters['moku']=="None":
+        devices.moku.set_switch_1pulse(2*parameters['delay']) 
+        devices.moku.set_magnet(parameters)
+    if parameters["use_psu"]:
+        devices.psu.output = True
     setup_twotone_experiment(parameters, devices, sweep)
 
 

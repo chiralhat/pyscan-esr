@@ -59,7 +59,7 @@ def invert_scope(devices, arg, ave=4, sltime=0.3, **kwargs):
     
     
 def process_ses(d, win, backnum=100, detune=0):
-    i1usub = sback(d.v1up)
+    v1usub = sback(d.v1up)
     v1dsub = sback(d.v1down)
     v2usub = sback(d.v2up)
     v2dsub = sback(d.v2down)
@@ -89,7 +89,7 @@ def process_ses(d, win, backnum=100, detune=0):
     int_out = integrate_echo(d.time, [d.v3sub, d.v4sub, d.x2, d.x2sub1],
                                 backsub='linear', prewin=win[1])
     [d.i2int, d.q2int, d.x2int, d.x2int1] = int_out
-    d = fourier_signals(d)
+    #d = fourier_signals(d)
 
     d.i1 = d.v1sub
     d.q1 = d.v2sub
@@ -104,7 +104,7 @@ def subback(subfunc, args, devices, ave,
             **kwargs):
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    period = devices.fpga.period/1e9
+    period = devices.fpga.period/1e6
     delays = np.array([devices.fpga[dstr]/1e9 for dstr in ['delay', 'delay2']])
     win = [[lim[0]/1e6, lim[1]/1e6]
             for lim in lims]
@@ -250,7 +250,7 @@ def measure_echos(expt):
     d.delay2 = delay2
     d.sltime = sltime
     if 'ls335' in devices.keys():
-        d.temp = devices.ls335.get_temp()
+        d.temp, d.tempB = devices.ls335.get_temps()
     
     expt.t = d.time
 
