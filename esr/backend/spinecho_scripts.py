@@ -219,7 +219,7 @@ def subback(subfunc, args, devices, ave,
             **kwargs):
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    period = devices.fpga.period/1e9
+    period = devices.fpga.period/1e6
     delay = devices.fpga.delay2/1e9 if port==2 else devices.fpga.delay/1e9
     # win = [delay+lims[0]/1e6, delay+lims[1]/1e6]
     win = [lims[0]/1e6, lims[1]/1e6]
@@ -273,7 +273,7 @@ def subback_none(devices, ave=128, phase=0, dphase=180,
                  **kwargs):
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    period = devices.fpga.period/1e9
+    period = devices.fpga.period/1e6
     delay = devices.fpga.delay2/1e9 if port==2 else devices.fpga.delay/1e9
     # win = [delay+lims[0]/1e6, delay+lims[1]/1e6]
     win = [lims[0]/1e6, lims[1]/1e6]
@@ -303,7 +303,7 @@ def subback_phasedelay(devices, ave=128, phase=0, delay=1000, offset=False,
                        **kwargs):
     if isinstance(d, int):
         d = ps.ItemAttribute()
-    period = devices.fpga.period/1e9
+    period = devices.fpga.period/1e6
 #     delay = devices.fpga.delay/1e9
     win = [delay/1e9+lims[0]/1e6, delay/1e9+lims[1]/1e6]
     
@@ -530,7 +530,7 @@ def measure_echo(expt):
     d.phase = phase
     d.sltime = sltime
     if 'ls335' in devices.keys():
-        d.temp = devices.ls335.get_temp()
+        d.temp, d.tempB = devices.ls335.get_temps()
     
     expt.t = d.time
 
