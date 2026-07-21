@@ -45,7 +45,7 @@ devices = (
 sig = ps.ItemAttribute()  # Container for storing acquired signal data.
 expt = None
 sweep = None
-scopes = {"TBS1052C": ps.Tektronix1052B, "MSO24": ps.TektronixMSO2}
+scopes = {"MSO24": ps.TektronixMSO2}
 
 
 def read(sig, devices):

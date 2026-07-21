@@ -36,6 +36,7 @@ Pyscan can be installed by downloading this repository and following the instruc
 * Jupyter Lab (recommended interface to run experiments using pyscan), automatically installed through [Anaconda](https://www.anaconda.com)
 * It is also recommended to install and use pyscan in a virtual environment
 * conda or python must be accessable from the terminal or anaconda prompt
+* flask for the server
 
 ### Install
 
