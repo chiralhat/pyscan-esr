@@ -1502,6 +1502,12 @@ class ExperimentUI(QMainWindow):
                     layout.addWidget(self.current_experiment.sweep_graph_1D)
                     self.combo_1d = combo_1d
 
+            # Reload settings panel with new template and defaults
+            self.settings_panel.load_settings_panel(
+                self.experiment_templates[self.current_experiment.type],
+                default_file=self.current_experiment.default_file,
+            )
+
             # Reset button state
             self.read_unprocessed_btn.setEnabled(False)
             self.read_processed_btn.setEnabled(False)
