@@ -102,7 +102,13 @@ spin_echo_sweep_keys = {
     },
 }
 
+cpmgs = range(1, 256)
+voltage_limits = [0.002, 10]
+tdivs = []
+for n in range(9, -1, -1):
+    tdivs += [2*10**-n, 4*10**-n, 10*10**-n]#[2.5*10**-n, 5*10**-n, 10*10**-n]
 
+scopes = {'MSO24': ps.TektronixMSO2}
 
 # Global setting trees for the Pulse Frequency Sweep and Spin Echo experiment settings
 sweep_list = [

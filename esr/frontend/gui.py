@@ -72,13 +72,6 @@ from ExperimentType import *
 from templates import EXPERIMENT_TEMPLATES
 
 lstyle = {"description_width": "initial"}
-aves = [1, 4, 16, 64, 128, 256]
-voltage_limits = [0.002, 10]
-tdivs = []
-for n in range(9, -1, -1):
-    tdivs += [2 * 10**-n, 4 * 10**-n, 10 * 10**-n]  # [2.5*10**-n, 5*10**-n, 10*10**-n]
-
-scopes = []
 
 
 TOOLTIPS = {
@@ -426,24 +419,6 @@ class ExperimentUI(QMainWindow):
 
         self.last_saved_graph_path = None
         self.worker_thread = None
-
-    def get_scopes_from_backend(self):
-        """Attempts to query available scope devices from the backend server.
-
-        On success: stores the response in the global `scopes` variable and stops polling.
-        On failure: logs the error message in the GUI.
-        """
-        try:
-            response = requests.get(
-                self.server_address + "/get_scopes", json=data, timeout=2
-            )
-            response.raise_for_status()
-            data = response.json()
-            global scopes
-            scopes = data
-            self.poll_timer.stop()
-        except Exception as e:
-            self.label.setText(f"Unable to get scopes from backend... ({e})")
 
     def load_defaults_and_build_ui(self):
         """Initializes the UI settings panel using the current experiment's template
