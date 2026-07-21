@@ -25,7 +25,6 @@ class WindfreakSynthHD():
 
         self.instrument = SynthHD(port)
         self.instrument.init()
-        self.ch = self.instrument
         
         # Need to set the Feedback to 'Divided'
         self.instrument.API['feedback'] = (int, 'b{}', 'b?')
@@ -56,8 +55,8 @@ class WindfreakSynthHD():
             self.instrument.sweep_cont = False
         chans = [channel-1] if channel else [0, 1]
         for chan in chans:
-            if not self.ch[chan].enable:
-                self.ch[chan].enable = True
+            if not self.instrument[chan].enable:
+                self.instrument[chan].enable = True
 #         if close:
 #             self.close()
     
@@ -66,7 +65,7 @@ class WindfreakSynthHD():
 #         self.open()
         chans = [channel-1] if channel else [0, 1]
         for chan in chans:
-            self.ch[chan].enable = False
+            self.instrument[chan].enable = False
 #         self.close()
 
 
@@ -78,7 +77,7 @@ class WindfreakSynthHD():
         """
         chans = [channel-1] if channel else [0, 1]
         for chan in chans:
-            self.ch[chan].frequency = freq*1e6
+            self.instrument[chan].frequency = freq*1e6
 
 
     def get_freq(self, channel=1):
@@ -87,7 +86,7 @@ class WindfreakSynthHD():
         Returns:
             float: frequency in MHz.
         """
-        chan = self.ch[channel-1]
+        chan = self.instrument[channel-1]
         return chan.frequency/1e6
 
 
@@ -97,7 +96,7 @@ class WindfreakSynthHD():
         Args:
             float: power in dBm
         """
-        chan = self.ch[channel-1]
+        chan = self.instrument[channel-1]
         chan.power = pow
 
 
@@ -107,7 +106,7 @@ class WindfreakSynthHD():
         Returns:
             float: power in dBm
         """
-        chan = self.ch[channel-1]
+        chan = self.instrument[channel-1]
         return chan.power
 
 
@@ -118,7 +117,7 @@ class WindfreakSynthHD():
             value (float / int): phase shift in degrees
         """
 #         self.open()
-        chan = self.ch[channel-1]
+        chan = self.instrument[channel-1]
         chan.phase = phi
 #         self.close()
 
@@ -146,19 +145,19 @@ class WindfreakSynthHD():
 
     @property
     def c1_freq(self):
-        return self.ch[0].frequency
+        return self.instrument[0].frequency
     
     @c1_freq.setter
     def c1_freq(self, new_value):
-        self.ch[0].frequency = new_value*1e6
+        self.instrument[0].frequency = new_value*1e6
     
     @property
     def c2_freq(self):
-        return self.ch[1].frequency
+        return self.instrument[1].frequency
     
     @c2_freq.setter
     def c2_freq(self, new_value):
-        self.ch[1].frequency = new_value*1e6
+        self.instrument[1].frequency = new_value*1e6
         
     @property
     def c_freqs(self):
@@ -166,40 +165,40 @@ class WindfreakSynthHD():
     
     @c_freqs.setter
     def c_freqs(self, new_value):
-        self.ch[0].frequency = new_value*1e6
-        self.ch[1].frequency = new_value*1e6
+        self.instrument[0].frequency = new_value*1e6
+        self.instrument[1].frequency = new_value*1e6
         
     @property
     def c1_phase(self):
-        return self.ch[0].phase/phase_compression
+        return self.instrument[0].phase/phase_compression
     
     @c1_phase.setter
     def c1_phase(self, new_value):
-        self.ch[0].phase = new_value*phase_compression
+        self.instrument[0].phase = new_value*phase_compression
         
     @property
     def c2_phase(self):
-        return self.ch[1].phase/phase_compression
+        return self.instrument[1].phase/phase_compression
     
     @c2_phase.setter
     def c2_phase(self, new_value):
-        self.ch[1].phase = new_value*phase_compression
+        self.instrument[1].phase = new_value*phase_compression
         
     @property
     def c1_power(self):
-        return self.ch[0].power
+        return self.instrument[0].power
     
     @c1_power.setter
     def c1_power(self, new_value):
-        self.ch[0].power = new_value
+        self.instrument[0].power = new_value
         
     @property
     def c2_power(self):
-        return self.ch[1].power
+        return self.instrument[1].power
     
     @c2_power.setter
     def c2_power(self, new_value):
-        self.ch[1].power = new_value
+        self.instrument[1].power = new_value
     
     @property
     def sweep_freq_low(self):
@@ -326,7 +325,7 @@ class WindfreakSynthHD():
         self.sweep_freq_step = params['freq_step']
         self.sweep_time_step = params['step_length'] # In ms. Should be 4-10000.
         self.sweep_power = params['power']
-        self.ch[0].enable = True
+        self.instrument[0].enable = True
 
 
     def freq_sweep(self, params):
@@ -335,15 +334,15 @@ class WindfreakSynthHD():
         self.c2_power = params['power2']
         self.c1_freq = params['freq_start']+1
         self.c2_freq = params['freq_start']
-        self.ch[0].enable = True
-        self.ch[1].enable = True
+        self.instrument[0].enable = True
+        self.instrument[1].enable = True
         
 
     def freq_sweep_stop(self):
 #         self.open()
         self.instrument.trigger_mode = 'disabled'
-        self.ch[0].enable = False
-        self.ch[1].enable = False
+        self.instrument[0].enable = False
+        self.instrument[1].enable = False
 #         self.close()
 
 
@@ -352,8 +351,8 @@ class WindfreakSynthHD():
             self.c_freqs = p['freq']
         else:
             self.c_freqs = p['freq_start']
-        self.ch[0].power = p['power']
-        self.ch[1].power = p['power2']
+        self.instrument[0].power = p['power']
+        self.instrument[1].power = p['power2']
         self.instrument.write('feedback', 0)
         self.power_on()
         
@@ -361,8 +360,8 @@ class WindfreakSynthHD():
     def spin_echo(self, p):
         if not self.c_freqs/1e6==p['freq']:
             self.c_freqs = p['freq']
-        self.ch[0].power = p['power']
-        self.ch[1].power = p['power2']
+        self.instrument[0].power = p['power']
+        self.instrument[1].power = p['power2']
         self.c2_phase = p['phase']
         self.power_on()
         self.instrument.write('feedback', 0)
@@ -373,7 +372,7 @@ class WindfreakSynthHD():
             self.c1_freq = p['freq1']
         if not self.c2_freq/1e6==p['freq2']:
             self.c2_freq = p['freq2']
-        self.ch[0].power = p['power']
-        self.ch[1].power = p['power2']
+        self.instrument[0].power = p['power']
+        self.instrument[1].power = p['power2']
         self.power_on()
         self.instrument.write('feedback', 0)
