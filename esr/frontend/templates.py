@@ -102,13 +102,15 @@ spin_echo_sweep_keys = {
     },
 }
 
-cpmgs = range(1, 256)
+cpmgs = [str(n) for n in range(1, 256)]
 voltage_limits = [0.002, 10]
-tdivs = []
-for n in range(9, -1, -1):
-    tdivs += [2*10**-n, 4*10**-n, 10*10**-n]#[2.5*10**-n, 5*10**-n, 10*10**-n]
-
-scopes = {'MSO24': ps.TektronixMSO2}
+tdivs = ['2e-9', '4e-9']
+for n in range(8, 3, -1):
+    tdivs += [f'{i}e-{n}' for i in [1, 2, 4]]
+for n in range(3, -1, -1):
+    tdivs += [str(i*10**-n) for i in [1, 2, 4]]
+tdivs += ['10']
+tdivs
 
 # Global setting trees for the Pulse Frequency Sweep and Spin Echo experiment settings
 sweep_list = [
@@ -126,7 +128,7 @@ sweep_list = [
     "Temp"
 ]
 
-bimod_sweep_list = [
+twotone_sweep_list = [
     "A Pulse Sweep",
     "B Pulse Sweep",
     "Both Pulse Sweep",
@@ -376,7 +378,7 @@ CONTROL_DICT = {
             'display': '# 180 Pulses',
             'type': 'combo',
             'options': cpmgs,
-            'default': 1
+            'default': '1',
         },
         'block': {
             'key': 'block',
@@ -452,7 +454,7 @@ CONTROL_DICT = {
             'display': 'Time Scale (s)',
             'type': 'combo',
             'options': tdivs,
-            'default': 2e-09
+            'default': '1e-7',
         },
         'v_offset': {
             'key': 'v_offset',

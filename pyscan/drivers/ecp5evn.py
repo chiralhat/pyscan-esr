@@ -313,7 +313,7 @@ class ecp5evn(InstrumentDriver):
 
     
     def spin_echo(self, p):
-        self.cpmg = p['cpmg']
+        self.cpmg = int(p['cpmg'])
         self.block = p['block']
         self.pulse_block = p['pulse_block']
         self.nutation_delay = p['nutation_delay']
@@ -341,7 +341,7 @@ class ecp5evn(InstrumentDriver):
 
     
     def bimodal_spin_echo(self, p):
-        self.cpmg = p['cpmg']
+        self.cpmg = int(p['cpmg'])
         self.block = p['block']
         self.pulse_block = p['pulse_block']
         self.nutation_delay = p['nutation_delay']

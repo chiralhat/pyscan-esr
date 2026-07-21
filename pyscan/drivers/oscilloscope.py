@@ -296,7 +296,7 @@ class Oscilloscope(InstrumentDriver):
         # Setting delay for where we expect to see the echo, including the built-in switch delay
         delay = p['pulse1']/2+p['pulse2']/2+2*p['delay']+p['nutation_width']+p['nutation_delay']+2000
         pre_off = p['h_offset']
-        time_div = p['tdiv']
+        time_div = float(p['tdiv'])
         scale = p['scale']
         self.average = 1
         self.trigger_type = 'EDGE'
@@ -355,7 +355,7 @@ class Oscilloscope(InstrumentDriver):
         # Setting delay for where we expect to see the ringdown, including the built-in switch delay
         delay = p['pulse1']+p['pulse2']+p['delay']+p['nutation_width']+p['nutation_delay']+2000
         h_off = p['h_offset']
-        time_div = p['tdiv']
+        time_div = float(p['tdiv'])
         offset = p['v_offset']
         self.trigger_type = 'EDGE'
         self.trigger_source = 'AUX'
