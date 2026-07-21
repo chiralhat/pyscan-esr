@@ -31,7 +31,7 @@ class TektronixMSO2(Oscilloscope):
 
     '''
 
-    def __init__(self, instrument, timeout=2000, debug=False):
+    def __init__(self, instrument, timeout=5000, debug=False):
 
         super().__init__(instrument)
 

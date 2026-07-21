@@ -282,6 +282,7 @@ class ecp5evn(InstrumentDriver):
     def pre_att(self, value):
         assert 0<=value<=31.5, f'Attenuation must be between 0 and 31.5 Ohms, got {value}'
         self.set_param('attenuators', int(value*2))
+        self._pre_att = value
 
 
     def freq_sweep(self, length):
@@ -345,6 +346,7 @@ class ecp5evn(InstrumentDriver):
         self.pulse_block = p['pulse_block']
         self.nutation_delay = p['nutation_delay']
         self.nutation_width = p['nutation_width']
+        self.pre_att = p['pre_att']
         self.period = p['period']
         self.pulse1 = p['pulse1_1']
         self.pulse2 = p['pulse1_2']

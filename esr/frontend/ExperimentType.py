@@ -19,7 +19,7 @@ from time import sleep, time
 import requests
 from Worker import PyscanObject
 
-import globals
+#import globals
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -28,6 +28,44 @@ import sys, os
 sys.path.append("../")
 
 from pathlib import Path
+
+expt_select = {
+    "Pulse Sweep": 0,
+    "Rabi": 1,
+    "Period Sweep": 2,
+    "Hahn Echo": 3,
+    "EDFS": 4,
+    "Freq Sweep": 5,
+    "Phase Sweep": 6,
+    "Inversion Sweep": 7,
+    "CPMG": 8,
+    "Gain": 9,
+    "DEER": 10,
+    "Temp": 11,
+}
+y_names = [
+    "pulse_time",
+    "rabi_sweep",
+    "period_sweep",
+    "echo_delay",
+    "psu_field",
+    "freq_sweep",
+    "phase_sweep",
+    "inversion_sweep",
+    "echo_delay",
+    "gain_sweep",
+    "deer_sweep",
+    "ls335_temp",
+]
+
+psexpt_select = {
+    'Freq Sweep': 0,
+    'Field Sweep': 1
+}
+psy_names = [
+    'freq_sweep',
+    'psu_field'
+]
 
 
 class ExperimentType(QObject):
@@ -39,9 +77,11 @@ class ExperimentType(QObject):
     # Signal emitted when data is ready to be plotted (used to notify GUI)
     plot_update_signal = pyqtSignal()
 
-    def __init__(self, exp_type):
+    def __init__(self, exp_type, server_address, spectrometer):
         super().__init__()
         self.type = exp_type  # Experiment type string
+        self.server_address = server_address
+        self.spectrometer = spectrometer
 
         # Parameter dictionaries to be populated by the UI or script
         self.parameters = {}
@@ -53,6 +93,11 @@ class ExperimentType(QObject):
             self.default_file = "se_defaults.pkl"
         elif self.type == "Pulse Frequency Sweep":
             self.default_file = "ps_defaults.pkl"
+        # Default parameter files for different spectrometer types
+        if self.spectrometer == "Cryostat":
+            self.default_file = "c_" + self.default_file
+        elif self.spectrometer == "Bench":
+            self.default_file = "b_" + self.default_file
 
         # Initialize graphs for processed and unprocessed reads and sweeps
         self.read_unprocessed_graph = GraphWidget()
@@ -85,12 +130,20 @@ class ExperimentType(QObject):
                 period = 500
 
             # Compute subtime for each acquisition
-            tmult = period / 1e6 * 4 * reps
+            per = period/1e6
+            tmult = per * 4 * reps
             self.parameters["subtime"] = self.parameters["soft_avgs"] * tmult
+ 
+            if self.type == "Spin Echo":
+                yname = y_names[expt_select[self.parameters["expt"]]]
+            else:
+                yname = psy_names[psexpt_select[self.parameters["psexpt"]]]
+
+            self.parameters["y_name"] = yname
 
             # Build output file name with today's date
             datestr = date.today().strftime("%y%m%d")
-            fname = datestr + str(self.parameters["file_name"]) + "_"
+            fname = datestr + "_" + str(self.parameters["file_name"]) + "_"
             self.parameters["outfile"] = str(Path(self.parameters["save_dir"]) / fname)
 
             # Save default parameters locally
@@ -106,7 +159,7 @@ class ExperimentType(QObject):
 
             print("about to send parameters to the server")
             response = requests.post(
-                globals.server_address + "/initialize_experiment", json=data
+                self.server_address + "/initialize_experiment", json=data
             )
             print("parameters sent to server")
             print()
@@ -127,7 +180,7 @@ class ExperimentType(QObject):
         # Stop experiment loop
         #print("about to send sweep stop to server")
         response = requests.post(
-            globals.server_address + "/stop"#, json=data
+            self.server_address + "/stop"#, json=data
         )
        #print("parameters sent to server")
         print()
@@ -140,7 +193,7 @@ class ExperimentType(QObject):
         # Stop experiment loop
         #print("about to send hardware off to server")
         response = requests.post(
-            globals.server_address + "/off"#, json=data
+            self.server_address + "/off"#, json=data
         )
        # print("parameters sent to server")
         print()

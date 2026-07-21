@@ -94,6 +94,8 @@ def decay_field_sweep(expt):
             devices.synth.power_off()
             if runinfo.parameters['use_psu']:
                 devices.psu.output = False
+                if not runinfo.parameters['moku']=="None":
+                    devices.moku.field = 0
     
     return d
 

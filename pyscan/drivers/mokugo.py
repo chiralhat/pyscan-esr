@@ -53,9 +53,9 @@ class MokuGo(InstrumentDriver):
             self.instrument.set_power_supply(id=1, enable=True, voltage=5, current=0.15)
             self._gauss = 7890
             self.c_limit = 0.5
-            self.ramp = 0
+            self.ramp = 400
             self.fieldv_offset = 0.005
-            self.v2_offset = -0.016
+            self.v2_offset = 0
         self.set_switch_1pulse()
 
 
@@ -135,7 +135,7 @@ class MokuGo(InstrumentDriver):
 
     @v2.setter
     def v2(self, val):
-        value = val+self.fieldv_offset
+        value = np.round((val+self.fieldv_offset)/self.V_step)*self.V_step
         if value<0:
             value = 0
         assert value<self.c_limit, f'Current exceeds limit, limit: {self.c_limit}, current: {value}'

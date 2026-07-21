@@ -53,6 +53,9 @@ def single_shot(sig, parameters, devices, output, fig):
 
 def init_experiment(devices, parameters, sweep):
     parameters['pulse2'] = parameters['pulse1']*parameters['mult']
+    parameters['pulse1'] = 0
+    devices.fpga.nutation_width = 0
+    devices.fpga.nutation_delay = 10
     # p1_time = parameters['pulse1']+(parameters['delay']*2+parameters['pulse2'])*parameters['cpmg']
     # switch_time = 500 + p1_time
     devices.fpga.pulse_freq_sweep(parameters)
