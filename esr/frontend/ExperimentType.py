@@ -132,7 +132,7 @@ class ExperimentType(QObject):
             # Compute subtime for each acquisition
             per = period/1e6
             tmult = per * 4 * reps
-            self.parameters["subtime"] = self.parameters["soft_avgs"] * tmult
+            self.parameters["subtime"] = self.parameters["ave"] * tmult
  
             if self.type == "Spin Echo":
                 yname = y_names[expt_select[self.parameters["expt"]]]
