@@ -32,6 +32,7 @@ pulse_freq_sweep_keys = {
         "mult",
         "period",
         "block",
+        "pulse_block",
     ],
     "Temp": [
         "comp_temp",
