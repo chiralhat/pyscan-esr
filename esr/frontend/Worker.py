@@ -313,7 +313,7 @@ class Worker(QObject):
             print()
     
 
-    def update_plots(self, last_data_2d, last_data_1d, do_int, do_sweep2):
+    def update_plots(self, last_data_2d, last_data_1d, do_sweep2):
         try:
             if do_sweep2:
                 xname = self.experiment.parameters["y_name2"]
@@ -322,7 +322,7 @@ class Worker(QObject):
             yname = self.experiment.parameters["y_name"]
             
             if self.experiment.expt.runinfo.measured:
-                if (not do_int) or do_sweep2:
+                if do_sweep2:
                     data_name_2d = self.combo_2d.currentText()
                     if do_sweep2 and len(data_name_2d)==1:
                         data_name_2d = "xmean"
@@ -381,12 +381,12 @@ class Worker(QObject):
                     break
 
                 # Generate and emit updated plots
-                last_data_2d, last_data_1d = self.update_plots(last_data_2d, last_data_1d, do_int, do_sweep2)
+                last_data_2d, last_data_1d = self.update_plots(last_data_2d, last_data_1d, do_sweep2)
 
                 sleep(self.experiment.parameters['subtime']/10)
 
             # final emitting of plots when sweep is over
-            self.update_plots(last_data_2d, last_data_1d, do_int, do_sweep2)
+            self.update_plots(last_data_2d, last_data_1d, do_sweep2)
 
             # Final status update
             if self.stop_requested:
