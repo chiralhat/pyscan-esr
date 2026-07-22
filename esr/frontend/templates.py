@@ -32,6 +32,7 @@ pulse_freq_sweep_keys = {
         "mult",
         "period",
         "block",
+        "pulse_block",
     ],
     "Temp": [
         "comp_temp",
@@ -101,6 +102,7 @@ spin_echo_sweep_keys = {
     "Never Change": [
         "subtract",
         "moku",
+        "phase_sub",
     ],
 }
 

@@ -227,25 +227,19 @@ class Worker(QObject):
         so the main GUI thread won't freeze.
         """
         try:
-            single = self.experiment.parameters["single"]
-            avgs = self.experiment.parameters["soft_avgs"]
+            avgs = self.experiment.parameters["ave"]
             areps = self.experiment.parameters["reps"]
+            
             if self.task_name == "read_processed":
                 self.updateStatus.emit("Reading processed data...\n")
 
                 # Prepare data and handle specific experiment types
                 if self.experiment.type == "Spin Echo":
-                    # Change parameters for read
-                    self.experiment.parameters["single"] = self.experiment.parameters[
-                        "loopback"
-                    ]
-
                     data = {
                         "parameters": self.experiment.parameters,
                         "experiment type": "Spin Echo Read Processed",
                     }
                 elif self.experiment.type == "Pulse Frequency Sweep":
-                    self.experiment.parameters["single"] = True
                     data = {
                         "parameters": self.experiment.parameters,
                         "experiment type": "Pulse Frequency Sweep Read Processed",
@@ -255,8 +249,7 @@ class Worker(QObject):
                 self.updateStatus.emit("Reading unprocessed data...\n")
 
                 if self.experiment.type == "Spin Echo":
-                    self.experiment.parameters["single"] = True
-                    self.experiment.parameters["soft_avgs"] = 1
+                    self.experiment.parameters["ave"] = 1
                     self.experiment.parameters["reps"] = 1
                     data = {
                         "parameters": self.experiment.parameters,
@@ -277,8 +270,7 @@ class Worker(QObject):
                     #     print(f"Error reading unprocessed: {e}")
 
                 elif self.experiment.type == "Pulse Frequency Sweep":
-                    self.experiment.parameters["single"] = True
-                    self.experiment.parameters["soft_avgs"] = 1
+                    self.experiment.parameters["ave"] = 1
                     self.experiment.parameters["reps"] = 1
                     data = {
                         "parameters": self.experiment.parameters,
@@ -303,8 +295,7 @@ class Worker(QObject):
                 self.experiment.sig = deserialize_obj(response_data["sig"])
             else:
                 print("Error:", response.status_code, response.text)
-            self.experiment.parameters["single"] = single
-            self.experiment.parameters["soft_avgs"] = avgs
+            self.experiment.parameters["ave"] = avgs
             self.experiment.parameters["reps"] = areps
             self.experiment.sig.freq = self.experiment.parameters["freq"]
 
