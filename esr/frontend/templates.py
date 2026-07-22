@@ -61,6 +61,11 @@ spin_echo_sweep_keys = {
         "comp_save",
         "comp_sweep",
     ],
+    'Second Sweep': [
+        'sweep2',
+        'expt2',
+        'comp_sweep2',
+    ],
     "Scope": [
         "h_offset",
         "scale",
@@ -659,7 +664,28 @@ CONTROL_DICT = {
             'display': 'Turn off after sweep?',
             'type': 'check',
             'default': False
-        }}
+        }},
+    'Sweep2': {
+        'sweep2': {
+            "display": "Second sweep?",
+            "key": "sweep2",
+            "type": "check",
+            "default": False,
+        },
+        'expt2': {
+            "display": "Experiment 2",
+            "key": "expt2",
+            "type": "combo",
+            "options": sweep_list,
+            "default": "Hahn Echo",
+        },
+        'comp_sweep2': {
+            "display": "Sweep 2 start, end, step",
+            "key": ["sweep2_start", "sweep2_end", "sweep2_step"],
+            "type": "composite",
+            "default": [0, 0, 0],
+        },
+    },
 }
 
 EXPERIMENT_TEMPLATES = {
