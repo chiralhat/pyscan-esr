@@ -102,7 +102,7 @@ def initialize_experiment():
 
     inst = ps.ItemAttribute()
 
-    devlist = copy(res_list)
+    devlist = copy(list(res_list))
     if not hasattr(devices, 'scope'):
         try:
             for inst in devlist:
@@ -157,6 +157,7 @@ def initialize_experiment():
                 try:
                     devices.fpga = ps.ecp5evn(ps.new_instrument(serial_string=faddr))
                     devices.fpga.delay = 500
+                    devlist.remove(inst)
                     break
                 except:
                     pass
