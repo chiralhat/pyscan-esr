@@ -30,6 +30,7 @@ import pyscan as ps
 import pyvisa
 from time import sleep, time
 import numpy as np
+from copy import copy
 
 if not hasattr(ps, "rm"):
     ps.rm = pyvisa.ResourceManager("@py")
@@ -101,9 +102,10 @@ def initialize_experiment():
 
     inst = ps.ItemAttribute()
 
+    devlist = copy(res_list)
     if not hasattr(devices, 'scope'):
         try:
-            for inst in res_list:
+            for inst in devlist:
                 if inst[:4]=='USB0':
                     try:
                         tscope = ps.new_instrument(visa_string=inst)
@@ -111,7 +113,7 @@ def initialize_experiment():
                         sleep(0.25)
                         devices.scope = scopes[model](tscope)
                         devices.scope.initialize_waveforms()
-                        res_list.remove(inst)
+                        devlist.remove(inst)
                         break
                     except:
                         pass
@@ -119,12 +121,12 @@ def initialize_experiment():
             print(f"Error initializing Scope: {e}")
     if not hasattr(devices, 'synth'):
         try:
-            for inst in res_list[::-1]:
+            for inst in devlist[::-1]:
                 waddr = inst.split('ASRL')[-1].split('::')[0]
                 if 'ACM' in waddr:
                     try:
                         devices.synth = ps.WindfreakSynthHD(waddr)
-                        res_list.remove(inst)
+                        devlist.remove(inst)
                         break
                     except:
                         pass
@@ -133,15 +135,15 @@ def initialize_experiment():
     # Initialize PSU if necessary
     if not hasattr(devices, "psu") and (parameters["use_psu"]):
         try:
-            for inst in res_list:
+            for inst in devlist:
                 try:
                     devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
-                    res_list.remove(inst)
+                    devlist.remove(inst)
                     break
                 except Exception as e:
                     try:
                         devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
-                        res_list.remove(inst)
+                        devlist.remove(inst)
                         break
                     except:
                         pass
@@ -150,12 +152,11 @@ def initialize_experiment():
 
     if not hasattr(devices, 'fpga'):
         try:
-            for inst in res_list:
+            for inst in devlist:
                 faddr = inst.split('ASRL')[-1].split('::')[0]
                 try:
                     devices.fpga = ps.ecp5evn(ps.new_instrument(serial_string=faddr))
                     devices.fpga.delay = 500
-                    res_list.remove(inst)
                     break
                 except:
                     pass
@@ -177,7 +178,7 @@ def initialize_experiment():
         if parameters['set_temp']:
             devices.ls335.ramp(on=parameters['temp_ramp'])
             devices.ls335.setpoint(parameters['temp'])
-        self.heater(parameters['heater_on'])
+        devices.ls335.heater(parameters['heater_on'])
 
     """This initializes a pyscan experiment with functions from the correct 
         experiment type scripts and GUI files."""
