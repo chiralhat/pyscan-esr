@@ -2,7 +2,6 @@
 pulse_freq_sweep_keys = {
     "Main": [
         "freq",
-        "tdiv",
         "psexpt",
         "comp_save",
         "comp_sweep",
