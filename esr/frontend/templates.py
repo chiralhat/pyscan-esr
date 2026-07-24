@@ -2,8 +2,6 @@
 pulse_freq_sweep_keys = {
     "Main": [
         "freq",
-        "h_offset",
-        "tdiv",
         "psexpt",
         "comp_save",
         "comp_sweep",
@@ -62,6 +60,11 @@ spin_echo_sweep_keys = {
         "expt",
         "comp_save",
         "comp_sweep",
+    ],
+    'Second Sweep': [
+        'sweep2',
+        'expt2',
+        'comp_sweep2',
     ],
     "Scope": [
         "h_offset",
@@ -190,6 +193,7 @@ CONTROL_DICT = {
             'min': 50.0,
             'max': 14999.0,
             'default': 50.0,
+            'decimals': 3,
         },
         'freq1': {
             'key': 'freq1',
@@ -197,7 +201,8 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': 50.0,
             'max': 14999.0,
-            'default': 50.0
+            'default': 50.0,
+            'decimals': 3,
         },
         'freq2': {
             'key': 'freq2',
@@ -205,7 +210,8 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': 50.0,
             'max': 14999.0,
-            'default': 50.0
+            'default': 50.0,
+            'decimals': 3,
         },
         'detune': {
             'key': 'detune',
@@ -213,7 +219,8 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': -5000.0,
             'max': 5000.0,
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         },
         'port': {
             'key': 'port',
@@ -228,7 +235,8 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': -50.0,
             'max': 19.0,
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         },
         'power2': {
             'key': 'power2',
@@ -236,7 +244,8 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': -50.0,
             'max': 19.0,
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         },
         'phase': {
             'key': 'phase',
@@ -244,7 +253,8 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': 0.0,
             'max': 360.0,
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         },
         'att': {
             'key': 'att',
@@ -400,8 +410,8 @@ CONTROL_DICT = {
             'key': 'pulse_block',
             'display': 'Block Delay (ns)',
             'type': 'double_spin',
-            'min': 0.0,
-            'max': 2560.0,
+            'min': -5000.0,
+            'max': 5000.0,
             'default': 0.0
         },
         'nutation_delay': {
@@ -426,24 +436,26 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': 0.0,
             'max': 31.5,
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         }},
     'Scope': {
         'ave': {
             'key': 'ave',
             'display': 'Ave',
-            'type': 'double_spin',
-            'min': 0.0,
-            'max': 10240.0,
-            'default': 0.0
+            'type': 'spin',
+            'min': 1,
+            'max': 10240,
+            'default': 1
         },
         'scale': {
             'key': 'scale',
             'display': 'Scale (V)',
             'type': 'double_spin',
-            'min': 0.0,
+            'min': 0.001,
             'max': 10.0,
-            'default': 0.0
+            'default': 0.001,
+            'decimals': 3,
         },
         'h_offset': {
             'key': 'h_offset',
@@ -451,7 +463,8 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': -100000.0,
             'max': 100000.0,
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         },
         'tdiv': {
             'key': 'tdiv',
@@ -472,6 +485,7 @@ CONTROL_DICT = {
             "key": ["field", "gauss_amps", "current_limit"],
             "type": "composite",
             "default": [0.0, 276.0, 3.5],
+            'decimals': 3,
         },
         'field': {
             'key': 'field',
@@ -479,7 +493,8 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': 0.0,
             'max': 2500.0,
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         },
         'gauss_amps': {
             'key': 'gauss_amps',
@@ -487,7 +502,8 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': 0.001,
             'max': 10000.0,
-            'default': 277
+            'default': 277,
+            'decimals': 3,
         },
         'current_limit': {
             'key': 'current_limit',
@@ -495,7 +511,8 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': 0.0,
             'max': 10.0,
-            'default': 3.5
+            'default': 3.5,
+            'decimals': 3,
         },
         'use_psu': {
             "display": "Use PSU?",
@@ -524,6 +541,7 @@ CONTROL_DICT = {
             "min": 1.0,
             "max": 325,
             "default": 4,
+            'decimals': 3,
         },
         'use_temp': {
             "display": "Use Lakeshore?",
@@ -594,7 +612,8 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': 0.0,
             'max': 20.0,
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         },
         'sltime': {
             'key': 'sltime',
@@ -602,44 +621,71 @@ CONTROL_DICT = {
             'type': 'double_spin',
             'min': 0.0,
             'max': 20.0,
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         },
         'comp_sweep': {
             "display": "Sweep start, end, step",
             "key": ["sweep_start", "sweep_end", "sweep_step"],
             "type": "composite",
             "default": [150.0, 1000.0, 50.0],
+            'decimals': 3,
         },
         'int_start': {
             'key': 'int_start',
             'display': 'Int. Window (μs): Pre',
             'type': 'double_spin',
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         },
         'int_end': {
             'key': 'int_end',
             'display': 'Post Delay',
             'type': 'double_spin',
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         },
         'int_start2': {
             'key': 'int_start2',
             'display': 'Int. Window 2 (μs): Pre',
             'type': 'double_spin',
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         },
         'int_end2': {
             'key': 'int_end2',
             'display': 'Post Delay 2',
             'type': 'double_spin',
-            'default': 0.0
+            'default': 0.0,
+            'decimals': 3,
         },
         'turn_off': {
             'key': 'turn_off',
             'display': 'Turn off after sweep?',
             'type': 'check',
             'default': False
-        }}
+        }},
+    'Sweep2': {
+        'sweep2': {
+            "display": "Second sweep?",
+            "key": "sweep2",
+            "type": "check",
+            "default": False,
+        },
+        'expt2': {
+            "display": "Experiment 2",
+            "key": "expt2",
+            "type": "combo",
+            "options": sweep_list,
+            "default": "Hahn Echo",
+        },
+        'comp_sweep2': {
+            "display": "Sweep 2 start, end, step",
+            "key": ["sweep2_start", "sweep2_end", "sweep2_step"],
+            "type": "composite",
+            "default": [0, 0, 0],
+        },
+    },
 }
 
 EXPERIMENT_TEMPLATES = {

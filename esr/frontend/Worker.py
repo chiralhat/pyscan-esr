@@ -313,7 +313,7 @@ class Worker(QObject):
             print()
     
 
-    def update_plots(self, last_data_2d, last_data_1d, do_int, do_sweep2):
+    def update_plots(self, last_data_2d, last_data_1d, do_sweep2):
         try:
             if do_sweep2:
                 xname = self.experiment.parameters["y_name2"]
@@ -322,23 +322,22 @@ class Worker(QObject):
             yname = self.experiment.parameters["y_name"]
             
             if self.experiment.expt.runinfo.measured:
-                if (not do_int) or do_sweep2:
-                    data_name_2d = self.combo_2d.currentText()
-                    if do_sweep2 and len(data_name_2d)==1:
-                        data_name_2d = "xmean"
-                    pg_2D = PlotGenerator(
-                        expt=self.experiment.expt,
-                        d=2,
-                        x_name=xname,
-                        y_name=yname,
-                        data_name=data_name_2d,
-                        transpose=1,
-                    )
-                    if last_data_2d is None or not np.array_equal(
-                        pg_2D.data, last_data_2d
-                    ):
-                        last_data_2d = pg_2D.data.copy()
-                        self.live_plot_2D_update_signal.emit(pg_2D)
+                data_name_2d = self.combo_2d.currentText()
+                if do_sweep2 and len(data_name_2d)==1:
+                    data_name_2d = "xmean"
+                pg_2D = PlotGenerator(
+                    expt=self.experiment.expt,
+                    d=2,
+                    x_name=xname,
+                    y_name=yname,
+                    data_name=data_name_2d,
+                    transpose=1,
+                )
+                if last_data_2d is None or not np.array_equal(
+                    pg_2D.data, last_data_2d
+                ):
+                    last_data_2d = pg_2D.data.copy()
+                    self.live_plot_2D_update_signal.emit(pg_2D)
 
                 if self.experiment.type == "Spin Echo" and (not do_sweep2):
                     data_name_1d = self.combo_1d.currentText()
@@ -381,12 +380,12 @@ class Worker(QObject):
                     break
 
                 # Generate and emit updated plots
-                last_data_2d, last_data_1d = self.update_plots(last_data_2d, last_data_1d, do_int, do_sweep2)
+                last_data_2d, last_data_1d = self.update_plots(last_data_2d, last_data_1d, do_sweep2)
 
                 sleep(self.experiment.parameters['subtime']/10)
 
             # final emitting of plots when sweep is over
-            self.update_plots(last_data_2d, last_data_1d, do_int, do_sweep2)
+            self.update_plots(last_data_2d, last_data_1d, do_sweep2)
 
             # Final status update
             if self.stop_requested:
