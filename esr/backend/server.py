@@ -293,9 +293,9 @@ def run_snapshot():
     if "Read Unprocessed" in experiment_type:
         devices.scope.read_vxy(d=sig)
     elif "Pulse Frequency" in experiment_type:
-        pf_single_shot(sig, parameters, devices)
+        pulsesweep_scripts.pf_single_shot(sig, parameters, devices)
     else:
-        se_single_shot(sig, parameters, devices)
+        spinecho_scripts.se_single_shot(sig, parameters, devices)
 
     # Serialize all public attributes of `sig`
     serialized_sig = serialize_object(sig)

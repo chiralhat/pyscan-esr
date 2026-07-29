@@ -10,9 +10,10 @@ from IPython.display import display, clear_output
 def pf_single_shot(sig, parameters, devices):
     devices.scope.read_vxy(d=sig)
     freq = devices.synth.c_freqs
-    fit, err = ps.plot_exp_fit_norange(np.array([sig.time*1e6, sig.x]),
-                                       freq, 1, plt=ax)
+    fit, err = ps.exp_fit_norange(np.array([sig.time*1e6, sig.x]),
+                                       freq, 1)[:2]
     sig.fit = fit
+    sig.err = err
 
 
 def read_wait(devices, parameters):
