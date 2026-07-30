@@ -223,7 +223,7 @@ class TektronixMSO2(Oscilloscope):
         total_time = xincr * record
         xstart = self.xdelay-5*self.tdiv
         tstop = xstart + total_time
-        Time = np.linspace(xstart, tstop, num=record, endpoint=False)
+        Time = np.linspace(xstart, tstop, num=record, endpoint=False)*1e6
         return np.array([Time, Volts])
     
     
