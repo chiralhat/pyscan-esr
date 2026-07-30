@@ -227,7 +227,8 @@ CONTROL_DICT = {
             'display': 'Output Port',
             'type': 'combo',
             'options': ['1', '2', 'Both'],
-            'default': '1'
+            'default': '1',
+            'values': {'1': 1, '2': 2, 'Both': 0},
         },
         'power': {
             'key': 'power',
