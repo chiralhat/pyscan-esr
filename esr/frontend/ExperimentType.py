@@ -138,6 +138,8 @@ class ExperimentType(QObject):
                 yname = y_names[expt_select[self.parameters["expt"]]]
             else:
                 yname = psy_names[psexpt_select[self.parameters["psexpt"]]]
+                self.parameters['pulse2'] = parameters['pulse1']*parameters['mult']
+                self.parameters['pulse1'] = 0
                 self.parameters['nutation_width'] = 0
                 self.parameters['nutation_delay'] = period//100
                 self.parameters['reps'] = 1
