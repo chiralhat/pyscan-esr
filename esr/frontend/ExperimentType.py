@@ -128,6 +128,8 @@ class ExperimentType(QObject):
                 period = self.parameters["period"]
             else:
                 period = 500
+            if not "pulses" in self.parameters.keys():
+                self.parameters['pulses'] = self.parameters['cpmg']
 
             # Compute subtime for each acquisition
             per = period/1e6
