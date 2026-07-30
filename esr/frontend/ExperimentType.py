@@ -128,8 +128,6 @@ class ExperimentType(QObject):
                 period = self.parameters["period"]
             else:
                 period = 500
-            if not "pulses" in self.parameters.keys():
-                self.parameters['pulses'] = int(self.parameters['cpmg'])
 
             # Compute subtime for each acquisition
             per = period/1e6
@@ -142,11 +140,15 @@ class ExperimentType(QObject):
                 yname = psy_names[psexpt_select[self.parameters["psexpt"]]]
                 self.parameters['pulse2'] = parameters['pulse1']*parameters['mult']
                 self.parameters['pulse1'] = 0
+                self.parameters['cpmg'] = 1
                 self.parameters['nutation_width'] = 0
                 self.parameters['nutation_delay'] = period//100
                 self.parameters['reps'] = 1
                 self.parameters['sweep2'] = False
 
+            if not "pulses" in self.parameters.keys():
+                self.parameters['pulses'] = int(self.parameters['cpmg'])
+            
             self.parameters['v_offset'] = 0
             self.parameters["y_name"] = yname
 
