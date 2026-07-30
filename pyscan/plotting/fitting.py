@@ -276,6 +276,7 @@ def exp_fit_norange(data, freq, up, coefs=0):
     (background, amplitude, decay time, Q);
     an array with the uncertainties in those parameters;
     the adjusted R-squared for the fit."""
+    data = np.array([data[0]-data[0][0], data[1]])
     if coefs == 0:
         guess = []
         guess.append(data[1].min())
@@ -341,14 +342,15 @@ def plot_exp_fit_norange(data, freq, up=1, coefs=0, plt=plt, col=0,
 
     Returns two arrays, the first with the fit parameters (background,
     amplitude, decay time, Q) and the second with the error in those."""
-    [fit, err, _] = exp_fit_norange(data, freq, up, coefs)
+    fdata = np.array([data[0]-data[0][0], data[1]])
+    [fit, err, _] = exp_fit_norange(fdata, freq, up, coefs)
     if col == 0:
         if plotdat:
             plt.plot(data[0], data[1], '.-', label=datlab)
-        plt.plot(data[0], exponential(data[0], fit[0], fit[1], fit[2]), '--',
+        plt.plot(data[0], exponential(fdata[0], fit[0], fit[1], fit[2]), '--',
             label=fitlab)
     else:
         plt.plot(data[0], data[1], '.-', c=col[0], label=datlab)
-        plt.plot(data[0], exponential(data[0], fit[0], fit[1], fit[2]), '--',
+        plt.plot(data[0], exponential(fdata[0], fit[0], fit[1], fit[2]), '--',
                 c=col[1], label=fitlab)
     return np.array([fit, err])
