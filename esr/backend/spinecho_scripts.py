@@ -665,6 +665,7 @@ def setup_experiment(parameters, devices, sweep):
 
     runinfo.parameters = parameters
     runinfo.wait_time = parameters['wait']
+    runinfo.running = False
 
     # TODO: Move the actual intialization of the sweep to Run
     # so we don't get so many empty directories
