@@ -213,7 +213,6 @@ def initialize_experiment():
         )  # From ______scripts.py
 
     elif experiment_type == "Pulse Frequency Sweep":
-        parameters['pulse2'] = parameters['pulse1']*parameters['mult']
         devices.fpga.pulse_freq_sweep(parameters)
         devices.synth.pulse_freq_sweep(parameters)
         devices.scope.setup_pulse_decay(parameters)
