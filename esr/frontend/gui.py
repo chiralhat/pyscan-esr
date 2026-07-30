@@ -270,7 +270,7 @@ class DynamicSettingsPanel(QWidget):
             widget.setMinimum(float(setting.get("min", 0.0)))
             widget.setMaximum(float(setting.get("max", 1e9)))
             widget.setValue(float(setting.get("default", 0.0)))
-            widget.setDecimals(setting.get("decimals", 3))
+            widget.setDecimals(setting.get("decimals", 0))
 
         # Text input field
         elif stype == "line_edit":
@@ -280,8 +280,14 @@ class DynamicSettingsPanel(QWidget):
         # Drop-down menu for categorical options
         elif stype == "combo":
             widget = QComboBox()
-            widget.addItems(setting.get("options", []))
+            if setting.get('values'):
+                dat = setting.get('values')
+                for val in setting.get("options", []):
+                    widget.addItem(val, dat[val])
+            else:
+                widget.addItems(setting.get("options", []))
             widget.setCurrentText(setting.get("default", ""))
+
 
         # Checkbox
         elif stype == "check":
@@ -371,8 +377,8 @@ class ExperimentUI(QMainWindow):
 
         # Create spectrometer options
         self.spectrometers = {
-            "Cryostat": "http://pynq.hamilton.edu:5000",
-            "Bench": "http://pynq2.hamilton.edu:5000",
+            "Cryostat": "http://collettlab2.hamilton.edu:5000",
+            # "Bench": "http://pynq2.hamilton.edu:5000",
         }
         self.spectrometer = "Cryostat"
 
@@ -1115,7 +1121,10 @@ class ExperimentUI(QMainWindow):
                 elif isinstance(widget, QLineEdit):
                     value = widget.text()
                 elif isinstance(widget, QComboBox):
-                    value = widget.currentText()
+                    if widget.currentData():
+                        value = widget.currentData()
+                    else:
+                        value = widget.currentText()
                 elif isinstance(widget, QCheckBox):
                     value = widget.isChecked()
                 elif isinstance(widget, QWidget) and hasattr(
@@ -1156,11 +1165,11 @@ class ExperimentUI(QMainWindow):
         self.sweep_start_stop_btn.setEnabled(True)
         self.sweep_start_stop_btn.setText("Start Sweep")
 
-        print("Initialized experiment with parameters:")
-        for k, v in new_params.items():
-            print(f"   {k}: {v}")
-        print("\n")
-        print("Select an action. \n")
+        # print("Initialized experiment with parameters:")
+        # for k, v in new_params.items():
+        #     print(f"   {k}: {v}")
+        # print("\n")
+        # print("Select an action. \n")
 
     def read_unprocessed_frontend(self):
         """Starts a worker thread to read unprocessed experiment data from the server.
@@ -1263,10 +1272,7 @@ class ExperimentUI(QMainWindow):
             self.sweep_start_stop_btn.setText("Stop Sweep")
 
             # Focus on the 2d sweep graph tab
-            if self.current_experiment.parameters['integrate']:
-                self.graph_tabs.setCurrentIndex(3)
-            else:
-                self.graph_tabs.setCurrentIndex(2)
+            self.graph_tabs.setCurrentIndex(2)
 
             # Choose appropriate worker config depending on experiment type
             if self.current_experiment.type == "Pulse Frequency Sweep":
@@ -1430,6 +1436,10 @@ class ExperimentUI(QMainWindow):
             self.current_experiment.hardware_off()
         except Exception as e:
             print(e)
+        
+        self.read_unprocessed_btn.setEnabled(False)
+        self.read_processed_btn.setEnabled(False)
+        self.sweep_start_stop_btn.setEnabled(False)
         # finally:
         #     self.close()
 
