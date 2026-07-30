@@ -307,9 +307,11 @@ def run_snapshot():
 def start_sweep():
     global sweep
     global expt
-    if expt and expt.runinfo.running:
-        print("sweep in progress, try again later")
-        return jsonify({"status": "sweep in progress, try again later"})
+    if expt:
+        if "running" in expt.runinfo.keys():
+            if expt.runinfo.running:
+                print("sweep in progress, try again later")
+                return jsonify({"status": "sweep in progress, try again later"})
     else:
         """starts up the hardware to run a sweep and runs a sweep"""
         # Get the data from the request
