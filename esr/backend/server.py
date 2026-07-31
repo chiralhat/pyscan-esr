@@ -331,6 +331,11 @@ def hardware_off():
         if devices.moku.laser_port:
             devices.moku.laser = False
     print("Turning off hardware...")
+
+    # Disconnect from all equipment
+    for key in devices.keys():
+        devices[key].close()
+    devices.__dict__.clear()
     # insert your real code here to stop sweep
     return jsonify({"status": "off"})
 
