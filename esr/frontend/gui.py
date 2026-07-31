@@ -162,7 +162,7 @@ EXPERIMENT_TEMPLATES = {
                     "display": "Time Offset",
                     "key": "h_offset",
                     "type": "double_spin",
-                    # "min": -10000.0,
+                    "min": -10000.0,
                     # "max": 10000.0,
                     "default": -0.125,
                 },
@@ -1000,24 +1000,6 @@ class ExperimentUI(QMainWindow):
 
         self.last_saved_graph_path = None
         self.worker_thread = None
-
-    def get_scopes_from_backend(self):
-        """Attempts to query available scope devices from the backend server.
-
-        On success: stores the response in the global `scopes` variable and stops polling.
-        On failure: logs the error message in the GUI.
-        """
-        try:
-            response = requests.get(
-                self.server_address + "/get_scopes", json=data, timeout=2
-            )
-            response.raise_for_status()
-            data = response.json()
-            global scopes
-            scopes = data
-            self.poll_timer.stop()
-        except Exception as e:
-            self.label.setText(f"Unable to get scopes from backend... ({e})")
 
     def load_defaults_and_build_ui(self):
         """Initializes the UI settings panel using the current experiment's template
@@ -3256,7 +3238,7 @@ def main():
     ex = ExperimentUI()
     ex.show()
     screen = QDesktopWidget().screenGeometry()
-    screen_width = screen.width()
+    screen_width = screen.width()/2
     screen_height = screen.height()
     ex.setGeometry(0, 0, int(screen_width), int(screen_height))
     ex.setWindowIcon(QIcon("icon.png"))
