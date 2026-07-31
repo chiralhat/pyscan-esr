@@ -393,7 +393,7 @@ class Worker(QObject):
                 # Generate and emit updated plots
                 last_data_2d, last_data_1d = self.update_plots(last_data_2d, last_data_1d, do_int, do_sweep2)
 
-                sleep(self.experiment.parameters['subtime']/10)
+                sleep(self.experiment.parameters['subtime'])
 
             # final emitting of plots when sweep is over
             self.update_plots(last_data_2d, last_data_1d, do_int, do_sweep2)
