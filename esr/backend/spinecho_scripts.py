@@ -133,7 +133,7 @@ def end_func(d, expt, run, dim=0):
         ]
         fit = try_fit(ps.rabifit, rabidat, guess)
         if dim == 0:
-            expt.fit, expt.out, expt.outerr = fit, *fit[:, 2] / 2
+            expt.fit, expt.out, expt.outerr = fit, *fit[:, 2] / 4
         else:
             expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = (
                 fit,
@@ -207,7 +207,7 @@ def setup_measure_function(soc, integrate, deer=False):
                 dim = [runinfo._dims[1], runinfo.indicies[1]]
             else:
                 dim = 0
-            end_func(d, expt, runinfo.parameters["expt"], dim)
+                end_func(d, expt, runinfo.parameters["expt"], dim)
             if runinfo.parameters["sweep2"] and not runinfo._indicies[1] == (
                 runinfo._dims[1] - 1
             ):
