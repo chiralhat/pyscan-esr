@@ -139,8 +139,18 @@ def end_func(d, expt, run, dim=0):
                 fit,
                 *fit[:, 2] / 4,
             )
-    elif run == "Hahn Echo" or run == "CPMG":  # Hahn or CPMG sweep
+    elif run == "Hahn Echo":  # Hahn sweep
         deldat = np.array([expt.echo_delay, sigs])
+        try:
+            fit = np.array(ps.exp_fit_norange(deldat, 1, 1)[:2])
+        except:
+            fit = np.zeros((2, 4))
+        if dim == 0:
+            fit, expt.out, expt.outerr = fit, *fit[:, 2]
+        else:
+            expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = fit, *fit[:, 2]
+    elif run == "CPMG":  # CPMG sweep
+        deldat = np.array([expt.cpmg_echo_delay, sigs])
         try:
             fit = np.array(ps.exp_fit_norange(deldat, 1, 1)[:2])
         except:
@@ -282,7 +292,7 @@ def setup_experiment(parameters, devices, sweep, soc):
             "freq_sweep",
             "phase_sweep",
             "inversion_sweep",
-            "echo_delay",
+            "cpmg_echo_delay",
             "gain_sweep",
             "deer_sweep",
             "temp_sweep"
@@ -339,6 +349,37 @@ def setup_experiment(parameters, devices, sweep, soc):
 
     runinfo.parameters = parameters
     runinfo.wait_time = wait
+
+
+    if parameters["expt"] == "Hahn Echo":
+        runinfo.scan0.scan_dict["echo_delay"] = (
+            2
+            * np.array(runinfo.scan0.scan_dict["delay_sweep"])
+            * runinfo.parameters["pulses"]
+        )
+    elif parameters["expt"] == "CPMG":
+        runinfo.scan0.scan_dict["cpmg_echo_delay"] = (
+            2
+            * runinfo.parameters["delay"]
+            * np.array(runinfo.scan0.scan_dict["cpmg_sweep"])
+        )
+    if parameters["sweep2"] and parameters["expt2"] == "Hahn Echo":
+        runinfo.scan1.scan_dict["echo_delay"] = (
+            2
+            * np.array(runinfo.scan1.scan_dict["delay_sweep"])
+            * runinfo.parameters["pulses"]
+        )
+    elif parameters["sweep2"] and parameters["expt2"] == "CPMG":
+        runinfo.scan1.scan_dict["cpmg_echo_delay"] = (
+            2
+            * runinfo.parameters["delay"]
+            * np.array(runinfo.scan1.scan_dict["cpmg_sweep"])
+        )
+    if not "echo_delay" in runinfo.scan0.scan_dict.keys():
+        runinfo.scan0.scan_dict["echo_delay"] = (
+            2 * runinfo.parameters["delay"] * runinfo.parameters["pulses"]
+        )
+
     sweep["name"] = parameters["outfile"] + fname
     sweep["runinfo"] = runinfo
 
