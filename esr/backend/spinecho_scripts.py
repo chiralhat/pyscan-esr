@@ -364,7 +364,7 @@ def setup_experiment(parameters, devices, sweep, soc):
             * np.array(runinfo.scan0.scan_dict["cpmg_sweep"])
         )
     else:
-        runinfo.scan0.scan_dict["echo_delay"] = (
+        runinfo.parameters["echo_delay"] = (
             2 * runinfo.parameters["delay"] * runinfo.parameters["pulses"]
         )
     if parameters["sweep2"] and parameters["expt2"] == "Hahn Echo":
@@ -378,10 +378,6 @@ def setup_experiment(parameters, devices, sweep, soc):
             2
             * runinfo.parameters["delay"]
             * np.array(runinfo.scan1.scan_dict["cpmg_sweep"])
-        )
-    elif parameters["sweep2"]:
-        runinfo.scan1.scan_dict["echo_delay"] = (
-            2 * runinfo.parameters["delay"] * runinfo.parameters["pulses"]
         )
 
     sweep["name"] = parameters["outfile"] + fname
