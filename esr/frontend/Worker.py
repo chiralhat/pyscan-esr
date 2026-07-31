@@ -329,7 +329,7 @@ class Worker(QObject):
             else:
                 xname = "t"
             yname = self.experiment.parameters["y_name"]
-            
+
             if self.experiment.expt.runinfo.measured:
                 if (not do_int) or do_sweep2:
                     data_name_2d = self.combo_2d.currentText()
@@ -393,7 +393,8 @@ class Worker(QObject):
                 # Generate and emit updated plots
                 last_data_2d, last_data_1d = self.update_plots(last_data_2d, last_data_1d, do_int, do_sweep2)
 
-                sleep(self.experiment.parameters['subtime'])
+                tsleep = np.max([0.6, self.experiment.parameters['subtime']])
+                sleep(tsleep)
 
             # final emitting of plots when sweep is over
             self.update_plots(last_data_2d, last_data_1d, do_int, do_sweep2)
