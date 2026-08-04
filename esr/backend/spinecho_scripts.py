@@ -133,7 +133,7 @@ def end_func(d, expt, run, dim=0):
         ]
         fit = try_fit(ps.rabifit, rabidat, guess)
         if dim == 0:
-            expt.fit, expt.out, expt.outerr = fit, *fit[:, 2] / 2
+            expt.fit, expt.out, expt.outerr = fit, *fit[:, 2] / 4
         else:
             expt.fit[dim[1]], expt.out[dim[1]], expt.outerr[dim[1]] = (
                 fit,
@@ -207,7 +207,7 @@ def setup_measure_function(soc, integrate, deer=False):
                 dim = [runinfo._dims[1], runinfo.indicies[1]]
             else:
                 dim = 0
-            end_func(d, expt, runinfo.parameters["expt"], dim)
+                end_func(d, expt, runinfo.parameters["expt"], dim)
             if runinfo.parameters["sweep2"] and not runinfo._indicies[1] == (
                 runinfo._dims[1] - 1
             ):
@@ -363,6 +363,10 @@ def setup_experiment(parameters, devices, sweep, soc):
             * runinfo.parameters["delay"]
             * np.array(runinfo.scan0.scan_dict["cpmg_sweep"])
         )
+    else:
+        runinfo.parameters["echo_delay"] = (
+            2 * runinfo.parameters["delay"] * runinfo.parameters["pulses"]
+        )
     if parameters["sweep2"] and parameters["expt2"] == "Hahn Echo":
         runinfo.scan1.scan_dict["echo_delay"] = (
             2
@@ -374,10 +378,6 @@ def setup_experiment(parameters, devices, sweep, soc):
             2
             * runinfo.parameters["delay"]
             * np.array(runinfo.scan1.scan_dict["cpmg_sweep"])
-        )
-    if not "echo_delay" in runinfo.scan0.scan_dict.keys():
-        runinfo.scan0.scan_dict["echo_delay"] = (
-            2 * runinfo.parameters["delay"] * runinfo.parameters["pulses"]
         )
 
     sweep["name"] = parameters["outfile"] + fname

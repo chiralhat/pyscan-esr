@@ -105,7 +105,7 @@ def initialize_experiment():
         if parameters['set_temp']:
             devices.ls335.ramp(on=parameters['temp_ramp'])
             devices.ls335.setpoint(parameters['temp'])
-        self.heater(parameters['heater_on'])
+        devices.ls335.heater(parameters['heater_on'])
 
     """This initializes a pyscan experiment with functions from the correct 
         experiment type scripts and GUI files."""
@@ -269,36 +269,6 @@ def start_sweep():
         expt.out = 0
         expt.outerr = 0
 
-        if experiment_type == "Spin Echo":
-            if parameters["expt"] == "Hahn Echo":
-                expt.echo_delay = (
-                    2
-                    * np.array(runinfo.scan0.scan_dict["delay_sweep"])
-                    * runinfo.parameters["pulses"]
-                )
-            elif parameters["expt"] == "CPMG":
-                expt.echo_delay = (
-                    2
-                    * runinfo.parameters["delay"]
-                    * np.array(runinfo.scan0.scan_dict["cpmg_sweep"])
-                )
-            elif parameters["sweep2"] and parameters["expt2"] == "Hahn Echo":
-                expt.echo_delay = (
-                    2
-                    * np.array(runinfo.scan1.scan_dict["delay_sweep"])
-                    * runinfo.parameters["pulses"]
-                )
-            elif parameters["sweep2"] and parameters["expt2"] == "CPMG":
-                expt.echo_delay = (
-                    2
-                    * runinfo.parameters["delay"]
-                    * np.array(runinfo.scan1.scan_dict["cpmg_sweep"])
-                )
-            else:
-                expt.echo_delay = (
-                    2 * runinfo.parameters["delay"] * runinfo.parameters["pulses"]
-                )
-
         #print(expt)
         expt.start_time = time()
         expt.start_thread()
@@ -361,6 +331,11 @@ def hardware_off():
         if devices.moku.laser_port:
             devices.moku.laser = False
     print("Turning off hardware...")
+
+    # Disconnect from all equipment
+    for key in devices.keys():
+        devices[key].close()
+    devices.__dict__.clear()
     # insert your real code here to stop sweep
     return jsonify({"status": "off"})
 

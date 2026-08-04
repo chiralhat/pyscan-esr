@@ -89,7 +89,7 @@ class Lakeshore335():
         if hrange!='Read':
             if not hrange:
                 hran = self.instrument.HeaterRange.OFF
-            elif self.tset<=40:
+            elif self.tset<=10:
                 hran = self.instrument.HeaterRange.MEDIUM
             else:
                 hran = self.instrument.HeaterRange.HIGH
