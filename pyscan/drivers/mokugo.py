@@ -46,15 +46,17 @@ class MokuGo(InstrumentDriver):
             self.c_limit = 3.5
             self.ramp = 50
             self.fieldv_offset = 0
+            self.field_offset = 0
             self.v2_offset = 0
         elif moku=='Bench':
             self.laser_port = laser_port
             self.instrument.set_power_supply(id=self.laser_port, enable=False, voltage=self.laser_V, current=self.laser_I)
             self.instrument.set_power_supply(id=1, enable=True, voltage=5, current=0.15)
-            self._gauss = 7890
-            self.c_limit = 0.5
+            self._gauss = 622
+            self.c_limit = 5
             self.ramp = 400
-            self.fieldv_offset = 0.005
+            self.fieldv_offset = 0
+            self.field_offset = 40
             self.v2_offset = 0
         self.set_switch_1pulse()
 
@@ -99,7 +101,7 @@ class MokuGo(InstrumentDriver):
     
     def field_ramp(self, target):
         current_field = self.field
-        target = float(target)
+        target = float(target-self.field_offset)
         step = self.gauss*self.V_step
         rate = self.ramp
         assert rate>0, f'Ramp rate needs to be a positive integer, rate: {rate}'
@@ -134,13 +136,15 @@ class MokuGo(InstrumentDriver):
         return self.instrument.get_power_supply(2)['set_voltage']+self.v2_offset
 
     @v2.setter
-    def v2(self, val):
-        value = np.round((val+self.fieldv_offset)/self.V_step)*self.V_step
+    def v2(self, val, wait=0.5):
+        value = np.round((val)/self.V_step)*self.V_step
         if value<0:
             value = 0
         assert value<self.c_limit, f'Current exceeds limit, limit: {self.c_limit}, current: {value}'
-        voltage = 3.5 if value>self.c_limit else value
-        self.instrument.set_power_supply(2, voltage=value)
+        voltage = self.c_limit if value>self.c_limit else value
+        for n in [1,2,3]:
+            self.instrument.set_power_supply(2, voltage=value)
+            sleep(wait)
 
 
     @property
@@ -171,7 +175,7 @@ class MokuGo(InstrumentDriver):
         if self.ramp:
             self.field_ramp(value)
         else:
-            self.v2 = value/self.gauss
+            self.v2 = (value-self.field_offset)/self.gauss
         
         
     @property
