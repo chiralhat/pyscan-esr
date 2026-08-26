@@ -14,11 +14,11 @@ Key Interactions:
 - Uses `rfsoc2.py` to communicate with RFSoC and acquire signal data.
 """
 
-from rfsoc2 import *
+from .rfsoc2 import *
 import sys
 
 sys.path.append("../../")
-import spinecho_scripts as ses
+from .spinecho_scripts import fourier_signal
 import pyscan as ps
 import numpy as np
 from time import sleep, time
@@ -51,7 +51,7 @@ def decay_freq_sweep(expt):
     d = read_wait(devices, runinfo.parameters)
     #    d = devices.scope.read_vxy()
     expt.t = d.time
-    ses.fourier_signal(d)
+    fourier_signal(d)
     if "ls335" in devices.keys():
         d.temp = devices.ls335.get_temp()
 

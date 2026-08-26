@@ -328,7 +328,7 @@ def hardware_off():
         devices.psu.output = False
     if not sweep['runinfo'].parameters['moku']=="None":
         devices.moku.field = 0
-        if devices.moku.laser_port:
+        if devices.moku.laser:
             devices.moku.laser = False
     print("Turning off hardware...")
 
