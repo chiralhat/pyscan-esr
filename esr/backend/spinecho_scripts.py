@@ -14,7 +14,7 @@ Key Interactions:
 - Uses `rfsoc2.py` for RFSoC pulse generation and signal acquisition.
 """
 
-from rfsoc2 import *
+from .rfsoc2 import *
 import sys
 
 sys.path.append("../../")
