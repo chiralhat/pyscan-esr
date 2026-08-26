@@ -319,11 +319,29 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
                 
             inst = ps.ItemAttribute()
             
-            if not hasattr(devices, "psu") and parameters["use_psu"]:
+            
+            # Initialize PSU if necessary
+            if not hasattr(devices, "psu") and (parameters["use_psu"]):
                 try:
-                    devices.psu = ps.MokuGo()
+                    for inst in res_list:
+                        try:
+                            devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                            break
+                        except Exception as e:
+                            try:
+                                devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                                break
+                            except:
+                                pass
                 except Exception as e:
                     print(f"Error initializing PSU: {e}")
+
+            # Initialize Moku if necessary
+            if not hasattr(devices, "moku") and not parameters['moku']=="None":
+                try:
+                    devices.moku = ps.MokuGo(parameters['moku'])
+                except Exception as e:
+                    print(f"Error initializing Moku: {e}")
             if not hasattr(devices, 'ls335') and parameters['use_temp']:
                 devices.ls335 = ps.Lakeshore335()
                 ttemp = devices.ls335.get_temp()
@@ -346,6 +364,10 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
                 sweep['expt'].runinfo.running = False
             if parameters['use_psu']:
                 devices.psu.output = False
+            if not parameters['moku']=="None":
+                devices.moku.field = 0
+                if devices.moku.laser:
+                    devices.moku.laser = False
         
         with output:
             fig = plt.figure(figsize=(8, 5))

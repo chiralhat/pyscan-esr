@@ -126,8 +126,10 @@ def init_experiment(devices, parameters, sweep, soc):
     parameters['nutation_length'] = 0
     parameters['reps'] = 1
     parameters['sweep2'] = 0
-    if parameters['use_psu']:
-        devices.psu.set_magnet(parameters)
+    if parameters["use_psu"]:
+        devices.psu.output = True
+    if not parameters['moku']=="None":
+        devices.moku.set_magnet(parameters)
     setup_experiment(parameters, devices, sweep, soc)
 
 
