@@ -978,7 +978,7 @@ class ExperimentUI(QMainWindow):
         self.settings_panel = DynamicSettingsPanel()
         self.settings_panel.settingChanged.connect(self.on_setting_changed)
 
-        self.queue_manager = QueueManager(self.toggle_start_stop_sweep_frontend)
+        # self.queue_manager = QueueManager(self.toggle_start_stop_sweep_frontend)
         self.graphs_panel = self.init_graphs_panel()
         self.error_log = self.init_error_log_widget()
         self.top_menu_bar = self.init_top_menu_bar()
