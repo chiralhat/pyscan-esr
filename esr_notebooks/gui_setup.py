@@ -33,7 +33,9 @@ sweep_list = ['Pulse Sweep',
               'Hahn Echo',
               'EDFS',
               'Freq Sweep',
-              'CPMG']
+              'CPMG',
+              'Gain',
+              'DEER']
 
 bimod_sweep_list = ['A Pulse Sweep',
               'B Pulse Sweep',
@@ -73,8 +75,10 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
                                                           description='RF Addr'),
                             'psu_address': ipw.Dropdown(options=res_list,
                                                           description='PSU Addr'),
-                            'use_psu': ipw.Checkbox(layout=wwid, description='Use PSU? (No magnet if not)'),
-                           'use_temp': ipw.Checkbox(layout=wwid, description='Use Lakeshore?')},
+                            'use_psu': ipw.Checkbox(layout=nwid, description='Use PSU? (No magnet if not)'),
+                           'use_temp': ipw.Checkbox(layout=nwid, description='Use Lakeshore?'),
+                           'moku': ipw.Dropdown(options=['None', 'Cryostat', 'Bench'],
+                                                            description='Moku?')},
                 'rfsoc': {'freq': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
                                                        description='Ch1 Freq (MHz)'),
                           'freq2': ipw.BoundedFloatText(min=50, max=14999, step=0.00001, layout=nwid,
@@ -117,7 +121,9 @@ control_dict = {'devices': {'scope_address': ipw.Dropdown(options=res_list, layo
                                                            description='Time Offset (us)'),
                           'readout_length': ipw.BoundedFloatText(layout=nwid, min=0, max=5, step=0.001,
                                                description='Readout Length (us)'),
-                         'loopback': ipw.Checkbox(layout=nwid, description='Loopback')},
+                         'loopback': ipw.Checkbox(layout=nwid, description='Loopback'),
+                         'sw_offset': ipw.BoundedFloatText(layout=nwid, min=-1e5, max=1e5, step=0.001,
+                                               description='Switch Offset (us)')},
                 'psu': {'field': ipw.BoundedFloatText(min=0, max=2500, step=0.1, layout=nwid,
                                                        description='Magnetic Field (G)'),
                         'field_start': ipw.BoundedFloatText(min=0, max=2500, step=0.1, layout=nwid,
@@ -319,11 +325,28 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
                 
             inst = ps.ItemAttribute()
             
-            if not hasattr(devices, "psu") and parameters["use_psu"]:
+            # Initialize PSU if necessary
+            if not hasattr(devices, "psu") and (parameters["use_psu"]):
                 try:
-                    devices.psu = ps.MokuGo()
+                    for inst in res_list:
+                        try:
+                            devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                            break
+                        except Exception as e:
+                            try:
+                                devices.psu = ps.GPD3303S(inst.split('ASRL')[-1].split('::')[0])
+                                break
+                            except:
+                                pass
                 except Exception as e:
                     print(f"Error initializing PSU: {e}")
+
+            # Initialize Moku if necessary
+            if not hasattr(devices, "moku") and not parameters['moku']=="None":
+                try:
+                    devices.moku = ps.MokuGo(parameters['moku'])
+                except Exception as e:
+                    print(f"Error initializing Moku: {e}")
             if not hasattr(devices, 'ls335') and parameters['use_temp']:
                 devices.ls335 = ps.Lakeshore335()
                 ttemp = devices.ls335.get_temp()
@@ -365,6 +388,8 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
                 sweep['expt'].echo_delay = 2*np.array(runinfo.scan0.scan_dict['delay_sweep'])*runinfo.parameters['pulses']
             elif parameters['expt']=="CPMG":
                 sweep['expt'].echo_delay = 2*runinfo.parameters['delay']*runinfo.scan0.scan_dict['cpmg_sweep']
+            if parameters['expt']=="DEER":
+                sweep['expt'].echo_delay = 2*runinfo.parameters['delay']+2*runinfo.parameters['tau']
             elif parameters['sweep2'] and parameters['expt2']=="Hahn Echo":
                 sweep['expt'].echo_delay = 2*runinfo.scan1.scan_dict['delay_sweep']*runinfo.parameters['pulses']
             elif parameters['sweep2'] and parameters['expt2']=="CPMG":
