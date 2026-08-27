@@ -1063,15 +1063,15 @@ class ExperimentUI(QMainWindow):
 
         left_container.addWidget(self.settings_panel)
 
-        # Queue widget with fixed height
-        queue_wrapper = QWidget()
-        queue_layout = QVBoxLayout(queue_wrapper)
-        queue_layout.setContentsMargins(0, 0, 0, 0)
-        queue_layout.setSpacing(0)
-        queue_layout.addWidget(self.queue_manager)
-        queue_wrapper.setMaximumHeight(350)
+        # # Queue widget with fixed height
+        # queue_wrapper = QWidget()
+        # queue_layout = QVBoxLayout(queue_wrapper)
+        # queue_layout.setContentsMargins(0, 0, 0, 0)
+        # queue_layout.setSpacing(0)
+        # queue_layout.addWidget(self.queue_manager)
+        # queue_wrapper.setMaximumHeight(350)
 
-        left_container.addWidget(queue_wrapper)
+        # left_container.addWidget(queue_wrapper)
         self.main_splitter.addWidget(left_widget)
 
         # ----- Right: Graphs + Log -----
