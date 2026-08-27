@@ -1252,12 +1252,12 @@ class ExperimentUI(QMainWindow):
         top_menu.addWidget(exp_widget)
         top_menu.addSpacing(30)
 
-        # ----- Add to Queue Button -----
-        add_queue_btn = QPushButton("Add to Queue")
-        add_queue_btn.setMinimumHeight(40)
-        add_queue_btn.setStyleSheet("font-size: 10pt; padding: 4px;")
-        add_queue_btn.clicked.connect(self.add_to_queue)
-        top_menu.addWidget(add_queue_btn)
+        # # ----- Add to Queue Button -----
+        # add_queue_btn = QPushButton("Add to Queue")
+        # add_queue_btn.setMinimumHeight(40)
+        # add_queue_btn.setStyleSheet("font-size: 10pt; padding: 4px;")
+        # add_queue_btn.clicked.connect(self.add_to_queue)
+        # top_menu.addWidget(add_queue_btn)
 
         # ----- Load from Server Button -----
         server_load_btn = QPushButton("Load from Server")
@@ -2057,84 +2057,84 @@ class ExperimentUI(QMainWindow):
                 f'open "{folder}"'
             )  # 'xdg-open' for Linux. Use `open` for macOS, or `start` for Windows.
 
-    def expand_queue_panel(self):
-        """Opens a standalone window to view and manage the experiment queue.
+    # def expand_queue_panel(self):
+    #     """Opens a standalone window to view and manage the experiment queue.
 
-        Provides draggable lists for working/active queues and control buttons for queue history,
-        clearing, and toggling execution.
-        """
-        self.queue_window = QWidget()
-        self.queue_window.setWindowTitle("Queue Viewer")
-        self.queue_window.setGeometry(300, 300, 500, 400)
+    #     Provides draggable lists for working/active queues and control buttons for queue history,
+    #     clearing, and toggling execution.
+    #     """
+    #     self.queue_window = QWidget()
+    #     self.queue_window.setWindowTitle("Queue Viewer")
+    #     self.queue_window.setGeometry(300, 300, 500, 400)
 
-        # Main vertical layout
-        main_layout = QVBoxLayout(self.queue_window)
+    #     # Main vertical layout
+    #     main_layout = QVBoxLayout(self.queue_window)
 
-        # Control bar (History / Clear / Start-Stop)
-        control_bar = QHBoxLayout()
-        for name in ["History", "Clear", "Start/Stop"]:
-            btn = QPushButton(name)
-            control_bar.addWidget(btn)
-        main_layout.addLayout(control_bar)
+    #     # Control bar (History / Clear / Start-Stop)
+    #     control_bar = QHBoxLayout()
+    #     for name in ["History", "Clear", "Start/Stop"]:
+    #         btn = QPushButton(name)
+    #         control_bar.addWidget(btn)
+    #     main_layout.addLayout(control_bar)
 
-        # Scrollable content area
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        content_widget = QWidget()
-        scroll_area.setWidget(content_widget)
+    #     # Scrollable content area
+    #     scroll_area = QScrollArea()
+    #     scroll_area.setWidgetResizable(True)
+    #     content_widget = QWidget()
+    #     scroll_area.setWidget(content_widget)
 
-        # Layout inside the scroll area
-        scroll_layout = QVBoxLayout(content_widget)
+    #     # Layout inside the scroll area
+    #     scroll_layout = QVBoxLayout(content_widget)
 
-        # Active Queue
-        scroll_layout.addWidget(QLabel("Active Queue:"))
-        self.active_queue_list = QListWidget()
-        self.active_queue_list.setSizePolicy(
-            QSizePolicy.Expanding, QSizePolicy.Preferred
-        )
-        scroll_layout.addWidget(self.active_queue_list)
+    #     # Active Queue
+    #     scroll_layout.addWidget(QLabel("Active Queue:"))
+    #     self.active_queue_list = QListWidget()
+    #     self.active_queue_list.setSizePolicy(
+    #         QSizePolicy.Expanding, QSizePolicy.Preferred
+    #     )
+    #     scroll_layout.addWidget(self.active_queue_list)
 
-        # Working Queue (drag-and-drop)
-        scroll_layout.addWidget(QLabel("Working Queue:"))
-        self.working_queue_list = QListWidget()
-        self.working_queue_list.setDragEnabled(True)
-        self.working_queue_list.setAcceptDrops(True)
-        self.working_queue_list.setDragDropMode(QAbstractItemView.InternalMove)
-        self.working_queue_list.setSpacing(2)
-        self.working_queue_list.setSizePolicy(
-            QSizePolicy.Expanding, QSizePolicy.Preferred
-        )
-        scroll_layout.addWidget(self.working_queue_list)
+    #     # Working Queue (drag-and-drop)
+    #     scroll_layout.addWidget(QLabel("Working Queue:"))
+    #     self.working_queue_list = QListWidget()
+    #     self.working_queue_list.setDragEnabled(True)
+    #     self.working_queue_list.setAcceptDrops(True)
+    #     self.working_queue_list.setDragDropMode(QAbstractItemView.InternalMove)
+    #     self.working_queue_list.setSpacing(2)
+    #     self.working_queue_list.setSizePolicy(
+    #         QSizePolicy.Expanding, QSizePolicy.Preferred
+    #     )
+    #     scroll_layout.addWidget(self.working_queue_list)
 
-        # Add scroll area to the main layout
-        main_layout.addWidget(scroll_area)
+    #     # Add scroll area to the main layout
+    #     main_layout.addWidget(scroll_area)
 
-        self.queue_window.setLayout(main_layout)
-        self.queue_window.show()
+    #     self.queue_window.setLayout(main_layout)
+    #     self.queue_window.show()
 
-    def add_to_queue(self):
-        """Creates a new queued experiment using the current settings and adds it to the working queue.
+    # def add_to_queue(self):
+    #     """Creates a new queued experiment using the current settings and adds it to the working queue.
 
-        Opens a configuration dialog to customize the experiment’s metadata (e.g., name, graph output).
-        """
-        try:
-            # Clone the current experiment backend logic
-            new_experiment = ExperimentType(self.current_experiment.type, self.server_address, self.spectrometer)
+    #     Opens a configuration dialog to customize the experiment’s metadata (e.g., name, graph output).
+    #     """
+    #     try:
+    #         # Clone the current experiment backend logic
+    #         new_experiment = ExperimentType(self.current_experiment.type, self.server_address, self.spectrometer)
 
-            # Create a QueuedExperiment wrapper (includes settings + metadata)
-            queue_item = QueuedExperiment(
-                start_stop_sweep_function=self.toggle_start_stop_sweep_frontend,
-                experiment=new_experiment,
-                queue_manager=self.queue_manager,
-                last_used_directory=self.last_saved_graph_path,
-            )
+    #         # Create a QueuedExperiment wrapper (includes settings + metadata)
+    #         queue_item = QueuedExperiment(
+    #             start_stop_sweep_function=self.toggle_start_stop_sweep_frontend,
+    #             experiment=new_experiment,
+    #             queue_manager=self.queue_manager,
+    #             last_used_directory=self.last_saved_graph_path,
+    #         )
 
-            # Only add if the user completed the dialog
-            if queue_item.valid:
-                self.queue_manager.add_to_working_queue(queue_item)
+    #         # Only add if the user completed the dialog
+    #         if queue_item.valid:
+    #             self.queue_manager.add_to_working_queue(queue_item)
 
-        except Exception as e:
-            print(e)
+    #     except Exception as e:
+    #         print(e)
 
     def load_from_server(self):
         """Loads settings into the panel using the experiment template structure.
@@ -2167,1069 +2167,1069 @@ class ExperimentUI(QMainWindow):
             print(e)
 
 
-class QueueRunnerWorker(QThread):
-    """Worker thread that runs through the active experiment queue.
-
-    For each experiment:
-    - Locks it (greys out)
-    - Initializes and runs it
-    - Marks it done
-    - Handles hardware errors and moves to next in queue
-    """
-
-    experiment_locked = pyqtSignal(object)
-    experiment_unlocked = pyqtSignal(object)
-    queue_stopped = pyqtSignal()
-    hardware_error = pyqtSignal(object, str)
-
-    def __init__(self, queue_manager):
-        """Initializes the queue runner with a reference to the main queue manager."""
-        super().__init__()
-        self.queue_manager = queue_manager
-        self.stop_requested = False
-
-    def run(self):
-        """Main queue execution loop.
-
-        - Pulls next experiment from active queue
-        - Initializes and runs it
-        - Stops if no experiments remain or if error/stop is triggered
-        """
-        while not self.stop_requested:
-            experiment = self.get_next_experiment()
-            if not experiment:
-                self.queue_stopped.emit()
-                return
-
-            self.experiment_locked.emit(experiment)
-
-            try:
-                self.initialize_experiment(experiment)
-            except Exception as e:
-                self.hardware_error.emit(experiment, str(e))
-                self.experiment_unlocked.emit(experiment)
-                self.queue_stopped.emit()
-                return
-
-            self.mark_experiment_done(experiment)
-            self.move_to_next_experiment()
-
-    def run_worker_task(self, experiment, task):
-        """Starts a background Worker thread to perform a single task
-        (e.g., sweep, read_processed, read_unprocessed) for a given experiment.
-
-        Connects appropriate update and plotting signals to the GUI.
-        """
-        worker = Worker(experiment.experiment, task, self.server_address)
-        thread = QThread()
-
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run_snapshot)
-
-        # Attach signal handlers to update plots in the background
-        worker.dataReady_se.connect(
-            experiment.experiment.read_unprocessed_graph.update_canvas_se
-        )
-        worker.dataReady_ps.connect(
-            experiment.experiment.read_unprocessed_graph.update_canvas_psweep
-        )
-
-        # Status updates + cleanup
-        worker.updateStatus.connect(self.queue_manager.parent().on_worker_status_update)
-        #worker.finished.connect(thread.quit)
-        worker.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-
-        # Start the task
-        thread.start()
-
-    def get_next_experiment(self):
-        """Retrieves the next experiment item from the active queue, if any."""
-        if self.queue_manager.active_queue_list.count() > 0:
-            return self.queue_manager.active_queue_list.item(0)
-        return None
-
-    def initialize_experiment(self, experiment):
-        """Initializes the experiment backend with saved parameters and launches its components.
-
-        Runs selected tasks depending on the experiment’s configured flags.
-        """
-        experiment.init_experiment()
-
-        if experiment.has_sweep:
-            self.run_worker_task(experiment, task="sweep")
-
-        if experiment.has_read_unprocessed:
-            self.run_worker_task(experiment, task="read_unprocessed")
-
-        if experiment.has_read_processed:
-            self.run_worker_task(experiment, task="read_processed")
-
-    def mark_experiment_done(self, experiment):
-        """Marks the experiment as finished and logs it with a timestamp.
-
-        Adds an entry to the experiment history log in the queue manager.
-        """
-        now = datetime.now()
-
-        # Format timestamp
-        if not self.queue_manager.session_started:
-            self.queue_manager.session_started = True
-            timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            timestamp = now.strftime("%H:%M:%S")
-
-        # Get display name and output location
-        display_name = experiment.parameters_dict.get(
-            "display_name", "Unnamed Experiment"
-        )
-        save_location = experiment.parameters_dict.get("save_directory", "")
-
-        self.queue_manager.history_log.append((timestamp, display_name, save_location))
-
-        experiment.set_done()
-
-    def move_to_next_experiment(self):
-        """Removes the current experiment from the active queue list (visually and logically)."""
-        self.queue_manager.active_queue_list.takeItem(0)
-
-
-class QueueManager(QWidget):
-    """Manages the experiment queue (working and active), controls queue execution,
-    and handles user interaction with queued experiments (move, duplicate, delete).
-    """
-
-    def __init__(self, start_stop_sweep_function=None, parent=None):
-        """Initializes the queue manager panel, including:
-
-        - A collapsed/expandable UI
-        - Two queues: working (editable) and active (in progress)
-        - Buttons for running, clearing, and showing history
-        """
-        super().__init__(parent)
-
-        self.start_stop_sweep_function = start_stop_sweep_function
-
-        # State tracking
-        self.queue_runner = None
-        self.queue_running = False
-        self.history_log = []
-        self.session_started = False
-
-        self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(0)
-
-        # Collapsed header
-        self.collapsed_button = QPushButton("Queue: Currently Running: [None] ▲")
-        self.collapsed_button.setMaximumHeight(40)
-        self.collapsed_button.setStyleSheet("text-align: left; padding: 8px;")
-        self.collapsed_button.clicked.connect(self.toggle_expand)
-        self.main_layout.addWidget(self.collapsed_button)
-
-        # Expanded content frame
-        self.expanded_frame = QFrame()
-        self.expanded_frame.setVisible(False)
-        self.expanded_layout = QVBoxLayout(self.expanded_frame)
-        self.expanded_layout.setContentsMargins(10, 10, 10, 10)
-        self.expanded_layout.setSpacing(10)
-
-        # Header controls (label + buttons)
-        active_queue_bar = QHBoxLayout()
-        active_label = QLabel("Active Queue:")
-        active_label.setStyleSheet("font-weight: bold;")
-        self.history_button = QPushButton("History")
-        self.clear_button = QPushButton("Clear")
-        self.toggle_run_button = QPushButton("Start")
-
-        for btn in [self.history_button, self.clear_button, self.toggle_run_button]:
-            btn.setFixedHeight(28)
-            btn.setFixedWidth(70)
-            btn.setStyleSheet("font-size: 10pt; padding: 2px;")
-
-        active_queue_bar.addWidget(active_label)
-        active_queue_bar.addStretch()
-        active_queue_bar.addWidget(self.history_button)
-        active_queue_bar.addWidget(self.clear_button)
-        active_queue_bar.addWidget(self.toggle_run_button)
-
-        self.expanded_layout.addLayout(active_queue_bar)
-
-        # Connect control buttons
-        self.history_button.clicked.connect(self.show_history)
-        self.clear_button.clicked.connect(self.clear_queue)
-        self.toggle_run_button.clicked.connect(self.start_stop_queue)
-
-        # Active queue list (non-editable)
-        self.active_queue_list = QListWidget()
-        self.expanded_layout.addWidget(self.active_queue_list)
-
-        self.expanded_layout.addWidget(QLabel("Working Queue:"))
-        self.working_queue_list = QListWidget()
-        self.working_queue_list.setDragEnabled(True)
-        self.working_queue_list.setAcceptDrops(True)
-        self.working_queue_list.setDragDropMode(QListWidget.InternalMove)
-        self.expanded_layout.addWidget(self.working_queue_list)
-
-        self.main_layout.addWidget(self.expanded_frame)
-
-        self.current_running_text = "[None]"
-
-    def start_stop_queue(self):
-        """Toggles queue execution.
-
-        - If queue is not running: starts execution of active queue
-        - If already running: signals the queue runner to stop
-        """
-        self.toggle_run_button_text()
-        if self.queue_runner and self.queue_runner.isRunning():
-            self.stop_queue()
-        else:
-            self.queue_running = True
-            print("Calling next queue item()")
-            self.next_queue_item()
-
-    def stop_queue(self):
-        """Request the queue to stop."""
-        if self.queue_runner:
-            self.queue_runner.stop_requested = True
-
-    def next_queue_item(self):
-        """Starts execution of the next experiment in the active queue.
-
-        If queue is empty, does nothing. Removes the experiment from the list after running.
-        """
-        try:
-            if self.active_queue_list.count != 0:
-                next_experiment = self.active_queue_list.takeItem(0)
-                self.current_experiment = next_experiment.experiment
-                next_experiment.init_experiment()
-                next_experiment.start_stop_sweep_function()
-        except Exception as e:
-            print(e)
-
-    def queue_stopped_due_to_completion_or_error(self):
-        """Handles cleanup when the queue finishes naturally or due to an error.
-
-        Resets state flags and button labels.
-        """
-        self.queue_running = False
-        self.toggle_run_button.setText("Start")
-        print("Queue has stopped.")
-
-    def handle_hardware_error(self, experiment, error_message):
-        """Prints/logs an error message if an experiment failed due to hardware issues.
-
-        Used by the QueueRunnerWorker when catching backend exceptions.
-        """
-        print(
-            f"Hardware error detected in experiment: {experiment.parameters_dict.get('display_name', 'Unknown')}"
-        )
-        print(f"Error: {error_message}")
-
-    def lock_experiment(self, experiment):
-        """Greys out an experiment in the queue to indicate it's currently running.
-
-        Used to visually lock the item (disable interaction).
-        """
-        if isinstance(experiment, QueuedExperiment):
-            experiment.widget.setStyleSheet(
-                """
-                QWidget {
-                    background-color: #cccccc;
-                    border: 2px solid #888;
-                    border-radius: 6px;
-                    padding: 8px;
-                }
-            """
-            )
-
-    def unlock_experiment(self, experiment):
-        """Restores visual style for an experiment item after it finishes running."""
-        if isinstance(experiment, QueuedExperiment):
-            experiment.widget.setStyleSheet(
-                """
-                QWidget {
-                    background-color: #f9f9f9;
-                    border: 2px solid #888;
-                    border-radius: 6px;
-                    padding: 8px;
-                }
-            """
-            )
-
-    def toggle_run_button_text(self):
-        """Toggles the Run button text between 'Start' and 'Stop' based on current state."""
-        current_text = self.toggle_run_button.text().strip()
-
-        if current_text.lower() == "start" or current_text.lower() == "start/stop":
-            self.toggle_run_button.setText("Stop")
-        else:
-            self.toggle_run_button.setText("Start")
-
-    def toggle_expand(self):
-        """Toggles the visibility of the expanded queue view.
-
-        When collapsed, only the header is shown; when expanded, full queue control is visible.
-        """
-        is_visible = self.expanded_frame.isVisible()
-        self.expanded_frame.setVisible(not is_visible)
-        arrow = "▼" if not is_visible else "▲"
-        self.collapsed_button.setText(
-            f"Queue: Currently Running: {self.current_running_text} {arrow}"
-        )
-
-    def set_current_running(self, text):
-        """Updates the header to show which experiment is currently running."""
-        self.current_running_text = text
-        if not self.expanded_frame.isVisible():
-            self.collapsed_button.setText(f"Queue: Currently Running: {text} ▲")
-
-    def add_to_active_queue(self, widget_item):
-        """Adds a queued experiment item to the active queue (for immediate execution)."""
-        self.active_queue_list.addItem(widget_item)
-
-    def add_to_working_queue(self, queued_experiment):
-        """Adds a queued experiment item to the working queue (editable list).
-
-        Also attaches the experiment’s QWidget display.
-        """
-        print(
-            f"Adding queued experiment: {queued_experiment.parameters_dict['display_name']} to working queue..."
-        )
-        self.working_queue_list.addItem(queued_experiment)
-        self.working_queue_list.setItemWidget(
-            queued_experiment, queued_experiment.widget
-        )
-
-    def show_history(self):
-        """Opens a scrollable dialog showing the log of all completed experiments in the session."""
-        if not self.history_log:
-            QMessageBox.information(
-                self, "History", "No experiments have been run yet."
-            )
-            return
-
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Experiment History")
-        dialog.setMinimumSize(500, 400)
-
-        layout = QVBoxLayout(dialog)
-
-        history_text = QTextEdit()
-        history_text.setReadOnly(True)
-
-        # Format each log entry with timestamp, name, and save path
-        log_entries = []
-        for timestamp, name, location in self.history_log:
-            log_entries.append(
-                f"{timestamp}\nExperiment: {name}\nSaved to: {location}\n\n"
-            )
-
-        history_text.setText("".join(log_entries))
-        layout.addWidget(history_text)
-
-        close_button = QPushButton("Close")
-        close_button.clicked.connect(dialog.accept)
-        layout.addWidget(close_button)
-
-        dialog.exec_()
-
-    def clear_queue(self):
-        """Clears all items from both the working and active queues after user confirmation."""
-        if self.working_queue_list.count() == 0 and self.active_queue_list.count() == 0:
-            return
-
-        reply = QMessageBox.question(
-            self,
-            "Confirm Clear Queue",
-            "Are you sure you want to clear the queue? Experiments will be lost forever.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
-        )
-
-        if reply == QMessageBox.Yes:
-            # Clear working queue
-            while self.working_queue_list.count() > 0:
-                item = self.working_queue_list.takeItem(0)
-                if isinstance(item, QueuedExperiment):
-                    del item.widget
-                    del item.experiment
-                del item
-
-            # Clear active queue
-            while self.active_queue_list.count() > 0:
-                item = self.active_queue_list.takeItem(0)
-                if isinstance(item, QueuedExperiment):
-                    del item.widget
-                    del item.experiment
-                del item
-
-
-class ExperimentSetupDialog(QDialog):
-    """Wraps an ExperimentType instance with GUI display and metadata for use in the queue.
-
-    Supports editing, moving, duplicating, and deleting queue entries through the interface.
-    """
-
-    def __init__(
-        self,
-        experiment_type,
-        parameters,
-        last_used_directory=None,
-        edit_settings=False,
-        parent=None,
-        values=None,
-    ):
-        """
-        A configuration dialog for queued experiments.
-
-        This dialog allows the user to:
-        - Name the experiment
-        - Select which tasks (read processed, read unprocessed, sweep) to run
-        - Choose whether to save the resulting graph and where to save it
-        - (Optionally) edit the experiment settings panel on the right
-
-        Used when adding a new experiment to the queue or editing an existing one.
-        """
-        super().__init__(parent)
-        self.setWindowTitle("Configure Queued Experiment")
-        self.setMinimumSize(600, 400)
-        self.edit_settings = edit_settings
-
-        self.display_name = ""
-        self.save_graph_output = False
-        self.save_directory = last_used_directory or os.getcwd()
-
-        main_layout = QHBoxLayout(self)
-
-        # --- LEFT PANEL: Name, checkboxes, directory, buttons ---
-        left_box = QVBoxLayout()
-
-        self.name_label = QLabel("Experiment Name:")
-        self.name_input = QLineEdit()
-        default_name = "default name"
-        self.name_input.setText(default_name)
-        left_box.addWidget(self.name_label)
-        left_box.addWidget(self.name_input)
-
-        # Checkboxes for task selection
-        self.read_processed_checkbox = QCheckBox("Read Processed")
-        left_box.addWidget(self.read_processed_checkbox)
-        self.read_unprocessed_checkbox = QCheckBox("Read Unprocessed")
-        left_box.addWidget(self.read_unprocessed_checkbox)
-        self.sweep_checkbox = QCheckBox("Sweep")
-        left_box.addWidget(self.sweep_checkbox)
-
-        self.save_checkbox = QCheckBox("Save graph output")
-        left_box.addWidget(self.save_checkbox)
-
-        # Directory selector
-        self.dir_label = QLabel("Save to:")
-        self.dir_input = QLineEdit()
-        self.dir_input.setText(self.save_directory)
-        self.browse_button = QPushButton("Browse")
-        self.browse_button.clicked.connect(self.choose_directory)
-
-        dir_row = QHBoxLayout()
-        dir_row.addWidget(self.dir_input)
-        dir_row.addWidget(self.browse_button)
-
-        left_box.addWidget(self.dir_label)
-        left_box.addLayout(dir_row)
-
-        # OK / Cancel buttons
-        button_row = QHBoxLayout()
-        self.cancel_button = QPushButton("Cancel")
-        self.ok_button = QPushButton("Okay")
-        button_row.addWidget(self.cancel_button)
-        button_row.addWidget(self.ok_button)
-        self.cancel_button.clicked.connect(self.reject)
-        self.ok_button.clicked.connect(self.accept)
-
-        left_box.addStretch()
-        left_box.addLayout(button_row)
-
-        # --- RIGHT PANEL: Settings tree view ---
-        self.settings_panel = DynamicSettingsPanel()
-        self.settings_panel.load_settings_panel(EXPERIMENT_TEMPLATES[experiment_type])
-
-        self._apply_parameters_to_settings(parameters)
-
-        if not self.edit_settings:
-            self.settings_panel.setDisabled(True)
-
-        # Assemble layout
-        main_layout.addLayout(left_box, 2)
-        main_layout.addWidget(self.settings_panel, 3)
-
-        # Pre-fill left panel values if provided
-        if values:
-            self.name_input.setText(values.get("display_name", "default name"))
-            self.read_processed_checkbox.setChecked(values.get("read_processed", False))
-            self.read_unprocessed_checkbox.setChecked(
-                values.get("read_unprocessed", False)
-            )
-            self.sweep_checkbox.setChecked(values.get("sweep", False))
-            self.save_checkbox.setChecked(values.get("save_graph_output", True))
-            self.dir_input.setText(values.get("save_directory", self.save_directory))
-
-    def _apply_parameters_to_settings(self, param_dict):
-        """
-        Populate the right-side settings panel widgets with values from a saved parameters dictionary.
-
-        This is used to initialize the settings UI with stored values when editing or reviewing a queued experiment.
-
-        @param param_dict -- A dictionary of parameter keys and values used to pre-fill widgets.
-        """
-        tree = self.settings_panel.settings_tree
-        root = tree.invisibleRootItem()
-        # Loop through each group in the settings tree
-        for i in range(root.childCount()):
-
-            # Loop through each setting item in the group
-            grp = root.child(i)
-            for j in range(grp.childCount()):
-                item = grp.child(j)
-                widget = tree.itemWidget(item, 1)
-                key = getattr(widget, "_underlying_key", None)
-
-                # Handle composite settings (e.g., multiple spin boxes)
-                if isinstance(key, list):
-                    layout = widget.layout()
-                    for idx, subkey in enumerate(key):
-                        if subkey in param_dict:
-                            val = param_dict[subkey]
-                            sub_widget = layout.itemAt(idx).widget()
-                            self._apply_value_to_widget(sub_widget, val)
-
-                # Handle single-key settings
-                else:
-                    if key in param_dict:
-                        val = param_dict[key]
-                        self._apply_value_to_widget(widget, val)
-
-    def _apply_value_to_widget(self, widget, value):
-        """
-        Apply a given value to a corresponding Qt input widget in the settings panel.
-
-        This is a helper method used during parameter loading to set the UI state
-        based on previously saved experiment settings.
-
-        @param widget -- The Qt widget instance (e.g., QSpinBox, QCheckBox) to populate.
-        @param value -- The value to apply to the widget.
-        """
-        # Handle numeric inputs
-        if isinstance(widget, QSpinBox):
-            widget.setValue(int(value))
-        elif isinstance(widget, QDoubleSpinBox):
-            widget.setValue(float(value))
-
-        # Handle boolean input
-        elif isinstance(widget, QCheckBox):
-            widget.setChecked(bool(value))
-
-        # Handle string input
-        elif isinstance(widget, QLineEdit):
-            widget.setText(str(value))
-
-        # Handle dropdown input
-        elif isinstance(widget, QComboBox):
-            idx = widget.findText(str(value))
-            if idx != -1:
-                widget.setCurrentIndex(idx)
-
-    def get_updated_parameters(self):
-        """
-        Collect the current values from the settings panel and return them as a dictionary.
-
-        This function is used when the user confirms the dialog, ensuring that all modified
-        parameter values are extracted from their widgets for use in queue setup or execution.
-
-        @return dict -- A dictionary mapping parameter keys to their current values.
-        """
-        updated_params = {}
-        tree = self.settings_panel.settings_tree
-        root = tree.invisibleRootItem()
-
-        # Traverse each group in the settings tree
-        for i in range(root.childCount()):
-            grp = root.child(i)
-
-            # Traverse each setting item within the group
-            for j in range(grp.childCount()):
-                item = grp.child(j)
-                widget = tree.itemWidget(item, 1)
-                key = getattr(widget, "_underlying_key", None)
-
-                # Handle multi-key composite widgets (e.g., sweep start/end/step)
-                if isinstance(key, list):
-                    layout = widget.layout()
-                    for idx, subkey in enumerate(key):
-                        sub_widget = layout.itemAt(idx).widget()
-                        updated_params[subkey] = self._get_widget_value(sub_widget)
-
-                # Handle standard single-key widgets
-                else:
-                    if key:
-                        updated_params[key] = self._get_widget_value(widget)
-        return updated_params
-
-    def _get_widget_value(self, widget):
-        """
-        Retrieve the current value from a given Qt input widget.
-
-        This helper is used to extract values from the settings panel during parameter gathering.
-
-        @param widget -- The widget to read from (QSpinBox, QLineEdit, etc.)
-        @return The value currently set in the widget.
-        """
-        # Numeric inputs
-        if isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
-            return widget.value()
-
-        # Boolean input
-        elif isinstance(widget, QCheckBox):
-            return widget.isChecked()
-
-        # Text input
-        elif isinstance(widget, QLineEdit):
-            return widget.text()
-
-        # Dropdown selector
-        elif isinstance(widget, QComboBox):
-            return widget.currentText()
-
-        # Fallback for unknown widget types
-        else:
-            return None
-
-    def get_values(self):
-        """
-        Retrieve the metadata values from the left side of the dialog.
-
-        This includes experiment name, which actions to perform (read/sweep),
-        save preferences, and output directory — separate from the right-side parameter tree.
-
-        @return dict -- Dictionary of UI selections related to queue and file saving.
-        """
-        return {
-            "display_name": self.name_input.text().strip(),
-            "read_processed": self.read_processed_checkbox.isChecked(),
-            "read_unprocessed": self.read_unprocessed_checkbox.isChecked(),
-            "sweep": self.sweep_checkbox.isChecked(),
-            "save_graph_output": self.save_checkbox.isChecked(),
-            "save_directory": self.dir_input.text().strip(),
-        }
-
-    def choose_directory(self):
-        """
-        Open a folder selection dialog and update the directory input field.
-
-        This is used to let the user choose where graph output files should be saved.
-        """
-        selected_dir = QFileDialog.getExistingDirectory(
-            self, "Select Save Directory", self.save_directory
-        )
-
-        # If a directory was selected, update both internal state and UI
-        if selected_dir:
-            self.save_directory = selected_dir
-            self.dir_input.setText(selected_dir)
-
-
-class QueuedExperiment(QListWidgetItem):
-    """
-    Represents a single experiment in the working or active queue.
-
-    Stores experiment configuration, user preferences, and metadata.
-    Includes a QWidget-based visual representation with action buttons
-    for editing, duplicating, moving, or deleting the experiment.
-    """
-
-    def __init__(
-        self,
-        start_stop_sweep_function,
-        experiment: ExperimentType,
-        queue_manager,
-        last_used_directory=None,
-        parameters_dict=None,
-    ):
-        super().__init__()
-
-        self.start_stop_sweep_function = start_stop_sweep_function
-        self.experiment = experiment
-        self.queue_manager = queue_manager
-        self.experiment_type = experiment.type
-
-        # --- Initialize parameters from dictionary or user dialog ---
-        if parameters_dict:
-            self.parameters_dict = parameters_dict.copy()
-            self.valid = True
-        else:
-            # If no pre-defined dictionary, prompt user for config
-            initial_params = experiment.parameters.copy()
-
-            default_name = self.generate_default_display_name()
-
-            dialog = ExperimentSetupDialog(
-                self.experiment_type,
-                initial_params,
-                last_used_directory or os.getcwd(),
-                values={"display_name": default_name},
-            )
-
-            if dialog.exec_() == QDialog.Rejected:
-                self.valid = False
-                return
-
-            updated_params = dialog.get_updated_parameters()
-
-            values = dialog.get_values()
-
-            self.parameters_dict = {
-                "display_name": values["display_name"],
-                "parameters": updated_params,
-                "read_processed": values["read_processed"],
-                "read_unprocessed": values["read_unprocessed"],
-                "sweep": values["sweep"],
-                "save_graph_output": values["save_graph_output"],
-                "save_directory": values["save_directory"],
-                "current_queue": "working_queue",
-            }
-
-            self.valid = True
-
-        # --- Build visual queue item widget ---
-        self.widget = QWidget()
-        self.widget.setStyleSheet(
-            """
-            QWidget {
-                background-color: #f9f9f9;
-                border: 2px solid #888;
-                border-radius: 6px;
-                padding: 8px;
-            }
-        """
-        )
-        self.layout = QVBoxLayout(self.widget)
-        self.layout.setContentsMargins(4, 4, 4, 4)
-
-        row_layout = QHBoxLayout()
-        row_layout.setSpacing(8)
-
-        # Display name label
-        self.label = QLabel(f"{self.parameters_dict['display_name']}")
-        self.label.setStyleSheet("font-weight: bold;")
-        row_layout.addWidget(self.label)
-        row_layout.addStretch()
-
-        # Action buttons: Move / Copy / Delete / Edit
-        button_size = QSize(48, 24)
-        self.change_queue_button = QPushButton("Move")
-        self.duplicate_button = QPushButton("Copy")
-        self.delete_button = QPushButton("Delete")
-        self.info_button = QPushButton("Edit")
-
-        # Hide edit button in the active queue
-        if self.parameters_dict.get("current_queue") == "active_queue":
-            self.info_button.hide()
-
-        row_layout.addWidget(self.change_queue_button)
-        row_layout.addWidget(self.duplicate_button)
-        row_layout.addWidget(self.delete_button)
-        row_layout.addWidget(self.info_button)
-
-        # Style and connect buttons
-        for btn in [
-            self.change_queue_button,
-            self.duplicate_button,
-            self.delete_button,
-            self.info_button,
-        ]:
-            btn.setFixedSize(button_size)
-            btn.setStyleSheet(
-                """
-                QPushButton {
-                    padding: 2px;
-                    border: 1px solid #aaa;
-                    border-radius: 4px;
-                    background-color: #e6e6e6;
-                }
-                QPushButton:hover {
-                    background-color: #d0d0d0;
-                }
-            """
-            )
-
-        self.delete_button.clicked.connect(self.delete_self)
-        self.info_button.clicked.connect(self.show_info_popup)
-        self.change_queue_button.clicked.connect(self.move_queues)
-        self.duplicate_button.clicked.connect(self.duplicate)
-
-        self.layout.addLayout(row_layout)
-
-        self.widget.setLayout(self.layout)
-        self.setSizeHint(self.widget.sizeHint())
-
-    def generate_default_display_name(self):
-        """
-        Generate a unique default name for the experiment based on its type and sweep name.
-
-        Format:
-            - For Spin Echo:   SE:HahnEcho
-            - For Pulse Sweep: PFS:FreqSweep
-            - Appends a numeric suffix if duplicates already exist in the queues
-
-        @return str -- A unique display name string.
-        """
-        # Map experiment type to abbreviation
-        type_abbr = {"Spin Echo": "SE", "Pulse Frequency Sweep": "PFS"}
-        abbr = type_abbr.get(self.experiment_type, "UNK")
-
-        # Extract and sanitize the sweep name
-        expt_name = self.experiment.parameters.get("expt", "exp").replace(" ", "")
-        base_name = f"{abbr}:{expt_name}"
-
-        # Check for duplicates in both queues
-        count = 0
-        for list_widget in [
-            self.queue_manager.active_queue_list,
-            self.queue_manager.working_queue_list,
-        ]:
-            for i in range(list_widget.count()):
-                item = list_widget.item(i)
-                if isinstance(item, QueuedExperiment):
-                    other_name = item.parameters_dict.get("display_name", "")
-                    if other_name.startswith(base_name):
-                        count += 1
-        # Append suffix if necessary
-        if count == 0:
-            return base_name
-        else:
-            return f"{base_name}{count}"
-
-    def startDrag(self):
-        """
-        Placeholder method for enabling drag behavior in the QListWidget.
-
-        This is intended to support reordering or moving queue items,
-        but the drag action itself is currently delegated to the QListWidget internals.
-        """
-        listwidget = self.listWidget()
-        if listwidget:
-            drag = listwidget.model().supportedDragActions()  # No-op placeholder
-
-    def lock_experiment(self, experiment):
-        """
-        Visually disables (greys out) the experiment widget in the queue UI.
-
-        Called when a queued experiment is running, to prevent editing or interaction.
-        """
-        if self == experiment:
-            self.widget.setStyleSheet("background-color: #d0d0d0;")
-
-    def unlock_experiment(self, experiment):
-        """
-        Re-enables (un-greys) the experiment widget, restoring its normal appearance.
-
-        Typically called after an experiment finishes or is aborted early.
-        """
-        if self == experiment:
-            self.widget.setStyleSheet("background-color: #f9f9f9;")
-
-    @property
-    def has_sweep(self):
-        """
-        Check whether the user has enabled the 'Sweep' option for this experiment.
-
-        @return bool -- True if sweep is selected, False otherwise.
-        """
-        return self.parameters_dict.get("sweep", False)
-
-    @property
-    def has_read_unprocessed(self):
-        """
-        Check whether the user has enabled 'Read Unprocessed' for this experiment.
-
-        @return bool -- True if read unprocessed is selected, False otherwise.
-        """
-        return self.parameters_dict.get("read_unprocessed", False)
-
-    @property
-    def has_read_processed(self):
-        """
-        Check whether the user has enabled 'Read Processed' for this experiment.
-
-        @return bool -- True if read processed is selected, False otherwise.
-        """
-        return self.parameters_dict.get("read_processed", False)
-
-    def set_done(self):
-        """
-        Mark this experiment as completed in the UI.
-
-        Visually greys out the widget and disables all action buttons to prevent further editing.
-        Called after the experiment has successfully run in the queue.
-        """
-        print("Marking experiment done...")
-
-        # Grey out the entire widget
-        self.widget.setStyleSheet(
-            """
-            QWidget {
-                background-color: #cccccc;
-                border: 2px solid #444;
-                border-radius: 6px;
-                padding: 8px;
-            }
-        """
-        )
-
-        # Disable all action buttons
-        for button in [
-            self.change_queue_button,
-            self.duplicate_button,
-            self.delete_button,
-            self.info_button,
-        ]:
-            button.setEnabled(False)
-
-    def init_experiment(self):
-        """
-        Load saved parameters into the experiment and reinitialize its state.
-
-        Called before running the experiment to ensure it reflects the most
-        recent user-defined settings from the queue entry.
-        """
-        self.experiment.set_parameters(self.parameters_dict["parameters"])
-
-    def show_info_popup(self):
-        """
-        Open a dialog allowing the user to review or edit this experiment's settings.
-
-        This allows modification of both the left-hand metadata (name, sweep options, etc.)
-        and the right-hand settings panel. Updates the queue entry upon confirmation.
-        """
-        dialog = ExperimentSetupDialog(
-            self.experiment_type,
-            self.parameters_dict["parameters"].copy(),
-            last_used_directory=self.parameters_dict["save_directory"],
-            edit_settings=True,
-            values=self.parameters_dict,
-        )
-        if dialog.exec_() == QDialog.Accepted:
-            # Update internal state from dialog
-            values = dialog.get_values()
-            self.parameters_dict["display_name"] = values["display_name"]
-            self.parameters_dict["read_processed"] = values["read_processed"]
-            self.parameters_dict["read_unprocessed"] = values["read_unprocessed"]
-            self.parameters_dict["sweep"] = values["sweep"]
-            self.parameters_dict["save_graph_output"] = values["save_graph_output"]
-            self.parameters_dict["save_directory"] = values["save_directory"]
-            self.parameters_dict["parameters"] = dialog.get_updated_parameters()
-
-            # Update label text
-            self.label.setText(
-                f"{self.parameters_dict['display_name']} — {self.experiment_type}"
-            )
-
-    def delete_self(self):
-        """
-        Remove this experiment from the queue and clean up associated resources.
-
-        This deletes the experiment from either the working or active queue,
-        depending on its current location. Frees memory used by the widget and experiment.
-        """
-        if self.parameters_dict["current_queue"] == "working_queue":
-            row = self.queue_manager.working_queue_list.row(self)
-            if row != -1:
-                self.queue_manager.working_queue_list.takeItem(row)
-                del self.widget
-                del self.experiment
-        else:
-            row = self.queue_manager.active_queue_list.row(self)
-            if row != -1:
-                self.queue_manager.active_queue_list.takeItem(row)
-                del self.widget
-                del self.experiment
-
-    def move_queues(self):
-        """
-        Move this experiment between the working and active queues.
-
-        Internally duplicates the experiment in the new queue and deletes the original.
-        This avoids PyQt ownership issues (e.g., segfaults from reparenting widgets).
-        """
-        clone_dict = self.parameters_dict.copy()
-
-        # Flip the target queue and label
-        if clone_dict["current_queue"] == "working_queue":
-            clone_dict["current_queue"] = "active_queue"
-            target_queue = self.queue_manager.active_queue_list
-        else:
-            clone_dict["current_queue"] = "working_queue"
-            target_queue = self.queue_manager.working_queue_list
-
-        # Create a new instance with the same config but new queue context
-        new_item = QueuedExperiment(
-            self.start_stop_sweep_function,
-            self.experiment,
-            self.queue_manager,
-            parameters_dict=clone_dict,
-        )
-
-        if not new_item.valid:
-            return
-
-        # Add to target queue and remove original
-        target_queue.addItem(new_item)
-        target_queue.setItemWidget(new_item, new_item.widget)
-
-        self.delete_self()
-
-    def duplicate(self):
-        """
-        Create a copy of this experiment in the same queue with a new display name.
-
-        Prompts the user for a name for the duplicated experiment.
-        Copies all parameter settings and metadata.
-        """
-        new_name, ok = QInputDialog.getText(
-            self.widget,
-            "Duplicate Experiment",
-            "Enter a name for the duplicated experiment:",
-            QLineEdit.Normal,
-            self.parameters_dict["display_name"] + " (Copy)",
-        )
-        if not ok or not new_name.strip():
-            return
-
-        # Clone experiment settings and assign new display name
-        clone_dict = self.parameters_dict.copy()
-        clone_dict["display_name"] = new_name.strip()
-
-        new_item = QueuedExperiment(
-            self.start_stop_sweep_function,
-            self.experiment,
-            self.queue_manager,
-            parameters_dict=clone_dict,
-        )
-
-        if not new_item.valid:
-            return
-
-        # Insert into appropriate queue and attach its widget
-        if self.parameters_dict["current_queue"] == "active_queue":
-            self.queue_manager.active_queue_list.addItem(new_item)
-            self.queue_manager.active_queue_list.setItemWidget(
-                new_item, new_item.widget
-            )
-        else:
-            self.queue_manager.working_queue_list.addItem(new_item)
-            self.queue_manager.working_queue_list.setItemWidget(
-                new_item, new_item.widget
-            )
+# class QueueRunnerWorker(QThread):
+#     """Worker thread that runs through the active experiment queue.
+
+#     For each experiment:
+#     - Locks it (greys out)
+#     - Initializes and runs it
+#     - Marks it done
+#     - Handles hardware errors and moves to next in queue
+#     """
+
+#     experiment_locked = pyqtSignal(object)
+#     experiment_unlocked = pyqtSignal(object)
+#     queue_stopped = pyqtSignal()
+#     hardware_error = pyqtSignal(object, str)
+
+#     def __init__(self, queue_manager):
+#         """Initializes the queue runner with a reference to the main queue manager."""
+#         super().__init__()
+#         self.queue_manager = queue_manager
+#         self.stop_requested = False
+
+#     def run(self):
+#         """Main queue execution loop.
+
+#         - Pulls next experiment from active queue
+#         - Initializes and runs it
+#         - Stops if no experiments remain or if error/stop is triggered
+#         """
+#         while not self.stop_requested:
+#             experiment = self.get_next_experiment()
+#             if not experiment:
+#                 self.queue_stopped.emit()
+#                 return
+
+#             self.experiment_locked.emit(experiment)
+
+#             try:
+#                 self.initialize_experiment(experiment)
+#             except Exception as e:
+#                 self.hardware_error.emit(experiment, str(e))
+#                 self.experiment_unlocked.emit(experiment)
+#                 self.queue_stopped.emit()
+#                 return
+
+#             self.mark_experiment_done(experiment)
+#             self.move_to_next_experiment()
+
+#     def run_worker_task(self, experiment, task):
+#         """Starts a background Worker thread to perform a single task
+#         (e.g., sweep, read_processed, read_unprocessed) for a given experiment.
+
+#         Connects appropriate update and plotting signals to the GUI.
+#         """
+#         worker = Worker(experiment.experiment, task, self.server_address)
+#         thread = QThread()
+
+#         worker.moveToThread(thread)
+#         thread.started.connect(worker.run_snapshot)
+
+#         # Attach signal handlers to update plots in the background
+#         worker.dataReady_se.connect(
+#             experiment.experiment.read_unprocessed_graph.update_canvas_se
+#         )
+#         worker.dataReady_ps.connect(
+#             experiment.experiment.read_unprocessed_graph.update_canvas_psweep
+#         )
+
+#         # Status updates + cleanup
+#         worker.updateStatus.connect(self.queue_manager.parent().on_worker_status_update)
+#         #worker.finished.connect(thread.quit)
+#         worker.finished.connect(worker.deleteLater)
+#         thread.finished.connect(thread.deleteLater)
+
+#         # Start the task
+#         thread.start()
+
+#     def get_next_experiment(self):
+#         """Retrieves the next experiment item from the active queue, if any."""
+#         if self.queue_manager.active_queue_list.count() > 0:
+#             return self.queue_manager.active_queue_list.item(0)
+#         return None
+
+#     def initialize_experiment(self, experiment):
+#         """Initializes the experiment backend with saved parameters and launches its components.
+
+#         Runs selected tasks depending on the experiment’s configured flags.
+#         """
+#         experiment.init_experiment()
+
+#         if experiment.has_sweep:
+#             self.run_worker_task(experiment, task="sweep")
+
+#         if experiment.has_read_unprocessed:
+#             self.run_worker_task(experiment, task="read_unprocessed")
+
+#         if experiment.has_read_processed:
+#             self.run_worker_task(experiment, task="read_processed")
+
+#     def mark_experiment_done(self, experiment):
+#         """Marks the experiment as finished and logs it with a timestamp.
+
+#         Adds an entry to the experiment history log in the queue manager.
+#         """
+#         now = datetime.now()
+
+#         # Format timestamp
+#         if not self.queue_manager.session_started:
+#             self.queue_manager.session_started = True
+#             timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
+#         else:
+#             timestamp = now.strftime("%H:%M:%S")
+
+#         # Get display name and output location
+#         display_name = experiment.parameters_dict.get(
+#             "display_name", "Unnamed Experiment"
+#         )
+#         save_location = experiment.parameters_dict.get("save_directory", "")
+
+#         self.queue_manager.history_log.append((timestamp, display_name, save_location))
+
+#         experiment.set_done()
+
+#     def move_to_next_experiment(self):
+#         """Removes the current experiment from the active queue list (visually and logically)."""
+#         self.queue_manager.active_queue_list.takeItem(0)
+
+
+# class QueueManager(QWidget):
+#     """Manages the experiment queue (working and active), controls queue execution,
+#     and handles user interaction with queued experiments (move, duplicate, delete).
+#     """
+
+#     def __init__(self, start_stop_sweep_function=None, parent=None):
+#         """Initializes the queue manager panel, including:
+
+#         - A collapsed/expandable UI
+#         - Two queues: working (editable) and active (in progress)
+#         - Buttons for running, clearing, and showing history
+#         """
+#         super().__init__(parent)
+
+#         self.start_stop_sweep_function = start_stop_sweep_function
+
+#         # State tracking
+#         self.queue_runner = None
+#         self.queue_running = False
+#         self.history_log = []
+#         self.session_started = False
+
+#         self.main_layout = QVBoxLayout(self)
+#         self.main_layout.setContentsMargins(0, 0, 0, 0)
+#         self.main_layout.setSpacing(0)
+
+#         # Collapsed header
+#         self.collapsed_button = QPushButton("Queue: Currently Running: [None] ▲")
+#         self.collapsed_button.setMaximumHeight(40)
+#         self.collapsed_button.setStyleSheet("text-align: left; padding: 8px;")
+#         self.collapsed_button.clicked.connect(self.toggle_expand)
+#         self.main_layout.addWidget(self.collapsed_button)
+
+#         # Expanded content frame
+#         self.expanded_frame = QFrame()
+#         self.expanded_frame.setVisible(False)
+#         self.expanded_layout = QVBoxLayout(self.expanded_frame)
+#         self.expanded_layout.setContentsMargins(10, 10, 10, 10)
+#         self.expanded_layout.setSpacing(10)
+
+#         # Header controls (label + buttons)
+#         active_queue_bar = QHBoxLayout()
+#         active_label = QLabel("Active Queue:")
+#         active_label.setStyleSheet("font-weight: bold;")
+#         self.history_button = QPushButton("History")
+#         self.clear_button = QPushButton("Clear")
+#         self.toggle_run_button = QPushButton("Start")
+
+#         for btn in [self.history_button, self.clear_button, self.toggle_run_button]:
+#             btn.setFixedHeight(28)
+#             btn.setFixedWidth(70)
+#             btn.setStyleSheet("font-size: 10pt; padding: 2px;")
+
+#         active_queue_bar.addWidget(active_label)
+#         active_queue_bar.addStretch()
+#         active_queue_bar.addWidget(self.history_button)
+#         active_queue_bar.addWidget(self.clear_button)
+#         active_queue_bar.addWidget(self.toggle_run_button)
+
+#         self.expanded_layout.addLayout(active_queue_bar)
+
+#         # Connect control buttons
+#         self.history_button.clicked.connect(self.show_history)
+#         self.clear_button.clicked.connect(self.clear_queue)
+#         self.toggle_run_button.clicked.connect(self.start_stop_queue)
+
+#         # Active queue list (non-editable)
+#         self.active_queue_list = QListWidget()
+#         self.expanded_layout.addWidget(self.active_queue_list)
+
+#         self.expanded_layout.addWidget(QLabel("Working Queue:"))
+#         self.working_queue_list = QListWidget()
+#         self.working_queue_list.setDragEnabled(True)
+#         self.working_queue_list.setAcceptDrops(True)
+#         self.working_queue_list.setDragDropMode(QListWidget.InternalMove)
+#         self.expanded_layout.addWidget(self.working_queue_list)
+
+#         self.main_layout.addWidget(self.expanded_frame)
+
+#         self.current_running_text = "[None]"
+
+#     def start_stop_queue(self):
+#         """Toggles queue execution.
+
+#         - If queue is not running: starts execution of active queue
+#         - If already running: signals the queue runner to stop
+#         """
+#         self.toggle_run_button_text()
+#         if self.queue_runner and self.queue_runner.isRunning():
+#             self.stop_queue()
+#         else:
+#             self.queue_running = True
+#             print("Calling next queue item()")
+#             self.next_queue_item()
+
+#     def stop_queue(self):
+#         """Request the queue to stop."""
+#         if self.queue_runner:
+#             self.queue_runner.stop_requested = True
+
+#     def next_queue_item(self):
+#         """Starts execution of the next experiment in the active queue.
+
+#         If queue is empty, does nothing. Removes the experiment from the list after running.
+#         """
+#         try:
+#             if self.active_queue_list.count != 0:
+#                 next_experiment = self.active_queue_list.takeItem(0)
+#                 self.current_experiment = next_experiment.experiment
+#                 next_experiment.init_experiment()
+#                 next_experiment.start_stop_sweep_function()
+#         except Exception as e:
+#             print(e)
+
+#     def queue_stopped_due_to_completion_or_error(self):
+#         """Handles cleanup when the queue finishes naturally or due to an error.
+
+#         Resets state flags and button labels.
+#         """
+#         self.queue_running = False
+#         self.toggle_run_button.setText("Start")
+#         print("Queue has stopped.")
+
+#     def handle_hardware_error(self, experiment, error_message):
+#         """Prints/logs an error message if an experiment failed due to hardware issues.
+
+#         Used by the QueueRunnerWorker when catching backend exceptions.
+#         """
+#         print(
+#             f"Hardware error detected in experiment: {experiment.parameters_dict.get('display_name', 'Unknown')}"
+#         )
+#         print(f"Error: {error_message}")
+
+#     def lock_experiment(self, experiment):
+#         """Greys out an experiment in the queue to indicate it's currently running.
+
+#         Used to visually lock the item (disable interaction).
+#         """
+#         if isinstance(experiment, QueuedExperiment):
+#             experiment.widget.setStyleSheet(
+#                 """
+#                 QWidget {
+#                     background-color: #cccccc;
+#                     border: 2px solid #888;
+#                     border-radius: 6px;
+#                     padding: 8px;
+#                 }
+#             """
+#             )
+
+#     def unlock_experiment(self, experiment):
+#         """Restores visual style for an experiment item after it finishes running."""
+#         if isinstance(experiment, QueuedExperiment):
+#             experiment.widget.setStyleSheet(
+#                 """
+#                 QWidget {
+#                     background-color: #f9f9f9;
+#                     border: 2px solid #888;
+#                     border-radius: 6px;
+#                     padding: 8px;
+#                 }
+#             """
+#             )
+
+#     def toggle_run_button_text(self):
+#         """Toggles the Run button text between 'Start' and 'Stop' based on current state."""
+#         current_text = self.toggle_run_button.text().strip()
+
+#         if current_text.lower() == "start" or current_text.lower() == "start/stop":
+#             self.toggle_run_button.setText("Stop")
+#         else:
+#             self.toggle_run_button.setText("Start")
+
+#     def toggle_expand(self):
+#         """Toggles the visibility of the expanded queue view.
+
+#         When collapsed, only the header is shown; when expanded, full queue control is visible.
+#         """
+#         is_visible = self.expanded_frame.isVisible()
+#         self.expanded_frame.setVisible(not is_visible)
+#         arrow = "▼" if not is_visible else "▲"
+#         self.collapsed_button.setText(
+#             f"Queue: Currently Running: {self.current_running_text} {arrow}"
+#         )
+
+#     def set_current_running(self, text):
+#         """Updates the header to show which experiment is currently running."""
+#         self.current_running_text = text
+#         if not self.expanded_frame.isVisible():
+#             self.collapsed_button.setText(f"Queue: Currently Running: {text} ▲")
+
+#     def add_to_active_queue(self, widget_item):
+#         """Adds a queued experiment item to the active queue (for immediate execution)."""
+#         self.active_queue_list.addItem(widget_item)
+
+#     def add_to_working_queue(self, queued_experiment):
+#         """Adds a queued experiment item to the working queue (editable list).
+
+#         Also attaches the experiment’s QWidget display.
+#         """
+#         print(
+#             f"Adding queued experiment: {queued_experiment.parameters_dict['display_name']} to working queue..."
+#         )
+#         self.working_queue_list.addItem(queued_experiment)
+#         self.working_queue_list.setItemWidget(
+#             queued_experiment, queued_experiment.widget
+#         )
+
+#     def show_history(self):
+#         """Opens a scrollable dialog showing the log of all completed experiments in the session."""
+#         if not self.history_log:
+#             QMessageBox.information(
+#                 self, "History", "No experiments have been run yet."
+#             )
+#             return
+
+#         dialog = QDialog(self)
+#         dialog.setWindowTitle("Experiment History")
+#         dialog.setMinimumSize(500, 400)
+
+#         layout = QVBoxLayout(dialog)
+
+#         history_text = QTextEdit()
+#         history_text.setReadOnly(True)
+
+#         # Format each log entry with timestamp, name, and save path
+#         log_entries = []
+#         for timestamp, name, location in self.history_log:
+#             log_entries.append(
+#                 f"{timestamp}\nExperiment: {name}\nSaved to: {location}\n\n"
+#             )
+
+#         history_text.setText("".join(log_entries))
+#         layout.addWidget(history_text)
+
+#         close_button = QPushButton("Close")
+#         close_button.clicked.connect(dialog.accept)
+#         layout.addWidget(close_button)
+
+#         dialog.exec_()
+
+#     def clear_queue(self):
+#         """Clears all items from both the working and active queues after user confirmation."""
+#         if self.working_queue_list.count() == 0 and self.active_queue_list.count() == 0:
+#             return
+
+#         reply = QMessageBox.question(
+#             self,
+#             "Confirm Clear Queue",
+#             "Are you sure you want to clear the queue? Experiments will be lost forever.",
+#             QMessageBox.Yes | QMessageBox.No,
+#             QMessageBox.No,
+#         )
+
+#         if reply == QMessageBox.Yes:
+#             # Clear working queue
+#             while self.working_queue_list.count() > 0:
+#                 item = self.working_queue_list.takeItem(0)
+#                 if isinstance(item, QueuedExperiment):
+#                     del item.widget
+#                     del item.experiment
+#                 del item
+
+#             # Clear active queue
+#             while self.active_queue_list.count() > 0:
+#                 item = self.active_queue_list.takeItem(0)
+#                 if isinstance(item, QueuedExperiment):
+#                     del item.widget
+#                     del item.experiment
+#                 del item
+
+
+# class ExperimentSetupDialog(QDialog):
+#     """Wraps an ExperimentType instance with GUI display and metadata for use in the queue.
+
+#     Supports editing, moving, duplicating, and deleting queue entries through the interface.
+#     """
+
+#     def __init__(
+#         self,
+#         experiment_type,
+#         parameters,
+#         last_used_directory=None,
+#         edit_settings=False,
+#         parent=None,
+#         values=None,
+#     ):
+#         """
+#         A configuration dialog for queued experiments.
+
+#         This dialog allows the user to:
+#         - Name the experiment
+#         - Select which tasks (read processed, read unprocessed, sweep) to run
+#         - Choose whether to save the resulting graph and where to save it
+#         - (Optionally) edit the experiment settings panel on the right
+
+#         Used when adding a new experiment to the queue or editing an existing one.
+#         """
+#         super().__init__(parent)
+#         self.setWindowTitle("Configure Queued Experiment")
+#         self.setMinimumSize(600, 400)
+#         self.edit_settings = edit_settings
+
+#         self.display_name = ""
+#         self.save_graph_output = False
+#         self.save_directory = last_used_directory or os.getcwd()
+
+#         main_layout = QHBoxLayout(self)
+
+#         # --- LEFT PANEL: Name, checkboxes, directory, buttons ---
+#         left_box = QVBoxLayout()
+
+#         self.name_label = QLabel("Experiment Name:")
+#         self.name_input = QLineEdit()
+#         default_name = "default name"
+#         self.name_input.setText(default_name)
+#         left_box.addWidget(self.name_label)
+#         left_box.addWidget(self.name_input)
+
+#         # Checkboxes for task selection
+#         self.read_processed_checkbox = QCheckBox("Read Processed")
+#         left_box.addWidget(self.read_processed_checkbox)
+#         self.read_unprocessed_checkbox = QCheckBox("Read Unprocessed")
+#         left_box.addWidget(self.read_unprocessed_checkbox)
+#         self.sweep_checkbox = QCheckBox("Sweep")
+#         left_box.addWidget(self.sweep_checkbox)
+
+#         self.save_checkbox = QCheckBox("Save graph output")
+#         left_box.addWidget(self.save_checkbox)
+
+#         # Directory selector
+#         self.dir_label = QLabel("Save to:")
+#         self.dir_input = QLineEdit()
+#         self.dir_input.setText(self.save_directory)
+#         self.browse_button = QPushButton("Browse")
+#         self.browse_button.clicked.connect(self.choose_directory)
+
+#         dir_row = QHBoxLayout()
+#         dir_row.addWidget(self.dir_input)
+#         dir_row.addWidget(self.browse_button)
+
+#         left_box.addWidget(self.dir_label)
+#         left_box.addLayout(dir_row)
+
+#         # OK / Cancel buttons
+#         button_row = QHBoxLayout()
+#         self.cancel_button = QPushButton("Cancel")
+#         self.ok_button = QPushButton("Okay")
+#         button_row.addWidget(self.cancel_button)
+#         button_row.addWidget(self.ok_button)
+#         self.cancel_button.clicked.connect(self.reject)
+#         self.ok_button.clicked.connect(self.accept)
+
+#         left_box.addStretch()
+#         left_box.addLayout(button_row)
+
+#         # --- RIGHT PANEL: Settings tree view ---
+#         self.settings_panel = DynamicSettingsPanel()
+#         self.settings_panel.load_settings_panel(EXPERIMENT_TEMPLATES[experiment_type])
+
+#         self._apply_parameters_to_settings(parameters)
+
+#         if not self.edit_settings:
+#             self.settings_panel.setDisabled(True)
+
+#         # Assemble layout
+#         main_layout.addLayout(left_box, 2)
+#         main_layout.addWidget(self.settings_panel, 3)
+
+#         # Pre-fill left panel values if provided
+#         if values:
+#             self.name_input.setText(values.get("display_name", "default name"))
+#             self.read_processed_checkbox.setChecked(values.get("read_processed", False))
+#             self.read_unprocessed_checkbox.setChecked(
+#                 values.get("read_unprocessed", False)
+#             )
+#             self.sweep_checkbox.setChecked(values.get("sweep", False))
+#             self.save_checkbox.setChecked(values.get("save_graph_output", True))
+#             self.dir_input.setText(values.get("save_directory", self.save_directory))
+
+#     def _apply_parameters_to_settings(self, param_dict):
+#         """
+#         Populate the right-side settings panel widgets with values from a saved parameters dictionary.
+
+#         This is used to initialize the settings UI with stored values when editing or reviewing a queued experiment.
+
+#         @param param_dict -- A dictionary of parameter keys and values used to pre-fill widgets.
+#         """
+#         tree = self.settings_panel.settings_tree
+#         root = tree.invisibleRootItem()
+#         # Loop through each group in the settings tree
+#         for i in range(root.childCount()):
+
+#             # Loop through each setting item in the group
+#             grp = root.child(i)
+#             for j in range(grp.childCount()):
+#                 item = grp.child(j)
+#                 widget = tree.itemWidget(item, 1)
+#                 key = getattr(widget, "_underlying_key", None)
+
+#                 # Handle composite settings (e.g., multiple spin boxes)
+#                 if isinstance(key, list):
+#                     layout = widget.layout()
+#                     for idx, subkey in enumerate(key):
+#                         if subkey in param_dict:
+#                             val = param_dict[subkey]
+#                             sub_widget = layout.itemAt(idx).widget()
+#                             self._apply_value_to_widget(sub_widget, val)
+
+#                 # Handle single-key settings
+#                 else:
+#                     if key in param_dict:
+#                         val = param_dict[key]
+#                         self._apply_value_to_widget(widget, val)
+
+#     def _apply_value_to_widget(self, widget, value):
+#         """
+#         Apply a given value to a corresponding Qt input widget in the settings panel.
+
+#         This is a helper method used during parameter loading to set the UI state
+#         based on previously saved experiment settings.
+
+#         @param widget -- The Qt widget instance (e.g., QSpinBox, QCheckBox) to populate.
+#         @param value -- The value to apply to the widget.
+#         """
+#         # Handle numeric inputs
+#         if isinstance(widget, QSpinBox):
+#             widget.setValue(int(value))
+#         elif isinstance(widget, QDoubleSpinBox):
+#             widget.setValue(float(value))
+
+#         # Handle boolean input
+#         elif isinstance(widget, QCheckBox):
+#             widget.setChecked(bool(value))
+
+#         # Handle string input
+#         elif isinstance(widget, QLineEdit):
+#             widget.setText(str(value))
+
+#         # Handle dropdown input
+#         elif isinstance(widget, QComboBox):
+#             idx = widget.findText(str(value))
+#             if idx != -1:
+#                 widget.setCurrentIndex(idx)
+
+#     def get_updated_parameters(self):
+#         """
+#         Collect the current values from the settings panel and return them as a dictionary.
+
+#         This function is used when the user confirms the dialog, ensuring that all modified
+#         parameter values are extracted from their widgets for use in queue setup or execution.
+
+#         @return dict -- A dictionary mapping parameter keys to their current values.
+#         """
+#         updated_params = {}
+#         tree = self.settings_panel.settings_tree
+#         root = tree.invisibleRootItem()
+
+#         # Traverse each group in the settings tree
+#         for i in range(root.childCount()):
+#             grp = root.child(i)
+
+#             # Traverse each setting item within the group
+#             for j in range(grp.childCount()):
+#                 item = grp.child(j)
+#                 widget = tree.itemWidget(item, 1)
+#                 key = getattr(widget, "_underlying_key", None)
+
+#                 # Handle multi-key composite widgets (e.g., sweep start/end/step)
+#                 if isinstance(key, list):
+#                     layout = widget.layout()
+#                     for idx, subkey in enumerate(key):
+#                         sub_widget = layout.itemAt(idx).widget()
+#                         updated_params[subkey] = self._get_widget_value(sub_widget)
+
+#                 # Handle standard single-key widgets
+#                 else:
+#                     if key:
+#                         updated_params[key] = self._get_widget_value(widget)
+#         return updated_params
+
+#     def _get_widget_value(self, widget):
+#         """
+#         Retrieve the current value from a given Qt input widget.
+
+#         This helper is used to extract values from the settings panel during parameter gathering.
+
+#         @param widget -- The widget to read from (QSpinBox, QLineEdit, etc.)
+#         @return The value currently set in the widget.
+#         """
+#         # Numeric inputs
+#         if isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
+#             return widget.value()
+
+#         # Boolean input
+#         elif isinstance(widget, QCheckBox):
+#             return widget.isChecked()
+
+#         # Text input
+#         elif isinstance(widget, QLineEdit):
+#             return widget.text()
+
+#         # Dropdown selector
+#         elif isinstance(widget, QComboBox):
+#             return widget.currentText()
+
+#         # Fallback for unknown widget types
+#         else:
+#             return None
+
+#     def get_values(self):
+#         """
+#         Retrieve the metadata values from the left side of the dialog.
+
+#         This includes experiment name, which actions to perform (read/sweep),
+#         save preferences, and output directory — separate from the right-side parameter tree.
+
+#         @return dict -- Dictionary of UI selections related to queue and file saving.
+#         """
+#         return {
+#             "display_name": self.name_input.text().strip(),
+#             "read_processed": self.read_processed_checkbox.isChecked(),
+#             "read_unprocessed": self.read_unprocessed_checkbox.isChecked(),
+#             "sweep": self.sweep_checkbox.isChecked(),
+#             "save_graph_output": self.save_checkbox.isChecked(),
+#             "save_directory": self.dir_input.text().strip(),
+#         }
+
+#     def choose_directory(self):
+#         """
+#         Open a folder selection dialog and update the directory input field.
+
+#         This is used to let the user choose where graph output files should be saved.
+#         """
+#         selected_dir = QFileDialog.getExistingDirectory(
+#             self, "Select Save Directory", self.save_directory
+#         )
+
+#         # If a directory was selected, update both internal state and UI
+#         if selected_dir:
+#             self.save_directory = selected_dir
+#             self.dir_input.setText(selected_dir)
+
+
+# class QueuedExperiment(QListWidgetItem):
+#     """
+#     Represents a single experiment in the working or active queue.
+
+#     Stores experiment configuration, user preferences, and metadata.
+#     Includes a QWidget-based visual representation with action buttons
+#     for editing, duplicating, moving, or deleting the experiment.
+#     """
+
+#     def __init__(
+#         self,
+#         start_stop_sweep_function,
+#         experiment: ExperimentType,
+#         queue_manager,
+#         last_used_directory=None,
+#         parameters_dict=None,
+#     ):
+#         super().__init__()
+
+#         self.start_stop_sweep_function = start_stop_sweep_function
+#         self.experiment = experiment
+#         self.queue_manager = queue_manager
+#         self.experiment_type = experiment.type
+
+#         # --- Initialize parameters from dictionary or user dialog ---
+#         if parameters_dict:
+#             self.parameters_dict = parameters_dict.copy()
+#             self.valid = True
+#         else:
+#             # If no pre-defined dictionary, prompt user for config
+#             initial_params = experiment.parameters.copy()
+
+#             default_name = self.generate_default_display_name()
+
+#             dialog = ExperimentSetupDialog(
+#                 self.experiment_type,
+#                 initial_params,
+#                 last_used_directory or os.getcwd(),
+#                 values={"display_name": default_name},
+#             )
+
+#             if dialog.exec_() == QDialog.Rejected:
+#                 self.valid = False
+#                 return
+
+#             updated_params = dialog.get_updated_parameters()
+
+#             values = dialog.get_values()
+
+#             self.parameters_dict = {
+#                 "display_name": values["display_name"],
+#                 "parameters": updated_params,
+#                 "read_processed": values["read_processed"],
+#                 "read_unprocessed": values["read_unprocessed"],
+#                 "sweep": values["sweep"],
+#                 "save_graph_output": values["save_graph_output"],
+#                 "save_directory": values["save_directory"],
+#                 "current_queue": "working_queue",
+#             }
+
+#             self.valid = True
+
+#         # --- Build visual queue item widget ---
+#         self.widget = QWidget()
+#         self.widget.setStyleSheet(
+#             """
+#             QWidget {
+#                 background-color: #f9f9f9;
+#                 border: 2px solid #888;
+#                 border-radius: 6px;
+#                 padding: 8px;
+#             }
+#         """
+#         )
+#         self.layout = QVBoxLayout(self.widget)
+#         self.layout.setContentsMargins(4, 4, 4, 4)
+
+#         row_layout = QHBoxLayout()
+#         row_layout.setSpacing(8)
+
+#         # Display name label
+#         self.label = QLabel(f"{self.parameters_dict['display_name']}")
+#         self.label.setStyleSheet("font-weight: bold;")
+#         row_layout.addWidget(self.label)
+#         row_layout.addStretch()
+
+#         # Action buttons: Move / Copy / Delete / Edit
+#         button_size = QSize(48, 24)
+#         self.change_queue_button = QPushButton("Move")
+#         self.duplicate_button = QPushButton("Copy")
+#         self.delete_button = QPushButton("Delete")
+#         self.info_button = QPushButton("Edit")
+
+#         # Hide edit button in the active queue
+#         if self.parameters_dict.get("current_queue") == "active_queue":
+#             self.info_button.hide()
+
+#         row_layout.addWidget(self.change_queue_button)
+#         row_layout.addWidget(self.duplicate_button)
+#         row_layout.addWidget(self.delete_button)
+#         row_layout.addWidget(self.info_button)
+
+#         # Style and connect buttons
+#         for btn in [
+#             self.change_queue_button,
+#             self.duplicate_button,
+#             self.delete_button,
+#             self.info_button,
+#         ]:
+#             btn.setFixedSize(button_size)
+#             btn.setStyleSheet(
+#                 """
+#                 QPushButton {
+#                     padding: 2px;
+#                     border: 1px solid #aaa;
+#                     border-radius: 4px;
+#                     background-color: #e6e6e6;
+#                 }
+#                 QPushButton:hover {
+#                     background-color: #d0d0d0;
+#                 }
+#             """
+#             )
+
+#         self.delete_button.clicked.connect(self.delete_self)
+#         self.info_button.clicked.connect(self.show_info_popup)
+#         self.change_queue_button.clicked.connect(self.move_queues)
+#         self.duplicate_button.clicked.connect(self.duplicate)
+
+#         self.layout.addLayout(row_layout)
+
+#         self.widget.setLayout(self.layout)
+#         self.setSizeHint(self.widget.sizeHint())
+
+#     def generate_default_display_name(self):
+#         """
+#         Generate a unique default name for the experiment based on its type and sweep name.
+
+#         Format:
+#             - For Spin Echo:   SE:HahnEcho
+#             - For Pulse Sweep: PFS:FreqSweep
+#             - Appends a numeric suffix if duplicates already exist in the queues
+
+#         @return str -- A unique display name string.
+#         """
+#         # Map experiment type to abbreviation
+#         type_abbr = {"Spin Echo": "SE", "Pulse Frequency Sweep": "PFS"}
+#         abbr = type_abbr.get(self.experiment_type, "UNK")
+
+#         # Extract and sanitize the sweep name
+#         expt_name = self.experiment.parameters.get("expt", "exp").replace(" ", "")
+#         base_name = f"{abbr}:{expt_name}"
+
+#         # Check for duplicates in both queues
+#         count = 0
+#         for list_widget in [
+#             self.queue_manager.active_queue_list,
+#             self.queue_manager.working_queue_list,
+#         ]:
+#             for i in range(list_widget.count()):
+#                 item = list_widget.item(i)
+#                 if isinstance(item, QueuedExperiment):
+#                     other_name = item.parameters_dict.get("display_name", "")
+#                     if other_name.startswith(base_name):
+#                         count += 1
+#         # Append suffix if necessary
+#         if count == 0:
+#             return base_name
+#         else:
+#             return f"{base_name}{count}"
+
+#     def startDrag(self):
+#         """
+#         Placeholder method for enabling drag behavior in the QListWidget.
+
+#         This is intended to support reordering or moving queue items,
+#         but the drag action itself is currently delegated to the QListWidget internals.
+#         """
+#         listwidget = self.listWidget()
+#         if listwidget:
+#             drag = listwidget.model().supportedDragActions()  # No-op placeholder
+
+#     def lock_experiment(self, experiment):
+#         """
+#         Visually disables (greys out) the experiment widget in the queue UI.
+
+#         Called when a queued experiment is running, to prevent editing or interaction.
+#         """
+#         if self == experiment:
+#             self.widget.setStyleSheet("background-color: #d0d0d0;")
+
+#     def unlock_experiment(self, experiment):
+#         """
+#         Re-enables (un-greys) the experiment widget, restoring its normal appearance.
+
+#         Typically called after an experiment finishes or is aborted early.
+#         """
+#         if self == experiment:
+#             self.widget.setStyleSheet("background-color: #f9f9f9;")
+
+#     @property
+#     def has_sweep(self):
+#         """
+#         Check whether the user has enabled the 'Sweep' option for this experiment.
+
+#         @return bool -- True if sweep is selected, False otherwise.
+#         """
+#         return self.parameters_dict.get("sweep", False)
+
+#     @property
+#     def has_read_unprocessed(self):
+#         """
+#         Check whether the user has enabled 'Read Unprocessed' for this experiment.
+
+#         @return bool -- True if read unprocessed is selected, False otherwise.
+#         """
+#         return self.parameters_dict.get("read_unprocessed", False)
+
+#     @property
+#     def has_read_processed(self):
+#         """
+#         Check whether the user has enabled 'Read Processed' for this experiment.
+
+#         @return bool -- True if read processed is selected, False otherwise.
+#         """
+#         return self.parameters_dict.get("read_processed", False)
+
+#     def set_done(self):
+#         """
+#         Mark this experiment as completed in the UI.
+
+#         Visually greys out the widget and disables all action buttons to prevent further editing.
+#         Called after the experiment has successfully run in the queue.
+#         """
+#         print("Marking experiment done...")
+
+#         # Grey out the entire widget
+#         self.widget.setStyleSheet(
+#             """
+#             QWidget {
+#                 background-color: #cccccc;
+#                 border: 2px solid #444;
+#                 border-radius: 6px;
+#                 padding: 8px;
+#             }
+#         """
+#         )
+
+#         # Disable all action buttons
+#         for button in [
+#             self.change_queue_button,
+#             self.duplicate_button,
+#             self.delete_button,
+#             self.info_button,
+#         ]:
+#             button.setEnabled(False)
+
+#     def init_experiment(self):
+#         """
+#         Load saved parameters into the experiment and reinitialize its state.
+
+#         Called before running the experiment to ensure it reflects the most
+#         recent user-defined settings from the queue entry.
+#         """
+#         self.experiment.set_parameters(self.parameters_dict["parameters"])
+
+#     def show_info_popup(self):
+#         """
+#         Open a dialog allowing the user to review or edit this experiment's settings.
+
+#         This allows modification of both the left-hand metadata (name, sweep options, etc.)
+#         and the right-hand settings panel. Updates the queue entry upon confirmation.
+#         """
+#         dialog = ExperimentSetupDialog(
+#             self.experiment_type,
+#             self.parameters_dict["parameters"].copy(),
+#             last_used_directory=self.parameters_dict["save_directory"],
+#             edit_settings=True,
+#             values=self.parameters_dict,
+#         )
+#         if dialog.exec_() == QDialog.Accepted:
+#             # Update internal state from dialog
+#             values = dialog.get_values()
+#             self.parameters_dict["display_name"] = values["display_name"]
+#             self.parameters_dict["read_processed"] = values["read_processed"]
+#             self.parameters_dict["read_unprocessed"] = values["read_unprocessed"]
+#             self.parameters_dict["sweep"] = values["sweep"]
+#             self.parameters_dict["save_graph_output"] = values["save_graph_output"]
+#             self.parameters_dict["save_directory"] = values["save_directory"]
+#             self.parameters_dict["parameters"] = dialog.get_updated_parameters()
+
+#             # Update label text
+#             self.label.setText(
+#                 f"{self.parameters_dict['display_name']} — {self.experiment_type}"
+#             )
+
+#     def delete_self(self):
+#         """
+#         Remove this experiment from the queue and clean up associated resources.
+
+#         This deletes the experiment from either the working or active queue,
+#         depending on its current location. Frees memory used by the widget and experiment.
+#         """
+#         if self.parameters_dict["current_queue"] == "working_queue":
+#             row = self.queue_manager.working_queue_list.row(self)
+#             if row != -1:
+#                 self.queue_manager.working_queue_list.takeItem(row)
+#                 del self.widget
+#                 del self.experiment
+#         else:
+#             row = self.queue_manager.active_queue_list.row(self)
+#             if row != -1:
+#                 self.queue_manager.active_queue_list.takeItem(row)
+#                 del self.widget
+#                 del self.experiment
+
+#     def move_queues(self):
+#         """
+#         Move this experiment between the working and active queues.
+
+#         Internally duplicates the experiment in the new queue and deletes the original.
+#         This avoids PyQt ownership issues (e.g., segfaults from reparenting widgets).
+#         """
+#         clone_dict = self.parameters_dict.copy()
+
+#         # Flip the target queue and label
+#         if clone_dict["current_queue"] == "working_queue":
+#             clone_dict["current_queue"] = "active_queue"
+#             target_queue = self.queue_manager.active_queue_list
+#         else:
+#             clone_dict["current_queue"] = "working_queue"
+#             target_queue = self.queue_manager.working_queue_list
+
+#         # Create a new instance with the same config but new queue context
+#         new_item = QueuedExperiment(
+#             self.start_stop_sweep_function,
+#             self.experiment,
+#             self.queue_manager,
+#             parameters_dict=clone_dict,
+#         )
+
+#         if not new_item.valid:
+#             return
+
+#         # Add to target queue and remove original
+#         target_queue.addItem(new_item)
+#         target_queue.setItemWidget(new_item, new_item.widget)
+
+#         self.delete_self()
+
+#     def duplicate(self):
+#         """
+#         Create a copy of this experiment in the same queue with a new display name.
+
+#         Prompts the user for a name for the duplicated experiment.
+#         Copies all parameter settings and metadata.
+#         """
+#         new_name, ok = QInputDialog.getText(
+#             self.widget,
+#             "Duplicate Experiment",
+#             "Enter a name for the duplicated experiment:",
+#             QLineEdit.Normal,
+#             self.parameters_dict["display_name"] + " (Copy)",
+#         )
+#         if not ok or not new_name.strip():
+#             return
+
+#         # Clone experiment settings and assign new display name
+#         clone_dict = self.parameters_dict.copy()
+#         clone_dict["display_name"] = new_name.strip()
+
+#         new_item = QueuedExperiment(
+#             self.start_stop_sweep_function,
+#             self.experiment,
+#             self.queue_manager,
+#             parameters_dict=clone_dict,
+#         )
+
+#         if not new_item.valid:
+#             return
+
+#         # Insert into appropriate queue and attach its widget
+#         if self.parameters_dict["current_queue"] == "active_queue":
+#             self.queue_manager.active_queue_list.addItem(new_item)
+#             self.queue_manager.active_queue_list.setItemWidget(
+#                 new_item, new_item.widget
+#             )
+#         else:
+#             self.queue_manager.working_queue_list.addItem(new_item)
+#             self.queue_manager.working_queue_list.setItemWidget(
+#                 new_item, new_item.widget
+#             )
 
 
 def main():
