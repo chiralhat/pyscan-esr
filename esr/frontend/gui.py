@@ -2053,6 +2053,9 @@ class ExperimentUI(QMainWindow):
             self.current_experiment.disconnect()
         except Exception as e:
             print(e)
+        self.indicator_off.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
         self.indicator_disconnect.setStyleSheet(
             "background-color: grey; border: 1px solid black; border-radius: 5px;"
         )
