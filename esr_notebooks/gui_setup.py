@@ -327,9 +327,6 @@ def init_gui(cont_keys, init_expt, default_file, single_run, run_sweep, read):
             
             # Initialize PSU if necessary
             if not hasattr(devices, "psu") and (parameters["use_psu"]):
-            
-            # Initialize PSU if necessary
-            if not hasattr(devices, "psu") and (parameters["use_psu"]):
                 try:
                     for inst in res_list:
                         try:
