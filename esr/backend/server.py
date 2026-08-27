@@ -301,9 +301,9 @@ def get_sweep_data():
         return make_response(jsonify({"error": serialize_object(e)}), 500)
 
 
-@app.route("/get_scopes", methods=["GET"])
-def get_scopes():
-    return jsonify(scopes)
+# @app.route("/get_scopes", methods=["GET"])
+# def get_scopes():
+#     return jsonify(scopes)
 
 
 #### Stop the running sweep
@@ -331,13 +331,20 @@ def hardware_off():
         if devices.moku.laser:
             devices.moku.laser = False
     print("Turning off hardware...")
+    return jsonify({"status": "off"})
+
+
+#### Disconnects from the hardware
+@app.route("/disconnect", methods=["POST"])
+def disconnect():
+    hardware_off()
 
     # Disconnect from all equipment
     for key in devices.keys():
         devices[key].close()
     devices.__dict__.clear()
     # insert your real code here to stop sweep
-    return jsonify({"status": "off"})
+    return jsonify({"status": "disconnected"})
 
 
 @app.route("/status", methods=["GET"])
