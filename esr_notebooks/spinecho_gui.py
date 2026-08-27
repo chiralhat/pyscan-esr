@@ -18,10 +18,10 @@ plt.rc('mathtext', fontset='cm')
 default_file = 'se_defaults.pkl'
 
 # These are all the controls to add for this GUI
-secont_keys = {'devices': [['use_psu', 'use_temp']],
+secont_keys = {'devices': [['use_psu', 'use_temp', 'moku']],
                 'rfsoc': [['freq', 'gain', 'period'],
                             ['delay', 'pulse1_1', 'mult1'],
-                            ['nutation_delay', 'nutation_length'],
+                            ['nutation_delay', 'nutation_length', 'sw_offset'],
                             ['soft_avgs', 'h_offset', 'readout_length'],
                             ['phase', 'pulses', 'loopback']],
              'psu': [['field', 'gauss_amps', 'current_limit']],
