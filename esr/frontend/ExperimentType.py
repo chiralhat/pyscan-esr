@@ -199,3 +199,16 @@ class ExperimentType(QObject):
         )
        # print("parameters sent to server")
         print()
+
+
+    def disconnect(self):
+        """
+        disconnects from the hardware
+        """
+        # Stop experiment loop
+        #print("about to send disconnect to server")
+        response = requests.post(
+            self.server_address + "/disconnect"#, json=data
+        )
+       # print("parameters sent to server")
+        print()
