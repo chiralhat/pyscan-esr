@@ -18,10 +18,10 @@ plt.rc('mathtext', fontset='cm')
 default_file = 'se_defaults.pkl'
 
 # These are all the controls to add for this GUI
-secont_keys = {'devices': [['use_psu', 'use_temp']],
+secont_keys = {'devices': [['use_psu', 'use_temp', 'moku']],
                 'rfsoc': [['freq', 'gain', 'period'],
                             ['delay', 'pulse1_1', 'mult1'],
-                            ['nutation_delay', 'nutation_length'],
+                            ['nutation_delay', 'nutation_length', 'sw_offset'],
                             ['soft_avgs', 'h_offset', 'readout_length'],
                             ['phase', 'pulses', 'loopback']],
              'psu': [['field', 'gauss_amps', 'current_limit']],
@@ -57,9 +57,10 @@ def read(sig, config, soc, output, fig):
     """
     single = config['single']
     avgs = config['soft_avgs']
+    deer = True if config['expt'] == 'DEER' else False
     config['single'] = True
     config['soft_avgs'] = 1
-    measure_phase(config, soc, sig)
+    measure_phase(config, soc, sig, deer=deer)
     
     for ax in fig.axes:
         ax.remove()
@@ -102,7 +103,8 @@ def single_shot(sig, config, soc, output, fig):
     """
     single = config['single']
     config['single'] = config['loopback']
-    measure_phase(config, soc, sig)
+    deer = True if config['expt'] == 'DEER' else False
+    measure_phase(config, soc, sig, deer=deer)
     
     for ax in fig.axes:
         ax.remove()
