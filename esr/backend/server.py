@@ -301,9 +301,9 @@ def get_sweep_data():
         return make_response(jsonify({"error": serialize_object(e)}), 500)
 
 
-@app.route("/get_scopes", methods=["GET"])
-def get_scopes():
-    return jsonify(scopes)
+# @app.route("/get_scopes", methods=["GET"])
+# def get_scopes():
+#     return jsonify(scopes)
 
 
 #### Stop the running sweep
