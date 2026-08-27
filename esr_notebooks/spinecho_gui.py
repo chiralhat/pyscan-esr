@@ -57,9 +57,10 @@ def read(sig, config, soc, output, fig):
     """
     single = config['single']
     avgs = config['soft_avgs']
+    deer = True if config['expt'] == 'DEER' else False
     config['single'] = True
     config['soft_avgs'] = 1
-    measure_phase(config, soc, sig)
+    measure_phase(config, soc, sig, deer=deer)
     
     for ax in fig.axes:
         ax.remove()
@@ -102,7 +103,8 @@ def single_shot(sig, config, soc, output, fig):
     """
     single = config['single']
     config['single'] = config['loopback']
-    measure_phase(config, soc, sig)
+    deer = True if config['expt'] == 'DEER' else False
+    measure_phase(config, soc, sig, deer=deer)
     
     for ax in fig.axes:
         ax.remove()
@@ -130,8 +132,11 @@ def init_experiment(devices, parameters, sweep, soc):
     parameters['ro_chs'] = [channel]
     parameters['reps'] = 1
     parameters['single'] = parameters['loopback']
-    if parameters['use_psu'] and not parameters['loopback']:
-        devices.psu.set_magnet(parameters)
+    parameters['moku'] = 'Cryostat'
+    if not parameters['loopback']:
+        devices.moku.set_magnet(parameters)
+        if parameters["use_psu"]:
+            devices.psu.output = True
     setup_experiment(parameters, devices, sweep, soc)
     
 
