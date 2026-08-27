@@ -132,11 +132,10 @@ def init_experiment(devices, parameters, sweep, soc):
     parameters['ro_chs'] = [channel]
     parameters['reps'] = 1
     parameters['single'] = parameters['loopback']
-    parameters['moku'] = 'Cryostat'
-    if not parameters['loopback']:
+    if parameters["use_psu"]:
+        devices.psu.output = True
+    if not parameters['moku']=="None" and not parameters['loopback']:
         devices.moku.set_magnet(parameters)
-        if parameters["use_psu"]:
-            devices.psu.output = True
     setup_experiment(parameters, devices, sweep, soc)
     
 
