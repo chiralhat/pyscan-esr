@@ -1296,6 +1296,7 @@ class ExperimentUI(QMainWindow):
         - Read Unprocessed
         - Read Processed
         - Start/Stop Sweep
+        - Disconnect
         """
         # ----- Initialize -----
         init_widget = QWidget()
@@ -1394,14 +1395,38 @@ class ExperimentUI(QMainWindow):
         self.hardware_off_btn.setToolTip(
             "Helpful information"
         )  # Tool tip here!
-        self.indicator_off = QLabel(" ")
-        self.indicator_off.setFixedSize(10, 10)
-        self.indicator_off.setStyleSheet(
-            "background-color: grey; border: 1px solid black; border-radius: 5px;"
-        )
+        # self.indicator_off = QLabel(" ")
+        # self.indicator_off.setFixedSize(10, 10)
+        # self.indicator_off.setStyleSheet(
+        #     "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        # )
         off_layout.addWidget(self.hardware_off_btn)
-        off_layout.addWidget(self.indicator_off)
+        # off_layout.addWidget(self.indicator_off)
         top_menu.addWidget(off_widget)
+
+        # ----- Disconnect -----
+        disconnect_widget = QWidget()
+        disconnect_widget = QHBoxLayout(disconnect_widget)
+        disconnect_widget.setContentsMargins(0, 0, 0, 0)
+        self.disconnect_btn = QPushButton("Disconnect")
+        self.disconnect_btn.setMinimumHeight(40)
+        self.disconnect_btn.setStyleSheet(
+            "font-size: 10pt; padding: 2px 4px;"
+        )
+        self.disconnect_btn.clicked.connect(
+            self.disconnect_frontend
+        )
+        self.disconnect_btn.setToolTip(
+            "Helpful information"
+        )  # Tool tip here!
+        # self.indicator_off = QLabel(" ")
+        # self.indicator_off.setFixedSize(10, 10)
+        # self.indicator_off.setStyleSheet(
+        #     "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        # )
+        off_layout.addWidget(self.disconnect_btn)
+        # off_layout.addWidget(self.indicator_off)
+        top_menu.addWidget(disconnect_widget)
 
         return top_menu
 
@@ -2009,6 +2034,19 @@ class ExperimentUI(QMainWindow):
         print("Shutting off.")
         try:
             self.current_experiment.hardware_off()
+        except Exception as e:
+            print(e)
+        # finally:
+        #     self.close()
+
+    def disconnect_frontend(self):
+        """Calls the backend method to disconnect from experiment hardware.
+
+        Useful for switching between spectrometers.
+        """
+        print("Disconnecting.")
+        try:
+            self.current_experiment.disconnect()
         except Exception as e:
             print(e)
         # finally:
