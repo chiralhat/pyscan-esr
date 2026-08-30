@@ -14,11 +14,11 @@ Key Interactions:
 - Uses `rfsoc2.py` to communicate with RFSoC and acquire signal data.
 """
 
-from .rfsoc2 import *
+from rfsoc2 import *
 import sys
 
 sys.path.append("../../")
-from .spinecho_scripts import fourier_signal
+from spinecho_scripts import fourier_signal
 import pyscan as ps
 import numpy as np
 from time import sleep, time
