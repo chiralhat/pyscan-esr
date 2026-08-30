@@ -1395,19 +1395,7 @@ class ExperimentUI(QMainWindow):
         self.hardware_off_btn.setToolTip(
             "Helpful information"
         )  # Tool tip here!
-        # self.indicator_off = QLabel(" ")
-        # self.indicator_off.setFixedSize(10, 10)
-        # self.indicator_off.setStyleSheet(
-        #     "background-color: grey; border: 1px solid black; border-radius: 5px;"
-        # )
-        off_layout.addWidget(self.hardware_off_btn)
-        # off_layout.addWidget(self.indicator_off)
-        top_menu.addWidget(off_widget)
-
-        # ----- Disconnect -----
-        disconnect_widget = QWidget()
-        disconnect_widget = QHBoxLayout(disconnect_widget)
-        disconnect_widget.setContentsMargins(0, 0, 0, 0)
+        # Add disconnect button
         self.disconnect_btn = QPushButton("Disconnect")
         self.disconnect_btn.setMinimumHeight(40)
         self.disconnect_btn.setStyleSheet(
@@ -1419,14 +1407,21 @@ class ExperimentUI(QMainWindow):
         self.disconnect_btn.setToolTip(
             "Helpful information"
         )  # Tool tip here!
-        # self.indicator_off = QLabel(" ")
-        # self.indicator_off.setFixedSize(10, 10)
-        # self.indicator_off.setStyleSheet(
-        #     "background-color: grey; border: 1px solid black; border-radius: 5px;"
-        # )
+        self.indicator_off = QLabel(" ")
+        self.indicator_off.setFixedSize(10, 10)
+        self.indicator_off.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
+        self.indicator_disconnect = QLabel(" ")
+        self.indicator_disconnect.setFixedSize(10, 10)
+        self.indicator_disconnect.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
+        off_layout.addWidget(self.hardware_off_btn)
+        off_layout.addWidget(self.indicator_off)
         off_layout.addWidget(self.disconnect_btn)
-        # off_layout.addWidget(self.indicator_off)
-        top_menu.addWidget(disconnect_widget)
+        off_layout.addWidget(self.indicator_disconnect)
+        top_menu.addWidget(off_widget)
 
         return top_menu
 
@@ -1701,6 +1696,12 @@ class ExperimentUI(QMainWindow):
 
         print("Reading and setting parameters...\n")
         self.indicator_initialize.setStyleSheet(
+            "background-color: red; border: 1px solid black; border-radius: 5px;"
+        )
+        self.indicator_off.setStyleSheet(
+            "background-color: red; border: 1px solid black; border-radius: 5px;"
+        )
+        self.indicator_disconnect.setStyleSheet(
             "background-color: red; border: 1px solid black; border-radius: 5px;"
         )
 
@@ -2036,6 +2037,9 @@ class ExperimentUI(QMainWindow):
             self.current_experiment.hardware_off()
         except Exception as e:
             print(e)
+        self.indicator_off.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
         # finally:
         #     self.close()
 
@@ -2049,6 +2053,12 @@ class ExperimentUI(QMainWindow):
             self.current_experiment.disconnect()
         except Exception as e:
             print(e)
+        self.indicator_off.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
+        self.indicator_disconnect.setStyleSheet(
+            "background-color: grey; border: 1px solid black; border-radius: 5px;"
+        )
         # finally:
         #     self.close()
 
