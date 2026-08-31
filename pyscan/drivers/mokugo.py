@@ -31,7 +31,7 @@ class MokuGo(InstrumentDriver):
                     dict(source="Slot1OutB", destination="Output2")]
         self.instrument.set_connections(connections=connections)
         self.instrument.set_dio(direction=[0]*16)
-        self.laser_port = 0
+        self.laser_port = 3
         self.laser_V = 3
         self.laser_I = 0.25
         # Minimum step size for voltage is 0.005 V
@@ -48,6 +48,7 @@ class MokuGo(InstrumentDriver):
             self.fieldv_offset = 0
             self.field_offset = 0
             self.v2_offset = 0
+            self.psns = [1, 2]
         elif moku=='Bench':
             self.laser_port = laser_port
             self.instrument.set_power_supply(id=self.laser_port, enable=False, voltage=self.laser_V, current=self.laser_I)
@@ -58,6 +59,7 @@ class MokuGo(InstrumentDriver):
             self.fieldv_offset = 0
             self.field_offset = 40
             self.v2_offset = 0
+            self.psns = [self.laser_port]
         self.set_switch_1pulse()
 
 
@@ -206,8 +208,7 @@ class MokuGo(InstrumentDriver):
     
     @output.setter
     def output(self, on):
-        psns = [self.laser_port] if self.laser_port else [1, 2]
-        for n in psns:
+        for n in self.psns:
             self.instrument.get_power_supply(id=n)['enabled'] = on
         
         
