@@ -324,36 +324,6 @@ def start_sweep():
         expt.out = 0
         expt.outerr = 0
 
-        if experiment_type == "Spin Echo":
-            if parameters["expt"] == "Hahn Echo":
-                expt.echo_delay = (
-                    2
-                    * np.array(runinfo.scan0.scan_dict["delay_sweep"])
-                    * runinfo.parameters["pulses"]
-                )
-            elif parameters["expt"] == "CPMG":
-                expt.echo_delay = (
-                    2
-                    * runinfo.parameters["delay"]
-                    * np.array(runinfo.scan0.scan_dict["cpmg_sweep"])
-                )
-            elif parameters["sweep2"] and parameters["expt2"] == "Hahn Echo":
-                expt.echo_delay = (
-                    2
-                    * np.array(runinfo.scan1.scan_dict["delay_sweep"])
-                    * runinfo.parameters["pulses"]
-                )
-            elif parameters["sweep2"] and parameters["expt2"] == "CPMG":
-                expt.echo_delay = (
-                    2
-                    * runinfo.parameters["delay"]
-                    * np.array(runinfo.scan1.scan_dict["cpmg_sweep"])
-                )
-            else:
-                expt.echo_delay = (
-                    2 * runinfo.parameters["delay"] * runinfo.parameters["pulses"]
-                )
-
         #print(expt)
         expt.start_time = time()
         expt.start_thread()

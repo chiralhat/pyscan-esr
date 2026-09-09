@@ -679,6 +679,35 @@ def setup_experiment(parameters, devices, sweep):
     runinfo.wait_time = parameters['wait']
     runinfo.running = False
 
+    if parameters["expt"] == "Hahn Echo":
+        runinfo.loop0.scan_dict["echo_delay"] = (
+            2
+            * np.array(runinfo.loop0.scan_dict["delay_sweep"])
+            * runinfo.parameters["pulses"]
+        )
+    elif parameters["expt"] == "CPMG":
+        runinfo.loop0.scan_dict["cpmg_echo_delay"] = (
+            2
+            * runinfo.parameters["delay"]
+            * np.array(runinfo.loop0.scan_dict["cpmg_sweep"])
+        )
+    else:
+        runinfo.parameters["echo_delay"] = (
+            2 * runinfo.parameters["delay"] * runinfo.parameters["pulses"]
+        )
+    if parameters["sweep2"] and parameters["expt2"] == "Hahn Echo":
+        runinfo.loop1.scan_dict["echo_delay"] = (
+            2
+            * np.array(runinfo.loop1.scan_dict["delay_sweep"])
+            * runinfo.parameters["pulses"]
+        )
+    elif parameters["sweep2"] and parameters["expt2"] == "CPMG":
+        runinfo.loop1.scan_dict["cpmg_echo_delay"] = (
+            2
+            * runinfo.parameters["delay"]
+            * np.array(runinfo.loop1.scan_dict["cpmg_sweep"])
+        )
+
     # TODO: Move the actual intialization of the sweep to Run
     # so we don't get so many empty directories
     # expt = ps.Sweep(runinfo, devices, parameters['outfile']+fname)
