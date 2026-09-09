@@ -625,6 +625,9 @@ def setup_experiment(parameters, devices, sweep):
     sweep_range = ps.drange(parameters['sweep_start'],
                             parameters['sweep_step'],
                             parameters['sweep_end'])
+    sweep2_range = ps.drange(
+        parameters["sweep2_start"], parameters["sweep2_step"], parameters["sweep2_end"]
+    )
     setup_vars = {'y_name': ['pulse_time',
                              'rabi_sweep',
                              'fpga_period',
@@ -633,17 +636,21 @@ def setup_experiment(parameters, devices, sweep):
                              'synth_c_freqs',
                                  'phase_sweep',
                             'inversion_sweep'],
-                  'loop': [ps.FunctionScan(pulse_time, sweep_range, dt=wait),
-                           ps.FunctionScan(rabi_sweep, sweep_range, dt=wait),
-                           ps.PropertyScan({'fpga': sweep_range},
-                                           prop='period', dt=wait),
-                           ps.FunctionScan(delay_sweep, sweep_range, dt=wait),
-                           ps.PropertyScan({'moku': sweep_range},
-                                           prop='field', dt=wait),
-                           ps.PropertyScan({'synth': sweep_range},
-                                           prop='c_freqs', dt=wait),
-                           ps.FunctionScan(phase_sweep, sweep_range, dt=wait),
-                           ps.FunctionScan(inversion_sweep, sweep_range, dt=wait)],
+                  'scan': [
+                    [
+                        ps.FunctionScan(pulse_time, s_range, dt=wait),
+                        ps.FunctionScan(rabi_sweep, s_range, dt=wait),
+                        ps.PropertyScan({'fpga': s_range},
+                                        prop='period', dt=wait),
+                        ps.FunctionScan(delay_sweep, s_range, dt=wait),
+                        ps.PropertyScan({'moku': s_range},
+                                        prop='field', dt=wait),
+                        ps.PropertyScan({'synth': s_range},
+                                        prop='c_freqs', dt=wait),
+                        ps.FunctionScan(phase_sweep, s_range, dt=wait),
+                        ps.FunctionScan(inversion_sweep, s_range, dt=wait)
+                    ]
+                    for s_range in [sweep_range, sweep2_range]],
                   'file': ['PSweep',
                            'Rabi',
                            'T1',
@@ -653,11 +660,16 @@ def setup_experiment(parameters, devices, sweep):
                                'PhiSweep',
                           'T1']
                   }
-    run_n = expt_select[parameters['expt']]
-    parameters['y_name'] = setup_vars['y_name'][run_n]
-    fname = setup_vars['file'][run_n]
+    run_1 = expt_select[parameters['expt']]
+    run_2 = expt_select[parameters['expt2']]
+    parameters['y_name'] = setup_vars['y_name'][run_1]
+    fname = setup_vars['file'][run_1]
     runinfo = ps.RunInfo()
-    runinfo.loop0 = setup_vars['loop'][run_n]
+    runinfo.loop0 = setup_vars['scan'][run_1]
+    if parameters["sweep2"]:  # TODO: Fix sweep range in functions for sweep2
+        parameters["y_name2"] = setup_vars["y_name"][run_2]
+        runinfo.loop1 = setup_vars["scan"][1][run_2]
+        fname = setup_vars["file"][run_2] + "_" + fname
     runinfo.measure_function = measure_echo
     runinfo.sub_func = func
     runinfo.sltime = parameters['sltime']
