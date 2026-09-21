@@ -25,7 +25,7 @@ class Lakeshore335():
         self.write = self.instrument.command
         hres = self.instrument.HeaterResistance.HEATER_50_OHM
         hdisp = self.instrument.HeaterOutputDisplay.POWER
-        self.t_chan = 1
+        self.t_chan = 2 if self.get_temp(2) else 1
         self.zone = 0
         self.tolerance = 0.1
         self.timeout = 600
@@ -39,6 +39,7 @@ class Lakeshore335():
         tnow = self.get_temp(self.t_chan)
         self.ramp(on=0)
         sleep(0.2)
+        self.tset = 0
         self.setpoint(tnow)
         self.ramp()
     
@@ -62,7 +63,14 @@ class Lakeshore335():
     
     def setpoint(self, value=0, output=1):
         if value!=0:
+            still = True
             self.instrument.set_control_setpoint(output, value)
+            while still:
+                cval = self.instrument.get_control_setpoint(output)
+                if cval!=self.tset:
+                    still = False
+                else:
+                    self.instrument.set_control_setpoint(output, value)
             self.tset = value
         else:
             self.tset = self.instrument.get_control_setpoint(output)
@@ -98,15 +106,21 @@ class Lakeshore335():
         else:
             self.hran = int(self.instrument.get_heater_range(output))
         return self.hran
-
-
-    def temp(self, tset, output=1):
+        
+        
+    @property
+    def temp(self):
+        return self.get_temp(self.t_chan)
+    
+    @temp.setter
+    def temp(self, tset):
         """
         Set the temperature controller setpoint and enable the heater at an appropriate range.
         Waits until the temperature has reached the setpoint to exit (TBI)
         """
-        assert tset>=1.5, f'Setpoint needs to be between 1.5 K and 320 K, setpoint: {tset}'
-        assert tset<=320, f'Setpoint needs to be between 1.5 K and 320 K, setpoint: {tset}'
+        assert tset>=1.4, f'Setpoint needs to be between 1.4 K and 320 K, setpoint: {tset}'
+        assert tset<=320, f'Setpoint needs to be between 1.4 K and 320 K, setpoint: {tset}'
+        output = self.t_chan
         tc = self.instrument
         self.setpoint(tset, output)
         self.heater(1, output)
