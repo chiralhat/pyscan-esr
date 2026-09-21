@@ -44,7 +44,7 @@ class MokuGo(InstrumentDriver):
             self.instrument.set_power_supply(id=1, enable=False, voltage=0, current=0.15)
             self._gauss = 278
             self.c_limit = 3.5
-            self.ramp = 50
+            self.ramp = 100
             self.fieldv_offset = 0
             self.field_offset = 0
             self.v2_offset = 0
