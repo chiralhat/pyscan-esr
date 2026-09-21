@@ -260,6 +260,9 @@ def setup_experiment(parameters, devices, sweep, soc):
 
     def deer_sweep(T):
         parameters["DEER_delay"] = T
+        
+    def temp_sweep(T):
+        devices.ls335.temp = T
 
     expt_select = {
         "Pulse Sweep": 0,
@@ -296,6 +299,7 @@ def setup_experiment(parameters, devices, sweep, soc):
             "gain_sweep",
             "deer_sweep",
             "temp_sweep"
+            #"ls335_temp"
         ],
         "scan": [
             [
@@ -310,7 +314,8 @@ def setup_experiment(parameters, devices, sweep, soc):
                 ps.FunctionScan(cpmg_sweep, s_range, dt=wait),
                 ps.FunctionScan(gain_sweep, s_range, dt=wait),
                 ps.FunctionScan(deer_sweep, s_range, dt=wait),
-                ps.PropertyScan({"ls335": s_range}, prop="temp", dt=wait),
+                ps.FunctionScan(temp_sweep, s_range, dt=wait),
+                #ps.PropertyScan({"ls335": s_range}, prop="temp", dt=wait),
             ]
             for s_range in [sweep_range, sweep2_range]
         ],
