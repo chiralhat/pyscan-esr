@@ -1,0 +1,15 @@
+setuptools
+packaging
+h5py
+lakeshore
+moku
+nvnapython
+PyGPD3303S
+pyserial
+pyusb
+PyVISA
+scikit-rf
+scipy
+windfreak
+zeroconf
+pyvisa-py
