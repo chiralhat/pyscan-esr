@@ -27,7 +27,7 @@ import sys, os
 
 sys.path.append("../")
 
-from pathlib import Path
+from pathlib import PurePosixPath
 
 expt_select = {
     "Pulse Sweep": 0,
@@ -146,7 +146,7 @@ class ExperimentType(QObject):
             # Build output file name with today's date
             datestr = date.today().strftime("%y%m%d")
             fname = datestr + "_" + str(self.parameters["file_name"]) + "_"
-            self.parameters["outfile"] = str(Path(self.parameters["save_dir"]) / fname)
+            self.parameters["outfile"] = str(PurePosixPath(self.parameters["save_dir"]) / fname)
 
             # Save default parameters locally
             with open(self.default_file, "wb") as f:
