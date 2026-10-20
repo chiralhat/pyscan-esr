@@ -198,7 +198,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         offset = 0.05 if self.cfg["loopback"] else (tpi2)/2+(pulses)*(2*delay-.00145)
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
         trig_offset = self.us2cycles(0.25+nutwidth+self.cfg["h_offset"]+offset)
-        switch_offset = min([self.us2cycles(0.25+nutwidth-self.cfg["sw_offset"]+offset), trig_offset])
+        switch_offset = self.us2cycles(nutwidth+self.cfg["sw_offset"]+offset)
         
         # If the nutation pulse width is greater than the minimum number of cycles, add it in
         nut_length = self.us2cycles(nutwidth, gen_ch=res_ch)
@@ -214,10 +214,14 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         
         # Tell the ADC when to trigger readout, based on the trigger offset defined above
         # If you uncomment the pins argument, it will also send a pulse on an I/O pin
-        self.trigger_no_off(t=switch_offset, pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
-        self.trigger_no_off(adcs=self.ro_chs,
-                    # pins=[1,2],
+        # Sandwiching the readout trigger between the pin triggers means the switch can be switched either before
+        # or after the readout trigger
+        self.trigger_no_off(t=min([switch_offset, trig_offset]), pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
+        pins = [1,2] if switch_offset<trig_offset else [2]
+        self.trigger(adcs=self.ro_chs,
+                    pins=pins,
                     adc_trig_offset=trig_offset)
+        self.trigger_no_off(t=max([switch_offset, trig_offset]), pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
 
         # pi/2 pulse
         self.set_pulse_registers(ch=res_ch, gain=gain2,
