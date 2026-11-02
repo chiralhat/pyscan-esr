@@ -61,39 +61,77 @@ pi2_phase_list = [0, 180, 180, 0]
 pi_phase_list = [90, 90, 270, 270]
 
 class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
-    def trigger_no_off(self, pins=None, t=0, rp=0, r_out=31, width=0):
-        """
-        Adapted from qick-dawg. Currently only used for digital I/O pins, so I removed the rest.
-        Sets the specified pin high starting at time t, lasting until the end of the cycle.
-        
-        Method that is a slight modification of qick.QickProgram.trigger().
-        This method does not turn off the PMOD pins, thus also does not require a width parameter
+    def trigger_no_off(
+            self,
+            adcs=None,
+            pins=None,
+            ddr4=False,
+            mr=False,
+            adc_trig_offset=270,
+            t=0,
+            width=0,
+            rp=0,
+            r_out=31):
+        """Pulse the readout(s) and marker pin(s) with a specified pulse width at a specified time t+adc_trig_offset.
+        If no readouts are specified, the adc_trig_offset is not applied.
 
         Parameters
         ----------
+        adcs : list of int
+            List of readout channels to trigger (index in 'readouts' list)
         pins : list of int
-            List of marker pins to pulsem, i.e. PMOD channels.
+            List of marker pins to pulse.
             Use the pin numbers in the QickConfig printout.
+        ddr4 : bool
+            If True, trigger the DDR4 buffer.
+        mr : bool
+            If True, trigger the MR buffer.
         adc_trig_offset : int, optional
             Offset time at which the ADC is triggered (in tProc cycles)
         t : int, optional
             The number of tProc cycles at which the ADC trigger starts
+        width : int, optional
+            The width of the trigger pulse, in tProc cycles
         rp : int, optional
             Register page
         r_out : int, optional
             Register number
         """
+        if adcs is None:
+            adcs = []
         if pins is None:
             pins = []
-        if not pins:
-            raise RuntimeError("must pulse at least one pin")
-            
+        # if not any([adcs, pins, ddr4]):
+        #    raise RuntimeError("must pulse at least one readout or pin")
+
         outdict = defaultdict(int)
+        for ro in adcs:
+            rocfg = self.soccfg['readouts'][ro]
+            outdict[rocfg['trigger_port']] |= (1 << rocfg['trigger_bit'])
+            # update trigger count for this readout
+            self.ro_chs[ro]['trigs'] += 1
         for pin in pins:
             pincfg = self.soccfg['tprocs'][0]['output_pins'][pin]
             outdict[pincfg[1]] |= (1 << pincfg[2])
+        if ddr4:
+            rocfg = self.soccfg['ddr4_buf']
+            outdict[rocfg['trigger_port']] |= (1 << rocfg['trigger_bit'])
+        if mr:
+            rocfg = self.soccfg['mr_buf']
+            outdict[rocfg['trigger_port']] |= (1 << rocfg['trigger_bit'])
 
         t_start = t
+        if any([adcs, ddr4, mr]):
+            t_start += adc_trig_offset
+            # update timestamps with the end of the readout window
+            for ro in adcs:
+                ts = self.get_timestamp(ro_ch=ro)
+                if t_start < ts:
+                    logger.warning("Readout time %d appears to conflict with previous readout ending at %f?" % (t, ts))
+                # convert from readout clock to tProc clock
+                ro_length = self.ro_chs[ro]['length']
+                ro_length *= self.tproccfg['f_time'] / self.soccfg['readouts'][ro]['f_output']
+                self.set_timestamp(t_start + ro_length, ro_ch=ro)
         if width:
             t_end = t_start + width
 
@@ -160,6 +198,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         offset = 0.05 if self.cfg["loopback"] else (tpi2)/2+(pulses)*(2*delay-.00145)
         # Actually set the trigger offset, including empirically-determined delay of 0.25 us
         trig_offset = self.us2cycles(0.25+nutwidth+self.cfg["h_offset"]+offset)
+        switch_offset = self.us2cycles(nutwidth+self.cfg["sw_offset"]+offset)
         
         # If the nutation pulse width is greater than the minimum number of cycles, add it in
         nut_length = self.us2cycles(nutwidth, gen_ch=res_ch)
@@ -175,9 +214,14 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         
         # Tell the ADC when to trigger readout, based on the trigger offset defined above
         # If you uncomment the pins argument, it will also send a pulse on an I/O pin
+        # Sandwiching the readout trigger between the pin triggers means the switch can be switched either before
+        # or after the readout trigger
+        self.trigger_no_off(t=min([switch_offset, trig_offset]), pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
+        pins = [1,2] if switch_offset<trig_offset else [2]
         self.trigger(adcs=self.ro_chs,
-                    # pins=[0],
+                    pins=pins,
                     adc_trig_offset=trig_offset)
+        self.trigger_no_off(t=max([switch_offset, trig_offset]), pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
 
         # pi/2 pulse
         self.set_pulse_registers(ch=res_ch, gain=gain2,
@@ -202,6 +246,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
         self.synci(self.us2cycles(delay_pi))
         
         self.wait_all()
+        self.trigger_no_off(pins=[2], width=5)
         self.sync_all(period-trig_offset-nutdelay)
         
 
@@ -222,7 +267,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
             # Trigger the switch-controlling pulse
             self.trigger_no_off(pins=[2])
             # Trigger the scope sync pulse
-            self.trigger_no_off(t=trig_offset, pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
+            # self.trigger_no_off(t=trig_offset, pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
             self.synci(self.us2cycles(0.1))
 
             self.cpmg(self.cfg["pulses"])
@@ -231,7 +276,7 @@ class CPMGProgram(QickRegisterManagerMixin, AveragerProgram):
                 # Trigger the switch-controlling pulse
                 self.trigger_no_off(pins=[2])
                 # Trigger the scope sync pulse
-                self.trigger_no_off(t=trig_offset, pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
+                # self.trigger_no_off(t=trig_offset, pins=[1,2]) #sends a pulse through pin 1,2 on pynq 
                 self.synci(self.us2cycles(0.1))
                 self.cpmg(self.cfg["pulses"], n)
 
