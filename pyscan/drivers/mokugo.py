@@ -31,6 +31,11 @@ class MokuGo(InstrumentDriver):
                     dict(source="Slot1OutB", destination="Output2")]
         self.instrument.set_connections(connections=connections)
         self.instrument.set_dio(direction=[0]*16)
+        self.psu_setup(moku, laser_port)
+        self.set_switch_1pulse()
+
+
+    def psu_setup(self, moku, laser_port):
         self.laser_port = 3
         self.laser_V = 3
         self.laser_I = 0.25
@@ -52,7 +57,8 @@ class MokuGo(InstrumentDriver):
         elif moku=='Bench':
             self.laser_port = laser_port
             self.instrument.set_power_supply(id=self.laser_port, enable=False, voltage=self.laser_V, current=self.laser_I)
-            self.instrument.set_power_supply(id=1, enable=True, voltage=5, current=0.15)
+            self.instrument.set_power_supply(id=1, enable=True, voltage=-2.5, current=0.15)
+            self.instrument.set_power_supply(id=4, enable=True, voltage=5, current=0.15)
             self._gauss = 622
             self.c_limit = 5
             self.ramp = 400
@@ -60,8 +66,6 @@ class MokuGo(InstrumentDriver):
             self.field_offset = 40
             self.v2_offset = 0
             self.psns = [self.laser_port]
-        self.set_switch_1pulse()
-
 
     def close(self):
         pass
